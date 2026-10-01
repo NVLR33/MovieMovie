@@ -5,8 +5,8 @@ import bcrypt from 'bcryptjs';
 
 // [DATA:SEED] Idempotent starter library and demo accounts.
 export async function ensureSeed() {
-  const existing = await db.select({ id: movies.id }).from(movies).limit(1);
-  if (existing.length) return;
+  // Автозаполнение (seed) отключено для продакшена, чтобы можно было вести свою базу с нуля.
+  return;
   const entries = [
     { title:'Дюна: Часть вторая', originalTitle:'Dune: Part Two', description:'Пол Атрейдес объединяется с Чани и фременами, чтобы отомстить заговорщикам, уничтожившим его семью. Перед ним выбор между любовью всей жизни и судьбой известной ему вселенной.', category:'Фильм', genre:'Фантастика, Приключения, Драма', year:2024, duration:166, poster:'/posters/dune.jpg', backdrop:'/posters/dune-backdrop.jpg', director:'Дени Вильнёв', country:'США, Канада', watchUrl:'https://www.justwatch.com/ru/фильм/диуна-часть-вторая', featured:true, views:1248 },
     { title:'Оппенгеймер', originalTitle:'Oppenheimer', description:'История американского физика Роберта Оппенгеймера и его роли в создании атомной бомбы. Грандиозная драма о выборе, который изменил мир.', category:'Фильм', genre:'Биография, Драма, История', year:2023, duration:180, poster:'/posters/oppenheimer.jpg', director:'Кристофер Нолан', country:'США, Великобритания', watchUrl:'https://www.justwatch.com/ru/фильм/oppengeimer', views:978 },
