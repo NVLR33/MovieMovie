@@ -1,10 +1,9 @@
 import { db } from '@/db';
 import { users, movies, watches, ratings, comments, bookmarks, friendships, notifications, gameScores } from '@/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
 
 export async function ensureSeed() {
-  // Автозаполнение (seed) отключено для продакшена, чтобы можно было вести свою базу с нуля.
+  // Автозаполнение (seed) отключено для продакшена.
   return;
 }
 
@@ -12,21 +11,27 @@ export async function getOverview() {
   const films = await db.select().from(movies).orderBy(desc(movies.createdAt));
   const allRatings = await db.select().from(ratings);
   
-  const scores = films.map(m => {
-    const movieRatings = allRatings.filter(r => r.movieId === m.id);
-    const count = movieRatings.length;
-    const average = count > 0 ? movieRatings.reduce((a, b) => a + b.value, 0) / count : 0;
-    
-    const dist: Record<string, number> = {};
-    movieRatings.forEach(r => {
-      dist[r.value.toString()] = (dist[r.value.toString()] || 0) + 1;
-    });
-    
-    return { movieId: m.id, average: Math.round(average * 10) / 10, count, dist };
+  const scoreMap = new Map<number, { average: number; count: number; dist: Record<string, number> }>();
+  
+  for (const r of allRatings) {
+    if (!scoreMap.has(r.movieId)) {
+      scoreMap.set(r.movieId, { average: 0, count: 0, dist: {} });
+    }
+    const s = scoreMap.get(r.movieId)!;
+    s.count++;
+    const valKey = r.value.toString();
+    s.dist[valKey] = (s.dist[valKey] || 0) + 1;
+  }
+
+  // Calculate averages
+  scoreMap.forEach((s, movieId) => {
+    const movieRatings = allRatings.filter(r => r.movieId === movieId);
+    const sum = movieRatings.reduce((a, b) => a + b.value, 0);
+    s.average = Math.round((sum / s.count) * 10) / 10;
   });
 
   return films.map(m => {
-    const s = scores.find(x => x.movieId === m.id);
+    const s = scoreMap.get(m.id);
     return {
       ...m,
       rating: s?.average || 0,
