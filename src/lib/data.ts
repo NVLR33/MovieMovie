@@ -7,23 +7,25 @@ export async function ensureSeed() {
   return;
 }
 
+// [DATA:DURATION] Count full title time for series/anime titles.
+export function getTitleMinutes(film:{duration:number;episodes:number|null;category:string}){
+  const episodic = ['Сериал','Мультсериал','Аниме-сериал'].includes(film.category);
+  return episodic ? film.duration * (film.episodes || 1) : film.duration;
+}
+
 export async function getOverview() {
   const films = await db.select().from(movies).orderBy(desc(movies.createdAt));
   const allRatings = await db.select().from(ratings);
-  
   const scoreMap = new Map<number, { average: number; count: number; dist: Record<string, number> }>();
-  
+
   for (const r of allRatings) {
-    if (!scoreMap.has(r.movieId)) {
-      scoreMap.set(r.movieId, { average: 0, count: 0, dist: {} });
-    }
+    if (!scoreMap.has(r.movieId)) scoreMap.set(r.movieId, { average: 0, count: 0, dist: {} });
     const s = scoreMap.get(r.movieId)!;
     s.count++;
-    const valKey = r.value.toString();
-    s.dist[valKey] = (s.dist[valKey] || 0) + 1;
+    const key = r.value.toString();
+    s.dist[key] = (s.dist[key] || 0) + 1;
   }
 
-  // Calculate averages
   scoreMap.forEach((s, movieId) => {
     const movieRatings = allRatings.filter(r => r.movieId === movieId);
     const sum = movieRatings.reduce((a, b) => a + b.value, 0);
@@ -32,12 +34,7 @@ export async function getOverview() {
 
   return films.map(m => {
     const s = scoreMap.get(m.id);
-    return {
-      ...m,
-      rating: s?.average || 0,
-      ratingCount: s?.count || 0,
-      ratingDist: s?.dist || {}
-    };
+    return { ...m, rating: s?.average || 0, ratingCount: s?.count || 0, ratingDist: s?.dist || {} };
   });
 }
 
@@ -48,6 +45,7 @@ export type Film = {
   description: string;
   category: string;
   genre: string;
+  studio: string | null;
   mood: string | null;
   year: number;
   duration: number;
