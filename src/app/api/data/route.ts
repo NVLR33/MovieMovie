@@ -27,24 +27,37 @@ function getCineDay():{label:string;filter?:string;icon:string}{
 // [DATA:ON_THIS_DAY] Retrospective memories
 function getOnThisDay(myWatches:{movieId:number;watchedAt:Date}[],myRatings:{movieId:number;value:number}[],films:Film[],friendEvents:{message:string;createdAt:Date}[]):{text:string;icon:string}[]{
   const today=new Date();const todayMD=`${today.getMonth()+1}-${today.getDate()}`;const items:{text:string;icon:string}[]=[];
+  
   for(const w of myWatches){
     const wd=new Date(w.watchedAt);const wMD=`${wd.getMonth()+1}-${wd.getDate()}`;
     if(wMD===todayMD && wd.getFullYear()<today.getFullYear()){
       const diff=today.getFullYear()-wd.getFullYear();const film=films.find(f=>f.id===w.movieId);
       const rating=myRatings.find(r=>r.movieId===w.movieId);
-      if(film)items.push({text:`${diff===1?'Ровно год':''+diff+' года/лет'} назад ты посмотрел «${film.title}»${rating?' и поставил '+rating.value+'/10':''}`,icon:'📅'});
-    }
-    const monthsAgo=((today.getFullYear()-new Date(w.watchedAt).getFullYear())*12)+(today.getMonth()-new Date(w.watchedAt).getMonth());
-    if(monthsAgo===3&&new Date(w.watchedAt).getDate()===today.getDate()){
-      const film=films.find(f=>f.id===w.movieId);
-      if(film)items.push({text:`3 месяца назад ты посмотрел «${film.title}»`,icon:'🕰️'});
+      if(film)items.push({text:`${diff===1?'Ровно год':diff+' года/лет'} назад ты посмотрел(а) «${film.title}»${rating?' и поставил(а) '+rating.value+'/10':''}`,icon:'📅'});
     }
   }
+  
   for(const f of films){
     const age=today.getFullYear()-f.year;
-    if(age>0&&age%5===0)items.push({text:`Сегодня ${age} лет фильму «${f.title}»! Пересмотри?`,icon:'🎂'});
+    if(age >= 5 && age % 5 === 0) {
+       items.push({text:`В этом году ${age} лет исполняется истории «${f.title}»! Самое время вспомнить.`,icon:'🎂'});
+    }
   }
-  return items.slice(0,5);
+  
+  if (items.length === 0 && myWatches.length > 3) {
+     const randomOldWatch = myWatches[myWatches.length - 1]; // Oldest watch
+     const film = films.find(f=>f.id===randomOldWatch.movieId);
+     const wd = new Date(randomOldWatch.watchedAt);
+     if (film) {
+       items.push({text:`А помнишь? ${wd.toLocaleDateString('ru-RU')} ты открыл(а) для себя «${film.title}». Может, стоит освежить память?`, icon:'🕰️'});
+     }
+  }
+
+  if (items.length < 2 && friendEvents.length > 0) {
+      items.push({text: friendEvents[0].message, icon: '👋'});
+  }
+
+  return items.slice(0,3);
 }
 
 // [DATA:SEASON] Season pass configuration
