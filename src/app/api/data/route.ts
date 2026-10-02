@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq, or, and } from 'drizzle-orm';
 import { getUser, publicUser } from '@/lib/auth';
 import { collabLists, collabItems, movieClub, challenges, challengeProgress } from '@/db/schema';
-import { getOverview, db, users, watches, ratings, comments, bookmarks, friendships, notifications, gameScores, desc } from '@/lib/data';
+import { getOverview, getTitleMinutes, db, users, watches, ratings, comments, bookmarks, friendships, notifications, gameScores, desc } from '@/lib/data';
 import { messages } from '@/db/schema';
 import type { Film } from '@/lib/data';
 
@@ -89,7 +89,7 @@ export async function GET(){
       friendsActivity = friendIds.map(fid => {
         const person = names[fid];
         const fWatches = allWatches.filter(w => w.userId === fid);
-        const fMinutes = fWatches.reduce((n, w) => n + (films.find(f => f.id === w.movieId)?.duration || 0), 0);
+        const fMinutes = fWatches.reduce((n, w) => n + (films.find(f => f.id === w.movieId) ? getTitleMinutes(films.find(f => f.id === w.movieId)!) : 0), 0);
         const lastWatch = fWatches.length ? fWatches[0].watchedAt : null;
         const commonFilms = new Set(fWatches.filter(w => myWatchedIds.has(w.movieId)).map(w => w.movieId)).size;
         return { id: fid, username: person?.username || 'User', avatar: person?.avatar || null, watches: fWatches.length, minutes: fMinutes, lastWatch: lastWatch ? new Date(lastWatch).toISOString() : null, commonFilms };
@@ -117,6 +117,6 @@ export async function GET(){
     const cineDay=getCineDay();
     const season=getCurrentSeason();
 
-    return NextResponse.json({films,user:publicUser(me),people:Object.values(names),watches:me?allWatches.filter(w=>w.userId===me.id):[],ratings:me?allRatings.filter(r=>r.userId===me.id):[],comments:allComments.map(c=>({...c,author:names[c.userId]})),bookmarks:me?allBookmarks.filter(b=>b.userId===me.id):[],friends:me?allFriends.filter(f=>f.fromId===me.id||f.toId===me.id):[],notifications:me?allNotifications.filter(n=>n.userId===me.id):[],scores:me?allScores.filter(s=>s.userId===me.id):[],leaderboard:people.map(p=>({id:p.id,username:p.username,avatar:p.avatar,role:p.role,xp:p.xp,watches:allWatches.filter(w=>w.userId===p.id).length,minutes:allWatches.filter(w=>w.userId===p.id).reduce((n,w)=>n+(films.find(f=>f.id===w.movieId)?.duration||0),0),streak:consecutiveDays(allWatches.filter(w=>w.userId===p.id).map(w=>w.watchedAt)),ratings:allRatings.filter(r=>r.userId===p.id).length,gameScore:allScores.filter(s=>s.userId===p.id).reduce((a,s)=>a+s.score,0)})),friendsActivity,unreadMessages,lists:allLists.map(l=>({...l,items:allCollabItems.filter(i=>i.listId===l.id).map(i=>({...i,film:films.find(f=>f.id===i.movieId)}))})),club:activeClubs.length?activeClubs[0]:null,onThisDay,cineDay,monthlySummary,challenges:myChallenges,season});
+    return NextResponse.json({films,user:publicUser(me),people:Object.values(names),watches:me?allWatches.filter(w=>w.userId===me.id):[],ratings:me?allRatings.filter(r=>r.userId===me.id):[],comments:allComments.map(c=>({...c,author:names[c.userId]})),bookmarks:me?allBookmarks.filter(b=>b.userId===me.id):[],friends:me?allFriends.filter(f=>f.fromId===me.id||f.toId===me.id):[],notifications:me?allNotifications.filter(n=>n.userId===me.id):[],scores:me?allScores.filter(s=>s.userId===me.id):[],leaderboard:people.map(p=>({id:p.id,username:p.username,avatar:p.avatar,role:p.role,xp:p.xp,watches:allWatches.filter(w=>w.userId===p.id).length,minutes:allWatches.filter(w=>w.userId===p.id).reduce((n,w)=>n+(films.find(f=>f.id===w.movieId)?getTitleMinutes(films.find(f=>f.id===w.movieId)!):0),0),streak:consecutiveDays(allWatches.filter(w=>w.userId===p.id).map(w=>w.watchedAt)),ratings:allRatings.filter(r=>r.userId===p.id).length,gameScore:allScores.filter(s=>s.userId===p.id).reduce((a,s)=>a+s.score,0)})),friendsActivity,unreadMessages,lists:allLists.map(l=>({...l,items:allCollabItems.filter(i=>i.listId===l.id).map(i=>({...i,film:films.find(f=>f.id===i.movieId)}))})),club:activeClubs.length?activeClubs[0]:null,onThisDay,cineDay,monthlySummary,challenges:myChallenges,season});
   }catch(e){console.error(e);return NextResponse.json({error:'Не удалось загрузить данные'},{status:500});}
 }

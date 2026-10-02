@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { users, watches, ratings, comments, bookmarks, movies, friendships } from '@/db/schema';
 import { getUser } from '@/lib/auth';
+import { getTitleMinutes } from '@/lib/data';
 
 // [API:PROFILE] Public profile data for viewing friend or community member profiles.
 export async function GET(req: NextRequest) {
@@ -38,13 +39,13 @@ export async function GET(req: NextRequest) {
   }
 
   const filmMap = Object.fromEntries(allFilms.map(f => [f.id, f]));
-  const totalMinutes = userWatches.reduce((n, w) => n + (filmMap[w.movieId]?.duration || 0), 0);
+  const totalMinutes = userWatches.reduce((n, w) => n + (filmMap[w.movieId] ? getTitleMinutes(filmMap[w.movieId]) : 0), 0);
   const uniqueFilms = new Set(userWatches.map(w => w.movieId)).size;
   const categories = ['Фильм', 'Сериал', 'Мультфильм', 'Мультсериал', 'Аниме-сериал', 'Аниме-фильм']
     .map(cat => ({
       name: cat,
       count: userWatches.filter(w => filmMap[w.movieId]?.category === cat).length,
-      minutes: userWatches.filter(w => filmMap[w.movieId]?.category === cat).reduce((n, w) => n + (filmMap[w.movieId]?.duration || 0), 0),
+      minutes: userWatches.filter(w => filmMap[w.movieId]?.category === cat).reduce((n, w) => n + (filmMap[w.movieId] ? getTitleMinutes(filmMap[w.movieId]) : 0), 0),
     }));
 
   // Favorite genres
@@ -135,6 +136,7 @@ export async function GET(req: NextRequest) {
       role: target.role,
       xp: target.xp,
       headerStyle: target.headerStyle,
+      headerImage: target.headerImage,
       avatarFrame: target.avatarFrame,
       headerFrame: target.headerFrame, profileEffect: target.profileEffect, nameEffect: target.nameEffect, nameColor: target.nameColor,
       createdAt: target.createdAt,
