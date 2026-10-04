@@ -1798,6 +1798,165 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
   );
 }
 
+function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId: number; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; openChat: (id: number) => void; auth: () => void; }) {
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/profile?id=' + userId).then(r => r.json()).then(d => {
+      if (d.profile) setProfile(d);
+      else setProfile(null);
+    }).catch(() => setProfile(null)).finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) return <div className="empty-state"><h3>Загрузка...</h3></div>;
+  if (!profile) return <div className="empty-state"><h3>Пользователь не найден</h3><button className="primary-btn" onClick={() => go('/friends')}>Назад</button></div>;
+
+  const p = profile.profile;
+  const s = profile.stats;
+  const level = s.level;
+  const myWatchedIds = new Set(data.watches.map(w => w.movieId));
+  const commonFilms = profile.recentWatches.filter(w => w.film && myWatchedIds.has(w.film.id)).length;
+
+  return (
+    <>
+      <button className="back-link" onClick={() => go('/friends')}>← Назад к друзьям</button>
+      <div className={`profile-cover header-style- effect-${p.profileEffect || 'none'} ${p.headerImage && p.headerStyle === 5 ? 'custom-header' : ''}`} style={p.headerImage && p.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${p.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={p.headerStyle || 1} data-frame={p.headerFrame || 'none'}>
+        <div className="cover-noise" />
+        <div className="cover-effect-layer" />
+        <span className="cover-label">MOVIE//GO · ПРОФИЛЬ УЧАСТНИКА</span>
+        <div className="cover-orbit">✦</div>
+        <div className="profile-cover-content">
+          <Avatar name={p.username} src={p.avatar} size={90} frame={p.avatarFrame} />
+          <div className="cover-identity">
+            <div className="cover-badges">
+              <span className="role-badge">{p.role === 'admin' ? 'АДМИНИСТРАТОР' : p.role === 'moderator' ? 'МОДЕРАТОР' : p.role === 'vip' ? 'VIP УЧАСТНИК' : 'УЧАСТНИК'}</span>
+              <span className="title-badge">✦ {titleFor({ xp: p.xp } as User, s.totalWatches)}</span>
+            </div>
+            <h1 className={`profile-name name-fx-${p.nameEffect || 'none'} name-clr-${p.nameColor || 'default'}`}>{p.username}</h1>
+            <p>{p.bio}</p>
+          </div>
+          <div className="cover-actions">
+            {profile.friendship.status === 'accepted' ? (
+              <>
+                <button className="cover-edit" onClick={() => openChat(p.id)}><MessageCircle size={16} /> Написать</button>
+                <button className="cover-edit" onClick={() => go('/chat')}><Send size={16} /> Чат</button>
+                <button className="cover-edit" onClick={() => go("/compare/" + p.id)}><Zap size={16} /> Кино-Баттл</button>
+              </>
+            ) : profile.friendship.status === 'pending' ? (
+              <span className="cover-edit">⏳ Заявка отправлена</span>
+            ) : !profile.isSelf && data.user ? (
+              <button className="cover-edit" onClick={() => action({ action: 'friend', userId: p.id }, 'Заявка отправлена')}><UserPlus size={16} /> Добавить в друзья</button>
+            ) : !data.user ? (
+              <button className="cover-edit" onClick={auth}>Войти</button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      
+      <div className="profile-level-row">
+        <div className="level-card">
+          <div className="level-emblem"><Zap size={23} fill="currentColor" /></div>
+          <div>
+            <span>УРОВЕНЬ {level} · {titleFor({ xp: p.xp } as User, s.totalWatches)}</span>
+            <div className="level-track"><i style={{ width: `${((p.xp || 0) % 500) / 5}%` }} /></div>
+            <small>{fmt(p.xp || 0)} XP</small>
+          </div>
+        </div>
+        <div className="profile-mini-stat"><Trophy size={21} /><b>{s.totalRatings}</b><small>оценок</small></div>
+        <div className="profile-mini-stat"><Flame size={21} /><b>{s.activeDays}</b><small>активных дней</small></div>
+      </div>
+
+      <div className="profile-columns">
+        <div className="profile-column">
+          <div className="profile-tile">
+            <div className="tile-heading"><span><BarChart3 size={18} /> Развернутая статистика</span></div>
+            <div className="profile-stats-grid expanded-stats">
+              <div><span className="stat-icon"><Clapperboard size={18} /></span><b>{s.totalWatches}</b><small>просмотров</small></div>
+              <div><span className="stat-icon amber"><Clock3 size={18} /></span><b>{Math.floor(s.totalMinutes / 60)}ч {s.totalMinutes % 60}м</b><small>времени</small></div>
+              <div><span className="stat-icon pink-icon"><Star size={18} /></span><b>{s.totalRatings}</b><small>оценок</small></div>
+              <div><span className="stat-icon green"><MessageCircle size={18} /></span><b>{s.totalComments}</b><small>отзывов</small></div>
+              <div><span className="stat-icon"><Bookmark size={18} /></span><b>{s.totalBookmarks}</b><small>в списке</small></div>
+              <div><span className="stat-icon amber"><TrendingUp size={18} /></span><b>{s.totalWatches > 0 ? Math.round(s.totalMinutes / s.totalWatches) : 0}м</b><small>ср. время</small></div>
+              <div><span className="stat-icon green"><Zap size={18} /></span><b>{p.xp}</b><small>опыт XP</small></div>
+              <div><span className="stat-icon pink-icon"><Flame size={18} /></span><b>{s.activeDays}</b><small>дней стрик</small></div>
+            </div>
+          </div>
+          
+          <div className="profile-tile">
+            <div className="tile-heading"><span><Sparkles size={18} /> Жанровые предпочтения</span></div>
+            <div className="top-genres-list">
+              {s.topGenres.map(g => (
+                <div className="top-genre-item" key={g.genre}>
+                  <span>{g.genre}</span>
+                  <div className="bar-track"><i style={{ width: `${Math.max(5, g.count / Math.max(1, s.topGenres[0].count) * 100)}%` }} /></div>
+                  <b>{Math.round(g.count / Math.max(1, s.totalWatches) * 100)}%</b>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="profile-tile">
+            <div className="tile-heading"><span><TrendingUp size={18} /> Лучшее из просмотренного</span></div>
+            <div className="history-list">
+              {profile.ratings.sort((a, b) => b.value - a.value).slice(0, 5).map((r, i) => (
+                <button key={i} onClick={() => go('/movie/' + r.movieId)}>
+                  <img src={data.films.find(f => f.id === r.movieId)?.poster} alt="" />
+                  <span><b>{r.title}</b><small>Оценка: {r.value.toFixed(1)} / 10</small></span>
+                  <Star size={14} fill="var(--gold)" color="var(--gold)" />
+                </button>
+              ))}
+              {!profile.ratings.length && <div className="tile-empty">Нет оценок.</div>}
+            </div>
+          </div>
+        </div>
+
+        <div className="profile-column">
+          <div className="profile-tile">
+            <div className="tile-heading"><span><Layers3 size={18} /> Распределение по категориям</span></div>
+            <div className="category-bars">
+              {s.categories.map((c, i) => (
+                <div className="category-bar" key={c.name}>
+                  <div><span>{c.name}</span><b>{c.count} ({Math.floor(c.minutes / 60)}ч)</b></div>
+                  <div className="bar-track"><i style={{ width: `${s.totalWatches ? Math.max(2, c.count / s.totalWatches * 100) : 0}%`, background: ['#a78bfa', '#67d8c7', '#f8b687', '#f490bc', '#88acff', '#f9d37d'][i] }} /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="profile-tile">
+            <div className="tile-heading"><span><Clock3 size={18} /> История просмотров</span></div>
+            {profile.recentWatches.length ? (
+              <div className="history-list">
+                {profile.recentWatches.map((w, i) => w.film && (
+                  <button key={i} onClick={() => go('/movie/' + w.film!.id)}>
+                    <img src={w.film.poster} alt="" />
+                    <span><b>{w.film.title}</b><small>{new Date(w.watchedAt).toLocaleDateString('ru-RU')} · {w.film.category}</small></span>
+                    <ChevronRight size={16} />
+                  </button>
+                ))}
+              </div>
+            ) : <div className="tile-empty">Нет просмотров.</div>}
+          </div>
+
+          {data.user && commonFilms > 0 && (
+            <div className="profile-tile common-films-tile">
+              <div className="tile-heading"><span><Heart size={18} /> Кино-связь</span></div>
+              <div className="common-films-visual">
+                 <Avatar name={data.user.username} src={data.user.avatar} size={50} />
+                 <div className="common-heart"><Heart size={20} fill="var(--accent)" /></div>
+                 <Avatar name={p.username} src={p.avatar} size={50} />
+              </div>
+              <p className="common-count">У вас <b>{commonFilms}</b> общих {commonFilms === 1 ? 'фильм' : commonFilms < 5 ? 'фильма' : 'фильмов'}.</p>
+              <p className="muted" style={{ fontSize: 11 }}>Ваши вкусы совпадают на {profile.compatibility}%!</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) => void; openChat: (id: number) => void; auth: () => void; }) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activePeer, setActivePeer] = useState<number | null>(null);
@@ -1937,6 +2096,113 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
   );
 }
 
+function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data: Data; go: (s: string) => void; close: () => void; notify: (s: string) => void; }) {
+  const [thread, setThread] = useState<ChatMessage[]>([]);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareSearch, setShareSearch] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const peer = data.people.find(p => p.id === peerId);
+
+  const loadThread = async () => {
+    const r = await fetch('/api/chat?with=' + peerId);
+    if (r.ok) {
+      const d = await r.json();
+      setThread(d.messages || []);
+      setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 60);
+    }
+  };
+
+  useEffect(() => {
+    loadThread();
+    pollRef.current = setInterval(loadThread, 4000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [peerId]);
+
+  const sendMessage = async (movieId?: number) => {
+    if (!text.trim() && !movieId) return;
+    setSending(true);
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toId: peerId, text: text.trim() || '', movieId: movieId || null })
+      });
+      if (r.ok) {
+        setText(''); setShareOpen(false); await loadThread();
+      } else {
+        const d = await r.json(); notify(d.error || 'Ошибка');
+      }
+    } catch {
+      notify('Ошибка отправки');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const shareFilms = data.films.filter(f => !shareSearch || f.title.toLowerCase().includes(shareSearch.toLowerCase())).slice(0, 5);
+
+  if (!peer) return null;
+
+  return (
+    <div className="chat-drawer">
+      <div className="chat-drawer-header">
+        <button className="chat-header-user" onClick={() => { close(); go('/user/' + peer.id); }}>
+          <Avatar name={peer.username} src={peer.avatar} size={34} />
+          <div><b>{peer.username}</b><small>Личный чат</small></div>
+        </button>
+        <div className="chat-drawer-actions">
+          <button onClick={() => { close(); go('/chat'); }} title="Открыть полный чат"><ExternalLink size={16} /></button>
+          <button onClick={close}><X size={18} /></button>
+        </div>
+      </div>
+      <div className="chat-messages chat-drawer-messages" ref={scrollRef}>
+        {thread.map(m => (
+          <div key={m.id} className={`chat-bubble ${m.fromId === data.user?.id ? 'mine' : 'theirs'}`}>
+            <div className="bubble-body">
+              <p>{m.body}</p>
+              {m.film && (
+                <button className="shared-film-card" onClick={() => { close(); go('/movie/' + m.film!.id); }}>
+                  <img src={m.film.poster} alt="" />
+                  <div><b>{m.film.title}</b><small>{m.film.year} · {m.film.category}</small></div>
+                  <ArrowUpRight size={14} />
+                </button>
+              )}
+            </div>
+            <span className="bubble-time">{new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        ))}
+        {thread.length === 0 && <div className="chat-empty-thread"><Sparkles size={24} /><p>Начни разговор!</p></div>}
+      </div>
+      <div className="chat-compose">
+        {shareOpen && (
+          <div className="chat-share-panel drawer-share">
+            <div className="chat-share-head"><b>Поделиться</b><button onClick={() => setShareOpen(false)}><X size={14} /></button></div>
+            <input value={shareSearch} onChange={e => setShareSearch(e.target.value)} placeholder="Поиск..." />
+            <div className="chat-share-list">
+              {shareFilms.map(f => (
+                <button key={f.id} onClick={() => sendMessage(f.id)} className="chat-share-item">
+                  <img src={f.poster} alt="" />
+                  <div><b>{f.title}</b><small>★ {f.rating.toFixed(1)}</small></div>
+                  <Send size={13} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="chat-input-row">
+          <button className="chat-attach-btn" onClick={() => setShareOpen(!shareOpen)}><Film size={17} /></button>
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Сообщение..." />
+          <button className="chat-send-btn" disabled={sending || (!text.trim())} onClick={() => sendMessage()}><Send size={16} /></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: number; go: (s: string) => void; auth: () => void; }) {
   const [compData, setCompData] = useState<ProfileData | null>(null);
   useEffect(() => { fetch('/api/profile?id=' + compareId).then(r => r.json()).then(d => setCompData(d.profile ? d : null)); }, [compareId]);
@@ -1995,7 +2261,7 @@ function WrappedPage({ data, go, auth }: { data: Data; go: (s: string) => void; 
   
   const slides = [
     <div className="wrapped-slide wrapped-1" key={1}><h1>Твой 2026 киногод</h1><p>Это было легендарно.</p><button className="primary-btn" onClick={() => setStep(1)}>Начать <ArrowRight size={16} /></button></div>,
-    <div className="wrapped-slide wrapped-2" key={2} onClick={() => setStep(2)}><h2>Ты провёл в кино<br /><span>{Math.floor(minutes / 60)} часов</span></h2><p>Это {Math.floor(minutes / 1440)} полных дней без сна!</p></div>,
+    <div className="wrapped-slide wrapped-2" key={2} onClick={() => setStep(2)}>2<h2>Ты провёл в кино<br /><span>{Math.floor(minutes / 60)} часов</span></h2><p>Это {Math.floor(minutes / 1440)} полных дней без сна!</p></div>,
     <div className="wrapped-slide wrapped-3" key={3} onClick={() => setStep(3)}><h2>Твоя жанровая душа:<br /><span>{topGenre ? topGenre[0] : 'Неизвестно'}</span></h2><p>Ты посмотрел {topGenre ? topGenre[1] : 0} историй в этом жанре.</p></div>,
     <div className="wrapped-slide wrapped-final" key={4}><h2>MovieGo Wrapped</h2><p>Твой год в цифрах. Делись в сторис!</p><div className="wrapped-card"><b>{data.user.username}</b><p>{data.watches.length} просмотров</p><p>{Math.floor(minutes / 60)} часов</p><p>Любимый жанр: {topGenre ? topGenre[0] : '-'}</p></div><button className="primary-btn" onClick={() => go('/profile')}>Завершить</button></div>
   ];
