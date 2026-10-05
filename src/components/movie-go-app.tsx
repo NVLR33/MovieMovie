@@ -1263,7 +1263,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
           <FilmGrid films={related} go={go} />
         </section>
       )}
-    </>
+    </div>
   );
 }
 
