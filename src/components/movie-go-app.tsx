@@ -239,7 +239,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
 
         <div className="sidebar-bottom">
           <div className="side-status"><span className="status-dot" /> ВСЁ РАБОТАЕТ КАК КИНО</div>
-          <span>© 2026 MOVIE//GO</span>
+          <span>© 2026 moviemovie</span>
         </div>
       </aside>
 
@@ -564,7 +564,7 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
             </div>
           </div>
         </div>
-        <div className="hero-corner">MOVIE//GO ORIGINAL SELECTION <span>↗</span></div>
+        <div className="hero-corner">moviemovie ORIGINAL SELECTION <span>↗</span></div>
       </div>
 
       <div className="quick-stats">
@@ -701,7 +701,7 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
       </section>
 
       <section className="home-section community-section">
-        <SectionTitle kicker={en ? 'THE MOVIE//GO COMMUNITY' : 'СООБЩЕСТВО MOVIE//GO'} title={en ? 'Movies are better together' : 'Кино лучше вместе'} link={en ? 'Leaderboard' : 'Таблица лидеров'} onClick={() => go('/leaderboard')} />
+        <SectionTitle kicker={en ? 'THE moviemovie COMMUNITY' : 'СООБЩЕСТВО moviemovie'} title={en ? 'Movies are better together' : 'Кино лучше вместе'} link={en ? 'Leaderboard' : 'Таблица лидеров'} onClick={() => go('/leaderboard')} />
         <div className="community-cards">
           <div className="community-card">
             <span className="cc-icon"><Trophy size={24} /></span>
@@ -887,7 +887,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
         </div>
       </div>
       
-      <div className="detail-lower">
+       <div className="detail-lower">
         <div className="detail-main">
           
           <div className="rating-panel-advanced">
@@ -917,28 +917,28 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div className="rating-current-value">{hover || myRating || '—'} <span>/ 10</span></div>
             </div>
 
-            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА: Полоски не улетают */}
-            {film.ratingCount > 0 && (
-              <div className="rating-stats-box" style={{ minWidth: 0 }}>
+            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА: Полоски заперты внутри */}
+            {film.ratingCount > 0 ? (
+              <div className="rating-stats-box" style={{ minWidth: "0px", overflow: "hidden" }}>
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
-                <div className="rating-histogram" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div className="rating-histogram" style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
                   {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((score) => {
                     const count = Number((film.ratingDist as any)[score] || 0) + Number((film.ratingDist as any)[score - 0.5] || 0);
                     const pct = film.ratingCount ? (count / film.ratingCount) * 100 : 0;
                     return (
-                      <div key={score} className="hist-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                        <span style={{ width: '16px', textAlign: 'right', flexShrink: 0, fontSize: '11px' }}>{score}</span>
-                        <div className="hist-bar-wrap" style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div className="hist-bar" style={{ width: `${pct}%`, height: '100%', background: 'var(--primary, #a855f7)' }} />
+                      <div key={score} className="hist-row" style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+                        <span style={{ width: "16px", textAlign: "right", flexShrink: 0, fontSize: "11px" }}>{score}</span>
+                        <div className="hist-bar-wrap" style={{ flexGrow: 1, flexShrink: 1, flexBasis: "0%", height: "6px", background: "rgba(255,255,255,0.08)", borderRadius: "10px", overflow: "hidden" }}>
+                          <div className="hist-bar" style={{ width: pct + "%", height: "100%", background: "var(--primary, #a855f7)" }} />
                         </div>
-                        <small style={{ width: '20px', textAlign: 'left', flexShrink: 0, fontSize: '11px', opacity: 0.5 }}>{count}</small>
+                        <small style={{ width: "20px", textAlign: "left", flexShrink: 0, fontSize: "11px", opacity: 0.5 }}>{count}</small>
                       </div>
                     );
                   })}
                 </div>
                 <div className="total-votes-count">Всего голосов: {film.ratingCount}</div>
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="comments-section">
@@ -956,15 +956,15 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
             </div>
             <div className="info-grid">
               
-              {/* Режиссёр с разделением */}
+              {/* Режиссёр: Разделение по запятой */}
               <div className="info-item">
                 <span className="info-icon"><Users size={15} /></span>
                 <div>
                   <small>Режиссёр</small>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {String(film.director || 'Неизвестно').split(',').map((val, idx) => (
-                      <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(val.trim()))}>
-                        {val.trim()}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
+                    {String(film.director || "Неизвестно").split(",").map((v, i) => (
+                      <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?search=" + encodeURIComponent(v.trim()))}>
+                        {v.trim()}
                       </button>
                     ))}
                   </div>
@@ -975,7 +975,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                 <span className="info-icon"><CalendarDays size={15} /></span>
                 <div>
                   <small>Год выпуска</small>
-                  <button type="button" className="info-tag" onClick={() => go('/catalog?year=' + film.year)}>{film.year}</button>
+                  <button type="button" className="info-tag" onClick={() => go("/catalog?year=" + film.year)}>{film.year}</button>
                 </div>
               </div>
 
@@ -987,60 +987,60 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                 </div>
               </div>
 
-              {/* Страна с разделением */}
+              {/* Страна: Разделение по запятой */}
               <div className="info-item">
                 <span className="info-icon"><Globe2 size={15} /></span>
                 <div>
                   <small>Страна</small>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {String(film.country || 'Неизвестно').split(',').map((val, idx) => (
-                      <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(val.trim()))}>
-                        {val.trim()}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
+                    {String(film.country || "Неизвестно").split(",").map((v, i) => (
+                      <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?search=" + encodeURIComponent(v.trim()))}>
+                        {v.trim()}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Категория с разделением */}
+              {/* Категория: Разделение по запятой */}
               <div className="info-item">
                 <span className="info-icon"><Film size={15} /></span>
                 <div>
                   <small>Категория</small>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {String(film.category || '').split(',').map((val, idx) => (
-                      <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?category=' + encodeURIComponent(val.trim()))}>
-                        {val.trim()}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
+                    {String(film.category || "").split(",").map((v, i) => (
+                      <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?category=" + encodeURIComponent(v.trim()))}>
+                        {v.trim()}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Студия с разделением */}
-              {film.studio && (
+              {/* Студия: Разделение по запятой */}
+              {film.studio ? (
                 <div className="info-item">
                   <span className="info-icon"><Clapperboard size={15} /></span>
                   <div>
                     <small>Студия</small>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                      {String(film.studio).split(',').map((val, idx) => (
-                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?studio=' + encodeURIComponent(val.trim()))}>
-                          {val.trim()}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
+                      {String(film.studio).split(",").map((v, i) => (
+                        <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?studio=" + encodeURIComponent(v.trim()))}>
+                          {v.trim()}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
           
-          {['admin', 'moderator'].includes(data.user?.role || '') && (
+          {["admin", "moderator"].includes(data.user?.role || "") ? (
             <button className="outline-btn manage-film" onClick={() => edit(film)}>
               <Pencil size={16} /> Редактировать материал
             </button>
-          )}
+          ) : null}
         </aside>
       </div>
       
@@ -1352,7 +1352,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
       <div className={`profile-cover header-style- effect-${u.profileEffect || 'none'} ${u.headerImage && u.headerStyle === 5 ? 'custom-header' : ''}`} style={u.headerImage && u.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${u.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={u.headerStyle || 1} data-frame={u.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
-        <span className="cover-label">MOVIE//GO · MEMBER PROFILE</span>
+        <span className="cover-label">moviemovie · MEMBER PROFILE</span>
         <div className="cover-orbit">✦</div>
         <div className="profile-cover-content">
           <div className="cover-main">
@@ -1816,12 +1816,12 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
 
 function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; edit: (f: FilmType | null) => void; }) {
   const [tab, setTab] = useState('films');
-  if (!['admin', 'moderator'].includes(data.user?.role || '')) return <div className="gate"><Shield size={40} /><h1>Доступ закрыт</h1><p>Этот раздел доступен только команде Movie//Go.</p><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>;
+  if (!['admin', 'moderator'].includes(data.user?.role || '')) return <div className="gate"><Shield size={40} /><h1>Доступ закрыт</h1><p>Этот раздел доступен только команде moviemovie.</p><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>;
   
   return (
     <>
       <div className="page-heading">
-        <div><span className="eyebrow">ЦЕНТР УПРАВЛЕНИЯ</span><h1>За кадром <em>Movie//Go.</em></h1><p>Управляй историями и заботься о нашем сообществе.</p></div>
+        <div><span className="eyebrow">ЦЕНТР УПРАВЛЕНИЯ</span><h1>За кадром <em>moviemovie.</em></h1><p>Управляй историями и заботься о нашем сообществе.</p></div>
         <button className="primary-btn" onClick={() => edit(null)}><Plus size={18} /> Добавить материал</button>
       </div>
       <div className="admin-stats">
@@ -1882,7 +1882,7 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
       const r = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: tab, email, password, username }) });
       const d = await r.json();
       if (!r.ok) notify(d.error || 'Ошибка входа');
-      else { await refresh(); notify(tab === 'login' ? 'С возвращением!' : 'Добро пожаловать в Movie//Go!'); close(); }
+      else { await refresh(); notify(tab === 'login' ? 'С возвращением!' : 'Добро пожаловать в moviemovie!'); close(); }
     } catch {
       notify('Ошибка соединения');
     } finally {
@@ -2039,7 +2039,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
       <div className={`profile-cover header-style- effect-${p.profileEffect || 'none'} ${p.headerImage && p.headerStyle === 5 ? 'custom-header' : ''}`} style={p.headerImage && p.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${p.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={p.headerStyle || 1} data-frame={p.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
-        <span className="cover-label">MOVIE//GO · ПРОФИЛЬ УЧАСТНИКА</span>
+        <span className="cover-label">moviemovie · ПРОФИЛЬ УЧАСТНИКА</span>
         <div className="cover-orbit">✦</div>
         <div className="profile-cover-content">
           <Avatar name={p.username} src={p.avatar} size={90} frame={p.avatarFrame} />
@@ -2677,7 +2677,7 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
       <div className="about-footer-note">
         <Sparkles size={18} />
         <div>
-          <h3>Movie//Go — это живой проект</h3>
+          <h3>moviemovie — это живой проект</h3>
           <p>Архитектура модульная и расширяемая. Каждый компонент задокументирован тегами [SECTION:NAME] для удобного поиска и редактирования. БД управляется Drizzle ORM — добавление новых таблиц через <code>npx drizzle-kit push</code>.</p>
         </div>
       </div>
