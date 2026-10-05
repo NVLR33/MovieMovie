@@ -889,8 +889,6 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
       
       <div className="detail-lower">
         <div className="detail-main">
-          
-          {/* БЛОК ОЦЕНКИ И СТАТИСТИКИ */}
           <div className="rating-panel-advanced">
             <div className="rating-selector-box">
               <span className="eyebrow">ТВОЙ ВЕРДИКТ</span>
@@ -900,16 +898,8 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                   const val = i + 1;
                   return (
                     <div key={i} className="star-wrapper">
-                      <button 
-                        className={`star-half left ${myRating >= val - 0.5 ? 'active' : ''}`} 
-                        onMouseEnter={() => setHover(val - 0.5)} 
-                        onClick={() => requireAuth(() => action({ action: 'rate', movieId: film.id, value: val - 0.5 }, 'Оценка сохранена'))} 
-                      />
-                      <button 
-                        className={`star-half right ${myRating >= val ? 'active' : ''}`} 
-                        onMouseEnter={() => setHover(val)} 
-                        onClick={() => requireAuth(() => action({ action: 'rate', movieId: film.id, value: val }, 'Оценка сохранена'))} 
-                      />
+                      <button className={`star-half left ${myRating >= val - 0.5 ? 'active' : ''}`} onMouseEnter={() => setHover(val - 0.5)} onClick={() => requireAuth(() => action({ action: 'rate', movieId: film.id, value: val - 0.5 }, 'Оценка сохранена'))} />
+                      <button className={`star-half right ${myRating >= val ? 'active' : ''}`} onMouseEnter={() => setHover(val)} onClick={() => requireAuth(() => action({ action: 'rate', movieId: film.id, value: val }, 'Оценка сохранена'))} />
                       <Star size={32} className={`base-star ${(hover || myRating) >= val ? 'filled' : (hover || myRating) >= val - 0.5 ? 'half' : ''}`} />
                     </div>
                   );
@@ -918,158 +908,119 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div className="rating-current-value">{hover || myRating || '—'} <span>/ 10</span></div>
             </div>
 
-            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА ГОЛОСОВ */}
+            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА: Полоски не улетают */}
             {film.ratingCount > 0 && (
               <div className="rating-stats-box" style={{ minWidth: 0 }}>
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
-                <div className="rating-histogram" style={{ minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div className="rating-histogram" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(score => {
                     const count = Number((film.ratingDist as any)[score] || 0) + Number((film.ratingDist as any)[score - 0.5] || 0);
                     const pct = film.ratingCount ? (count / film.ratingCount) * 100 : 0;
                     return (
-                      <div key={score} className="hist-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', minWidth: 0 }}>
+                      <div key={score} className="hist-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                         <span style={{ width: '16px', textAlign: 'right', flexShrink: 0, fontSize: '11px' }}>{score}</span>
-                        <div className="hist-bar-wrap" style={{ flex: 1, minWidth: 0, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden', position: 'relative' }}>
-                          <div className="hist-bar" style={{ width: `${pct}%`, height: '100%', background: 'var(--primary, #a855f7)', transition: 'width 0.5s ease' }} />
+                        <div className="hist-bar-wrap" style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden' }}>
+                          <div className="hist-bar" style={{ width: `${pct}%`, height: '100%', background: 'var(--primary, #a855f7)' }} />
                         </div>
                         <small style={{ width: '20px', textAlign: 'left', flexShrink: 0, fontSize: '11px', opacity: 0.5 }}>{count}</small>
                       </div>
                     );
                   })}
                 </div>
-                <div className="total-votes-count" style={{ marginTop: '12px', fontSize: '11px', opacity: 0.4, textAlign: 'right' }}>
-                  Всего голосов: {film.ratingCount}
-                </div>
+                <div className="total-votes-count">Всего голосов: {film.ratingCount}</div>
               </div>
             )}
           </div>
 
-          {/* КОММЕНТАРИИ (заглушка, чтобы не было ошибки неопределенной переменной) */}
-          <div className="comments-section" style={{ marginTop: '30px' }}>
-             {/* Если у тебя переменная комментариев называется иначе, замени её здесь */}
-             {!(film as any).comments?.length && <p className="muted" style={{ opacity: 0.5, fontSize: '14px' }}>Начни разговор первым!</p>}
+          <div className="comments-section">
+            {!movieComments.length && <p className="muted">Начни разговор первым!</p>}
           </div>
-
         </div>
 
-        {/* БОКОВАЯ ПАНЕЛЬ: ДЕТАЛИ */}
         <aside className="detail-side">
           <div className="info-panel-fancy">
-            <div className="info-panel-header">
-              <Sparkles size={18} /> 
-              <h3>Детали истории</h3>
-            </div>
+            <div className="info-panel-header"><Sparkles size={18} /> <h3>Детали истории</h3></div>
             <div className="info-grid">
-
-              {/* Режиссёр */}
+              
+              {/* Режиссёр с разделением */}
               <div className="info-item">
                 <span className="info-icon"><Users size={15} /></span>
                 <div>
                   <small>Режиссёр</small>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {(film.director || 'Неизвестно').split(',').map((val: string, idx: number) => {
-                      const item = val.trim();
-                      if (!item) return null;
-                      return (
-                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
-                          {item}
-                        </button>
-                      );
-                    })}
+                    {(film.director || 'Неизвестно').split(',').map((val: string, idx: number) => (
+                      <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(val.trim()))}>
+                        {val.trim()}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Год выпуска */}
               <div className="info-item">
                 <span className="info-icon"><CalendarDays size={15} /></span>
                 <div>
                   <small>Год выпуска</small>
-                  <button type="button" className="info-tag" onClick={() => go('/catalog?year=' + film.year)}>
-                    {film.year}
-                  </button>
+                  <button type="button" className="info-tag" onClick={() => go('/catalog?year=' + film.year)}>{film.year}</button>
                 </div>
               </div>
 
-              {/* Длительность */}
               <div className="info-item">
                 <span className="info-icon"><Clock3 size={15} /></span>
-                <div>
-                  <small>Длительность</small>
-                  <b style={{ color: '#fff', fontSize: '14px' }}>{film.duration} мин</b>
-                </div>
+                <div><small>Длительность</small><b>{film.duration} мин</b></div>
               </div>
 
-              {/* Страна */}
+              {/* Страна с разделением */}
               <div className="info-item">
                 <span className="info-icon"><Globe2 size={15} /></span>
                 <div>
                   <small>Страна</small>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {(film.country || 'Неизвестно').split(',').map((val: string, idx: number) => {
-                      const item = val.trim();
-                      if (!item) return null;
-                      return (
-                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
-                          {item}
-                        </button>
-                      );
-                    })}
+                    {(film.country || 'Неизвестно').split(',').map((val: string, idx: number) => (
+                      <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(val.trim()))}>
+                        {val.trim()}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Категория */}
+              {/* Категория с разделением */}
               <div className="info-item">
                 <span className="info-icon"><Film size={15} /></span>
                 <div>
                   <small>Категория</small>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {(film.category || '').split(',').map((val: string, idx: number) => {
-                      const item = val.trim();
-                      if (!item) return null;
-                      return (
-                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?category=' + encodeURIComponent(item))}>
-                          {item}
-                        </button>
-                      );
-                    })}
+                    {(film.category || '').split(',').map((val: string, idx: number) => (
+                      <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?category=' + encodeURIComponent(val.trim()))}>
+                        {val.trim()}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Студия */}
+              {/* Студия с разделением */}
               {film.studio && (
                 <div className="info-item">
                   <span className="info-icon"><Clapperboard size={15} /></span>
                   <div>
                     <small>Студия</small>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                      {film.studio.split(',').map((val: string, idx: number) => {
-                        const item = val.trim();
-                        if (!item) return null;
-                        return (
-                          <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?studio=' + encodeURIComponent(item))}>
-                            {item}
-                          </button>
-                        );
-                      })}
+                      {film.studio.split(',').map((val: string, idx: number) => (
+                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?studio=' + encodeURIComponent(val.trim()))}>
+                          {val.trim()}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
               )}
-
             </div>
           </div>
-
+          
           {['admin', 'moderator'].includes(data.user?.role || '') && (
-            <button 
-              className="outline-btn manage-film" 
-              style={{ marginTop: '20px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
-              onClick={() => edit(film)}
-            >
-              <Pencil size={16} /> Редактировать материал
-            </button>
+            <button className="outline-btn manage-film" onClick={() => edit(film)}><Pencil size={16} /> Редактировать материал</button>
           )}
         </aside>
       </div>
