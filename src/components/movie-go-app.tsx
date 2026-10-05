@@ -962,20 +962,120 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
           <div className="info-panel-fancy">
             <div className="info-panel-header"><Sparkles size={18} /> <h3>Детали истории</h3></div>
             <div className="info-grid">
-              <div className="info-item"><span className="info-icon"><Users size={15} /></span><div><small>Режиссёр</small><button type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(film.director || ''))}>{film.director || 'Неизвестно'}</button></div></div>
-              <div className="info-item"><span className="info-icon"><CalendarDays size={15} /></span><div><small>Год выпуска</small><button type="button" className="info-tag" onClick={() => go('/catalog?year=' + film.year)}>{film.year}</button></div></div>
-              <div className="info-item"><span className="info-icon"><Clock3 size={15} /></span><div><small>Длительность</small><b>{film.duration} мин</b></div></div>
-              {film.episodes && <div className="info-item"><span className="info-icon"><Layers3 size={15} /></span><div><small>Кол-во серий</small><b>{film.episodes}</b></div></div>}
-              <div className="info-item"><span className="info-icon"><Globe2 size={15} /></span><div><small>Страна</small><button type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(film.country || ''))}>{film.country || 'Неизвестно'}</button></div></div>
-              <div className="info-item"><span className="info-icon"><Film size={15} /></span><div><small>Категория</small><button type="button" className="info-tag" onClick={() => go('/catalog?category=' + encodeURIComponent(film.category))}>{film.category}</button></div></div>
-              {film.studio && <div className="info-item"><span className="info-icon"><Clapperboard size={15} /></span><div><small>Студия</small><button type="button" className="info-tag" onClick={() => go('/catalog?studio=' + encodeURIComponent(film.studio || ''))}>{film.studio}</button></div></div>}
+
+              {/* Режиссёр */}
+              <div className="info-item">
+                <span className="info-icon"><Users size={15} /></span>
+                <div>
+                  <small>Режиссёр</small>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {(film.director || 'Неизвестно').split(',').map((val, idx) => {
+                      const item = val.trim();
+                      if (!item) return null;
+                      return (
+                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Год выпуска */}
+              <div className="info-item">
+                <span className="info-icon"><CalendarDays size={15} /></span>
+                <div>
+                  <small>Год выпуска</small>
+                  <button type="button" className="info-tag" onClick={() => go('/catalog?year=' + film.year)}>{film.year}</button>
+                </div>
+              </div>
+
+              {/* Длительность */}
+              <div className="info-item">
+                <span className="info-icon"><Clock3 size={15} /></span>
+                <div>
+                  <small>Длительность</small>
+                  <b>{film.duration} мин</b>
+                </div>
+              </div>
+
+              {/* Серии */}
+              {film.episodes && (
+                <div className="info-item">
+                  <span className="info-icon"><Layers3 size={15} /></span>
+                  <div>
+                    <small>Кол-во серий</small>
+                    <b>{film.episodes}</b>
+                  </div>
+                </div>
+              )}
+
+              {/* Страна */}
+              <div className="info-item">
+                <span className="info-icon"><Globe2 size={15} /></span>
+                <div>
+                  <small>Страна</small>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {(film.country || 'Неизвестно').split(',').map((val, idx) => {
+                      const item = val.trim();
+                      if (!item) return null;
+                      return (
+                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Категория */}
+              <div className="info-item">
+                <span className="info-icon"><Film size={15} /></span>
+                <div>
+                  <small>Категория</small>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {(film.category || '').split(',').map((val, idx) => {
+                      const item = val.trim();
+                      if (!item) return null;
+                      return (
+                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?category=' + encodeURIComponent(item))}>
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Студия */}
+              {film.studio && (
+                <div className="info-item">
+                  <span className="info-icon"><Clapperboard size={15} /></span>
+                  <div>
+                    <small>Студия</small>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                      {film.studio.split(',').map((val, idx) => {
+                        const item = val.trim();
+                        if (!item) return null;
+                        return (
+                          <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?studio=' + encodeURIComponent(item))}>
+                            {item}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
           {['admin', 'moderator'].includes(data.user?.role || '') && (
             <button className="outline-btn manage-film" onClick={() => edit(film)}><Pencil size={16} /> Редактировать материал</button>
           )}
         </aside>
-      </div>
       
       {related.length > 0 && (
         <section className="home-section">
