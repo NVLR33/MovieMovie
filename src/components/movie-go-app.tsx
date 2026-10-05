@@ -949,6 +949,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
       <div className="detail-lower">
         <div className="detail-main">
           
+          {/* КАРТОЧКА ОЦЕНКИ И СТАТИСТИКИ ГОЛОСОВ */}
           <div className="rating-panel-advanced">
             <div className="rating-selector-box">
               <span className="eyebrow">ТВОЙ ВЕРДИКТ</span>
@@ -976,20 +977,20 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div className="rating-current-value">{hover || myRating || "—"} <span>/ 10</span></div>
             </div>
 
-            {/* СТАТИСТИКА: Исправленные полоски */}
+            {/* СТАТИСТИКА ГОЛОСОВ (Полоски зафиксированы) */}
             {(film.ratingCount > 0) ? (
-              <div className="rating-stats-box" style={{ minWidth: 0 }}>
+              <div className="rating-stats-box" style={{ minWidth: 0, overflow: "hidden" }}>
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
-                <div className="rating-histogram" style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div className="rating-histogram" style={{ width: "100%", minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" }}>
                   {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((score) => {
                     const dist = film.ratingDist || {};
                     const count = Number(dist[score] || 0) + Number(dist[score - 0.5] || 0);
                     const pct = film.ratingCount ? (count / film.ratingCount) * 100 : 0;
                     return (
-                      <div key={score} className="hist-row" style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+                      <div key={score} className="hist-row" style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", minWidth: 0 }}>
                         <span style={{ width: "16px", textAlign: "right", flexShrink: 0, fontSize: "11px" }}>{score}</span>
-                        <div className="hist-bar-wrap" style={{ flex: 1, height: "6px", background: "rgba(255,255,255,0.08)", borderRadius: "10px", overflow: "hidden" }}>
-                          <div className="hist-bar" style={{ width: (pct || 0) + "%", height: "100%", background: "var(--primary, #a855f7)" }} />
+                        <div className="hist-bar-wrap" style={{ flex: "1 1 0%", minWidth: 0, height: "6px", background: "rgba(255,255,255,0.08)", borderRadius: "10px", overflow: "hidden", position: "relative" }}>
+                          <div className="hist-bar" style={{ width: (pct || 0) + "%", height: "100%", background: "var(--primary, #a855f7)", borderRadius: "10px" }} />
                         </div>
                         <small style={{ width: "20px", textAlign: "left", flexShrink: 0, fontSize: "11px", opacity: 0.5 }}>{count}</small>
                       </div>
@@ -1001,14 +1002,9 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
             ) : null}
           </div>
 
-          {/* Исправленный блок комментариев */}
-          <div className="comments-section">
-            {(!movieComments || movieComments.length === 0) ? (
-              <p className="muted">Начни разговор первым!</p>
-            ) : null}
-          </div>
         </div>
 
+        {/* БОКОВАЯ ПАНЕЛЬ С ДЕТАЛЯМИ (Единственная) */}
         <aside className="detail-side">
           <div className="info-panel-fancy">
             <div className="info-panel-header">
@@ -1032,6 +1028,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                 </div>
               </div>
 
+              {/* Год выпуска */}
               <div className="info-item">
                 <span className="info-icon"><CalendarDays size={15} /></span>
                 <div>
@@ -1040,10 +1037,19 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                 </div>
               </div>
 
+              {/* Длительность */}
               <div className="info-item">
                 <span className="info-icon"><Clock3 size={15} /></span>
                 <div><small>Длительность</small><b>{film.duration} мин</b></div>
               </div>
+
+              {/* Серии (если есть) */}
+              {film.episodes ? (
+                <div className="info-item">
+                  <span className="info-icon"><Layers3 size={15} /></span>
+                  <div><small>Кол-во серий</small><b>{film.episodes}</b></div>
+                </div>
+              ) : null}
 
               {/* Страна */}
               <div className="info-item">
