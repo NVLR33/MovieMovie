@@ -889,6 +889,8 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
       
       <div className="detail-lower">
         <div className="detail-main">
+          
+          {/* БЛОК ОЦЕНКИ И СТАТИСТИКИ ГОЛОСОВ */}
           <div className="rating-panel-advanced">
             <div className="rating-selector-box">
               <span className="eyebrow">ТВОЙ ВЕРДИКТ</span>
@@ -908,7 +910,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div className="rating-current-value">{hover || myRating || '—'} <span>/ 10</span></div>
             </div>
 
-            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА ГОЛОСОВ (Полоски больше не вылетают) */}
+            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА ГОЛОСОВ */}
             {film.ratingCount > 0 && (
               <div className="rating-stats-box" style={{ minWidth: 0, overflow: 'hidden' }}>
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
@@ -932,7 +934,11 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
             )}
           </div>
 
-          {/* Здесь продолжается твоя секция обсуждения / комментариев... */}
+          {/* БЛОК ОБСУЖДЕНИЯ / КОММЕНТАРИЕВ */}
+          <div className="comments-section">
+            {!movieComments.length && <p className="muted">Начни разговор первым!</p>}
+          </div>
+
         </div>
 
         {/* ИСПРАВЛЕННЫЕ ДЕТАЛИ ИСТОРИИ (Теги разделены по запятой) */}
