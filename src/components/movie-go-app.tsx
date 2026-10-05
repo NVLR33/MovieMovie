@@ -908,18 +908,21 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div className="rating-current-value">{hover || myRating || '—'} <span>/ 10</span></div>
             </div>
 
+            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА ГОЛОСОВ (Полоски больше не вылетают) */}
             {film.ratingCount > 0 && (
-              <div className="rating-stats-box">
+              <div className="rating-stats-box" style={{ minWidth: 0, overflow: 'hidden' }}>
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
-                <div className="rating-histogram">
+                <div className="rating-histogram" style={{ minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(score => {
                     const count = Number((film.ratingDist as any)[score] || 0) + Number((film.ratingDist as any)[score - 0.5] || 0);
                     const pct = film.ratingCount ? (count / film.ratingCount) * 100 : 0;
                     return (
-                      <div key={score} className="hist-row">
-                        <span>{score}</span>
-                        <div className="hist-bar-wrap"><div className="hist-bar" style={{ width: `${pct}%` }} /></div>
-                        <small>{count}</small>
+                      <div key={score} className="hist-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', minWidth: 0 }}>
+                        <span style={{ width: '16px', textAlign: 'right', flexShrink: 0 }}>{score}</span>
+                        <div className="hist-bar-wrap" style={{ flex: 1, minWidth: 0, overflow: 'hidden', position: 'relative' }}>
+                          <div className="hist-bar" style={{ width: `${pct}%` }} />
+                        </div>
+                        <small style={{ width: '16px', textAlign: 'left', flexShrink: 0 }}>{count}</small>
                       </div>
                     );
                   })}
@@ -928,6 +931,138 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               </div>
             )}
           </div>
+
+          {/* Здесь продолжается твоя секция обсуждения / комментариев... */}
+        </div>
+
+        {/* ИСПРАВЛЕННЫЕ ДЕТАЛИ ИСТОРИИ (Теги разделены по запятой) */}
+        <aside className="detail-side">
+          <div className="info-panel-fancy">
+            <div className="info-panel-header">
+              <Sparkles size={18} /> 
+              <h3>Детали истории</h3>
+            </div>
+            <div className="info-grid">
+
+              {/* Режиссёр */}
+              <div className="info-item">
+                <span className="info-icon"><Users size={15} /></span>
+                <div>
+                  <small>Режиссёр</small>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {(film.director || 'Неизвестно').split(',').map((val: string, idx: number) => {
+                      const item = val.trim();
+                      if (!item) return null;
+                      return (
+                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Год выпуска */}
+              <div className="info-item">
+                <span className="info-icon"><CalendarDays size={15} /></span>
+                <div>
+                  <small>Год выпуска</small>
+                  <button type="button" className="info-tag" onClick={() => go('/catalog?year=' + film.year)}>
+                    {film.year}
+                  </button>
+                </div>
+              </div>
+
+              {/* Длительность */}
+              <div className="info-item">
+                <span className="info-icon"><Clock3 size={15} /></span>
+                <div>
+                  <small>Длительность</small>
+                  <b>{film.duration} мин</b>
+                </div>
+              </div>
+
+              {/* Кол-во серий */}
+              {film.episodes && (
+                <div className="info-item">
+                  <span className="info-icon"><Layers3 size={15} /></span>
+                  <div>
+                    <small>Кол-во серий</small>
+                    <b>{film.episodes}</b>
+                  </div>
+                </div>
+              )}
+
+              {/* Страна */}
+              <div className="info-item">
+                <span className="info-icon"><Globe2 size={15} /></span>
+                <div>
+                  <small>Страна</small>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {(film.country || 'Неизвестно').split(',').map((val: string, idx: number) => {
+                      const item = val.trim();
+                      if (!item) return null;
+                      return (
+                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Категория */}
+              <div className="info-item">
+                <span className="info-icon"><Film size={15} /></span>
+                <div>
+                  <small>Категория</small>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {(film.category || '').split(',').map((val: string, idx: number) => {
+                      const item = val.trim();
+                      if (!item) return null;
+                      return (
+                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?category=' + encodeURIComponent(item))}>
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Студия */}
+              {film.studio && (
+                <div className="info-item">
+                  <span className="info-icon"><Clapperboard size={15} /></span>
+                  <div>
+                    <small>Студия</small>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                      {film.studio.split(',').map((val: string, idx: number) => {
+                        const item = val.trim();
+                        if (!item) return null;
+                        return (
+                          <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?studio=' + encodeURIComponent(item))}>
+                            {item}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {['admin', 'moderator'].includes(data.user?.role || '') && (
+            <button className="outline-btn manage-film" onClick={() => edit(film)}>
+              <Pencil size={16} /> Редактировать материал
+            </button>
+          )}
+        </aside>
+      </div>
 
           <div className="discussion">
             <SectionTitle kicker="ДЕЛИСЬ ВПЕЧАТЛЕНИЯМИ" title={`Обсуждение · ${movieComments.length}`} />
