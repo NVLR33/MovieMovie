@@ -917,29 +917,27 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div className="rating-current-value">{hover || myRating || '—'} <span>/ 10</span></div>
             </div>
 
-            {/* ИСПРАВЛЕННАЯ СТАТИСТИКА: Полоски заперты внутри */}
-            {film.ratingCount > 0 ? (
-              <div className="rating-stats-box" style={{ minWidth: "0px", overflow: "hidden" }}>
+            {film.ratingCount > 0 && (
+              <div className="rating-stats-box" style={{ minWidth: 0 }}>
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
-                <div className="rating-histogram" style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((score) => {
+                <div className="rating-histogram" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(score => {
                     const count = Number((film.ratingDist as any)[score] || 0) + Number((film.ratingDist as any)[score - 0.5] || 0);
                     const pct = film.ratingCount ? (count / film.ratingCount) * 100 : 0;
                     return (
-                      <div key={score} className="hist-row" style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
-                        <span style={{ width: "16px", textAlign: "right", flexShrink: 0, fontSize: "11px" }}>{score}</span>
-                        <div className="hist-bar-wrap" style={{ flexGrow: 1, flexShrink: 1, flexBasis: "0%", height: "6px", background: "rgba(255,255,255,0.08)", borderRadius: "10px", overflow: "hidden" }}>
-                          <div className="hist-bar" style={{ width: pct + "%", height: "100%", background: "var(--primary, #a855f7)" }} />
+                      <div key={score} className="hist-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', minWidth: 0 }}>
+                        <span style={{ width: '16px', textAlign: 'right', flexShrink: 0, fontSize: '11px' }}>{score}</span>
+                        <div className="hist-bar-wrap" style={{ flex: 1, minWidth: 0, height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden', position: 'relative' }}>
+                          <div className="hist-bar" style={{ width: `${pct}%`, height: '100%', background: 'var(--primary, #a855f7)' }} />
                         </div>
-                        <small style={{ width: "20px", textAlign: "left", flexShrink: 0, fontSize: "11px", opacity: 0.5 }}>{count}</small>
+                        <small style={{ width: '20px', textAlign: 'left', flexShrink: 0, fontSize: '11px', opacity: 0.5 }}>{count}</small>
                       </div>
                     );
                   })}
                 </div>
                 <div className="total-votes-count">Всего голосов: {film.ratingCount}</div>
               </div>
-            ) : null}
-          </div>
+            )}
 
           <div className="comments-section">
             {!(film as any).comments?.length ? (
