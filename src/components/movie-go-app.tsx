@@ -41,10 +41,32 @@ const tone = (r: number) => r >= 8.5 ? 'gold' : r >= 7 ? 'teal' : r >= 5 ? 'blue
 const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
 function initials(s: string) { return s.slice(0, 2).toUpperCase(); }
 function titleFor(user: User | null, watches: number) { if (!user) return 'Гость'; if (watches >= 30) return 'Легенда экрана'; if (watches >= 15) return 'Мастер кадров'; if (watches >= 5) return 'Киноискатель'; return 'Начинающий зритель'; }
+
 function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: string | null; size?: number; frame?: string | null; }) {
   return (
     <span className={`avatar avatar-${frame || 'none'}`} style={{ width: size, height: size, fontSize: size * 0.28 }}>
       {src ? <img src={src} alt={name} /> : initials(name)}
+    </span>
+  );
+}
+
+/* --- БРЕНД: НОВЫЙ ЛОГОТИП "moviemovie" (movie над movie) --- */
+function BrandWordmark({ size = 15, align = 'left' }: { size?: number; align?: 'left' | 'center'; }) {
+  return (
+    <span
+      className="brand-wordmark-stack"
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        lineHeight: 1.02,
+        fontWeight: 800,
+        letterSpacing: '-0.02em',
+        fontSize: size,
+        textAlign: align,
+      }}
+    >
+      <span className="brand-wordmark-top" style={{ opacity: 1 }}>movie</span>
+      <span className="brand-wordmark-bottom" style={{ opacity: 0.55, marginTop: Math.max(1, Math.round(size * 0.08)) }}>movie</span>
     </span>
   );
 }
@@ -180,7 +202,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="side-brand" onClick={() => go('/')}>
           <span className="brand-mark"><Clapperboard size={21} strokeWidth={2.4} /></span>
-          <span>movie<span className="brand-slash">{"//"}</span>go</span>
+          <BrandWordmark size={17} />
         </div>
         <div className="side-scroll">
           <div className="nav-group-label">{en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ'}</div>
@@ -197,14 +219,13 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
           <div className="nav-group-label section-gap">{en ? 'COMMUNITY' : 'СООБЩЕСТВО'}</div>
           <nav className="nav-list">
             {nav.slice(4).map(n => (
-              <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => n.id === 'chat' ? requireAuth(() => go(n.url)) : go(n.url)}>
+              <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
                 <n.icon size={19} />
                 <span>{n.label}</span>
-                {n.id === 'chat' && data.unreadMessages > 0 && <small>{data.unreadMessages}</small>}
               </button>
             ))}
           </nav>
-          
+
           <div className="nav-group-label section-gap">{en ? 'PERSONAL' : 'ЛИЧНОЕ'}</div>
           <nav className="nav-list">
             <button className={`nav-item ${active === 'profile' ? 'active' : ''}`} onClick={() => data.user ? go('/profile') : setAuthOpen(true)}>
@@ -278,7 +299,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
                         <b>{f.title}</b>
                         <small>{f.year} · {f.category}</small>
                       </div>
-                      <span className="hot-item-rating">{f.rating.toFixed(1)}</span>
+                      <span className="hot-item-rating">{(f.rating || 0).toFixed(1)}</span>
                     </button>
                   )) : <div className="hot-search-empty">Ничего не найдено</div>
                 })()}
@@ -373,7 +394,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
         </main>
         
         <footer className="footer">
-          <div className="footer-logo">movie<span>{"//"}</span>go</div>
+          <div className="footer-logo"><BrandWordmark size={20} /></div>
           <p>Твоя история. Твоё кино. Твоя вселенная.</p>
           <span>Сделано с любовью к кино · 2026</span>
         </footer>
@@ -405,10 +426,16 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
                     </div>
                   ))
                 ) : (
-                  <div className="strip-winner">
-                    <div className="winner-glow" />
-                    <img src={image(data.films.find(f => f.title === (rouletteCategory === 'Все' ? data.films : data.films.filter(x => x.category === rouletteCategory))[rouletteIndex]?.title) || data.films[0])} alt="" />
-                  </div>
+                  (() => {
+                    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(x => x.category === rouletteCategory);
+                    const winner = pool[rouletteIndex] || data.films[0];
+                    return (
+                      <div className="strip-winner">
+                        <div className="winner-glow" />
+                        <img src={image(winner)} alt="" />
+                      </div>
+                    );
+                  })()
                 )}
               </div>
               <div className="roulette-pointer"><ChevronDown size={24} /></div>
@@ -502,7 +529,9 @@ function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: strin
         <p>{film.year} <span>·</span> {film.category} <span>·</span> {['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(film.category) && film.episodes ? `${film.episodes} сер.` : `${film.duration} мин`}</p>
         <div className="card-tags">
           {primaryGenre && <button type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(primaryGenre)); }}>{primaryGenre}</button>}
-          {film.studio && <button type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(film.studio || '')); }}>{film.studio}</button>}
+          {film.studio && film.studio.split(',').map((st, i) => (
+            <button key={i} type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(st.trim())); }}>{st.trim()}</button>
+          ))}
         </div>
       </div>
     </div>
@@ -639,7 +668,7 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
       )}
 
       <div className="editorial-row">
-        <div className="editorial-feature" onClick={() => go('/movie/' + films[2]?.id)} style={{ backgroundImage: `linear-gradient(90deg,rgba(10,12,19,.94),rgba(10,12,19,.55)),url('${films[2]?.poster}')` }}>
+        <div className="editorial-feature" onClick={() => films[2] && go('/movie/' + films[2].id)} style={{ backgroundImage: `linear-gradient(90deg,rgba(10,12,19,.94),rgba(10,12,19,.55)),url('${films[2]?.poster || ''}')` }}>
           <div className="editorial-icon"><Sparkles size={21} /></div>
           <span className="eyebrow">{en ? 'EDITOR’S PICK' : 'ВЫБОР РЕДАКЦИИ'}</span>
           <h3>{en ? <>Stories that<br />stay with you</> : <>Истории, которые<br />остаются с тобой</>}</h3>
@@ -681,14 +710,14 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
             { tag: 'САМЫЙ СПОРНЫЙ', icon: '↘', film: [...films].sort((a, b) => a.rating - b.rating)[0], kind: 'worst', caption: 'А что скажешь ты?' },
             { tag: 'СВЕЖЕЕ ПОПОЛНЕНИЕ', icon: '＋', film: [...films].sort((a, b) => b.year - a.year)[0], kind: 'new', caption: 'Недавно добавлено в каталог' },
             { tag: 'ВЫСОКИЙ РЕЙТИНГ', icon: '★', film: [...films].sort((a, b) => b.rating - a.rating)[1], kind: 'rated', caption: 'Рекомендовано сообществом' }
-          ].map((item, i) => (
-            <button key={i} className={`pulse-card pulse-${item.kind}`} onClick={() => go('/movie/' + item.film.id)}>
-              <img src={item.film.poster} alt="" />
+          ].filter(item => item.film).map((item, i) => (
+            <button key={i} className={`pulse-card pulse-${item.kind}`} onClick={() => go('/movie/' + item.film!.id)}>
+              <img src={item.film!.poster} alt="" />
               <div>
                 <span className="eyebrow">{item.icon} {item.tag}</span>
-                <h3>{item.film.title}</h3>
+                <h3>{item.film!.title}</h3>
                 <p>{item.caption}</p>
-                <b><Star size={13} fill="currentColor" /> {item.film.rating.toFixed(1)} <ArrowUpRight size={16} /></b>
+                <b><Star size={13} fill="currentColor" /> {item.film!.rating.toFixed(1)} <ArrowUpRight size={16} /></b>
               </div>
             </button>
           ))}
@@ -845,9 +874,11 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
   const saved = data.bookmarks.some(b => b.movieId === film.id);
   const myRating = data.ratings.find(r => r.movieId === film.id)?.value || 0;
   const movieComments = data.comments.filter(c => c.movieId === film.id);
+  const topComments = movieComments.filter(c => !c.parentId);
   const related = data.films.filter(f => f.id !== film.id && (f.genre.split(',').some(g => film.genre.includes(g.trim())))).slice(0, 5);
 
   const submit = async () => {
+    if (!comment.trim()) return;
     if (await action({ action: 'comment', movieId: film.id, text: comment, parentId: reply }, 'Комментарий опубликован')) {
       setComment('');
       setReply(null);
@@ -855,8 +886,9 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
   };
 
   return (
-    <>
+    <div className="movie-detail-page">
       <button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
+
       <div className={`detail-hero tone-${tone(film.rating)}`} style={{ backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` }}>
         <div className="detail-poster"><img src={image(film)} alt={film.title} /></div>
         <div className="detail-intro">
@@ -871,7 +903,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
           <p className="detail-description">{film.description}</p>
           <div className="genre-list">
             {film.genre.split(',').map(g => <button key={g} onClick={() => go('/catalog?search=' + encodeURIComponent(g.trim()))}>{g.trim()}</button>)}
-            {film.studio && <button onClick={() => go('/catalog?search=' + encodeURIComponent(film.studio || ''))}>{film.studio}</button>}
+            {film.studio && film.studio.split(',').map((st, i) => <button key={i} onClick={() => go('/catalog?search=' + encodeURIComponent(st.trim()))}>{st.trim()}</button>)}
           </div>
           <div className="detail-actions">
             <button className={data.watches.some(w => w.movieId === film.id) ? 'outline-btn watched-done' : 'primary-btn'} onClick={() => requireAuth(() => action({ action: 'watch', movieId: film.id }, 'Просмотр добавлен'))}>
@@ -886,10 +918,10 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
           {film.watchUrl && <a className="watch-external" href={film.watchUrl} target="_blank" rel="noopener noreferrer"><MonitorPlay size={17} /> Где посмотреть <ExternalLink size={15} /></a>}
         </div>
       </div>
-      
+
       <div className="detail-lower">
         <div className="detail-main">
-          
+
           <div className="rating-panel-advanced">
             <div className="rating-selector-box">
               <span className="eyebrow">ТВОЙ ВЕРДИКТ</span>
@@ -899,15 +931,15 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                   const val = i + 1;
                   return (
                     <div key={i} className="star-wrapper">
-                      <button 
-                        className={`star-half left ${myRating >= val - 0.5 ? "active" : ""}`} 
-                        onMouseEnter={() => setHover(val - 0.5)} 
-                        onClick={() => requireAuth(() => action({ action: "rate", movieId: film.id, value: val - 0.5 }, "Оценка сохранена"))} 
+                      <button
+                        className={`star-half left ${myRating >= val - 0.5 ? "active" : ""}`}
+                        onMouseEnter={() => setHover(val - 0.5)}
+                        onClick={() => requireAuth(() => action({ action: "rate", movieId: film.id, value: val - 0.5 }, "Оценка сохранена"))}
                       />
-                      <button 
-                        className={`star-half right ${myRating >= val ? "active" : ""}`} 
-                        onMouseEnter={() => setHover(val)} 
-                        onClick={() => requireAuth(() => action({ action: "rate", movieId: film.id, value: val }, "Оценка сохранена"))} 
+                      <button
+                        className={`star-half right ${myRating >= val ? "active" : ""}`}
+                        onMouseEnter={() => setHover(val)}
+                        onClick={() => requireAuth(() => action({ action: "rate", movieId: film.id, value: val }, "Оценка сохранена"))}
                       />
                       <Star size={32} className={`base-star ${(hover || myRating) >= val ? "filled" : (hover || myRating) >= val - 0.5 ? "half" : ""}`} />
                     </div>
@@ -917,7 +949,6 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div className="rating-current-value">{hover || myRating || "—"} <span>/ 10</span></div>
             </div>
 
-            {/* СТАТИСТИКА ГОЛОСОВ (ИСПРАВЛЕННАЯ) */}
             {film.ratingCount > 0 ? (
               <div className="rating-stats-box" style={{ minWidth: "0px", overflow: "hidden" }}>
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
@@ -942,112 +973,6 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
             ) : null}
           </div>
 
-          {/* СЕКЦИЯ КОММЕНТАРИЕВ */}
-          <section className="discussion-block">
-            {/* Если у вас дальше идет рендер самих комментариев, убедитесь, что он внутри этого section */}
-            {!movieComments.length ? (
-              <p className="muted">Начни разговор первым!</p>
-            ) : null}
-          </section>
-        </div>
-
-        {/* БОКОВАЯ ПАНЕЛЬ (ИСПРАВЛЕННЫЕ ТЕГИ) */}
-        <aside className="detail-side">
-          <div className="info-panel-fancy">
-            <div className="info-panel-header">
-              <Sparkles size={18} /> 
-              <h3>Детали истории</h3>
-            </div>
-            <div className="info-grid">
-              
-              <div className="info-item">
-                <span className="info-icon"><Users size={15} /></span>
-                <div>
-                  <small>Режиссёр</small>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
-                    {(film.director || "Неизвестно").split(",").map((v, i) => (
-                      <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?search=" + encodeURIComponent(v.trim()))}>
-                        {v.trim()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="info-item">
-                <span className="info-icon"><CalendarDays size={15} /></span>
-                <div>
-                  <small>Год выпуска</small>
-                  <button type="button" className="info-tag" onClick={() => go("/catalog?year=" + film.year)}>{film.year}</button>
-                </div>
-              </div>
-
-              <div className="info-item">
-                <span className="info-icon"><Clock3 size={15} /></span>
-                <div><small>Длительность</small><b>{film.duration} мин</b></div>
-              </div>
-
-              <div className="info-item">
-                <span className="info-icon"><Globe2 size={15} /></span>
-                <div>
-                  <small>Страна</small>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
-                    {(film.country || "Неизвестно").split(",").map((v, i) => (
-                      <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?search=" + encodeURIComponent(v.trim()))}>
-                        {v.trim()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="info-item">
-                <span className="info-icon"><Film size={15} /></span>
-                <div>
-                  <small>Категория</small>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
-                    {(film.category || "").split(",").map((v, i) => (
-                      <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?category=" + encodeURIComponent(v.trim()))}>
-                        {v.trim()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {film.studio ? (
-                <div className="info-item">
-                  <span className="info-icon"><Clapperboard size={15} /></span>
-                  <div>
-                    <small>Студия</small>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
-                      {film.studio.split(",").map((v, i) => (
-                        <button key={i} type="button" className="info-tag" onClick={() => go("/catalog?studio=" + encodeURIComponent(v.trim()))}>
-                          {v.trim()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-            </div>
-          </div>
-          
-          {(data.user && ["admin", "moderator"].includes(data.user.role)) ? (
-            <button className="outline-btn manage-film" onClick={() => edit(film)}>
-              <Pencil size={16} /> Редактировать материал
-            </button>
-          ) : null}
-        </aside>
-      </div>
-    );
-}
-
-// Конец функции ViewMovie, дальше идет CommentRow
-
-function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react: () => void }) {
-      
           <div className="discussion">
             <SectionTitle kicker="ДЕЛИСЬ ВПЕЧАТЛЕНИЯМИ" title={`Обсуждение · ${movieComments.length}`} />
             <div className="comment-compose">
@@ -1055,25 +980,38 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
               <div>
                 <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder={reply ? 'Напиши ответ...' : 'Что ты думаешь об этой истории? Напиши свой отзыв...'} />
                 <div className="emoji-bar">
-                  {['😍', '🔥', '👏', '😂', '😢', '🤯', '💀', '👎', '❤️', '🍿', '⭐', '💯', '🎬', '😱', '🤔', '👀', '✨', '🏆'].map(e => <button key={e} type="button" onClick={() => setComment(c => c + e)}>{e}</button>)}
+                  {['😍', '🔥', '👏', '😂', '😢', '🤯', '💀', '👎', '❤️', '🍿', '⭐', '💯', '🎬', '😱', '🤔', '👀', '✨', '🏆'].map(e => (
+                    <button key={e} type="button" onClick={() => setComment(prev => prev + e)}>{e}</button>
+                  ))}
                 </div>
                 <div className="compose-footer">
-                  <span>{reply ? `Ответ на комментарий #${reply}` : 'Будь добрым к другим зрителям ✨'} {reply && <button onClick={() => setReply(null)}>Отмена</button>}</span>
+                  <span>
+                    {reply ? `Ответ на комментарий #${reply}` : 'Будь добрым к другим зрителям ✨'}
+                    {reply && <button onClick={() => setReply(null)}>Отмена</button>}
+                  </span>
                   <button className="primary-btn small" onClick={() => requireAuth(submit)}><Send size={15} /> Опубликовать</button>
                 </div>
               </div>
             </div>
-            {movieComments.filter(c => !c.parentId).map(c => (
+
+            {topComments.length ? topComments.map(c => (
               <div key={c.id}>
-                <CommentRow c={c} reply={() => { setReply(c.id); document.querySelector('.comment-compose')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} react={() => requireAuth(() => action({ action: 'react', commentId: c.id }))} />
+                <CommentRow
+                  c={c}
+                  reply={() => { setReply(c.id); document.querySelector('.comment-compose')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
+                  react={() => requireAuth(() => action({ action: 'react', commentId: c.id }))}
+                />
                 {movieComments.filter(r => r.parentId === c.id).map(r => (
                   <div className="comment-reply" key={r.id}>
-                    <CommentRow c={r} reply={() => { setReply(c.id); }} react={() => requireAuth(() => action({ action: 'react', commentId: r.id }))} />
+                    <CommentRow
+                      c={r}
+                      reply={() => { setReply(c.id); document.querySelector('.comment-compose')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
+                      react={() => requireAuth(() => action({ action: 'react', commentId: r.id }))}
+                    />
                   </div>
                 ))}
               </div>
-            ))}
-            {!movieComments.length && <p className="muted">Начни разговор первым!</p>}
+            )) : <p className="muted">Начни разговор первым!</p>}
           </div>
         </div>
 
@@ -1082,7 +1020,6 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
             <div className="info-panel-header"><Sparkles size={18} /> <h3>Детали истории</h3></div>
             <div className="info-grid">
 
-              {/* Режиссёр */}
               <div className="info-item">
                 <span className="info-icon"><Users size={15} /></span>
                 <div>
@@ -1101,7 +1038,6 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
                 </div>
               </div>
 
-              {/* Год выпуска */}
               <div className="info-item">
                 <span className="info-icon"><CalendarDays size={15} /></span>
                 <div>
@@ -1110,7 +1046,6 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
                 </div>
               </div>
 
-              {/* Длительность */}
               <div className="info-item">
                 <span className="info-icon"><Clock3 size={15} /></span>
                 <div>
@@ -1119,7 +1054,6 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
                 </div>
               </div>
 
-              {/* Серии */}
               {film.episodes && (
                 <div className="info-item">
                   <span className="info-icon"><Layers3 size={15} /></span>
@@ -1130,7 +1064,6 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
                 </div>
               )}
 
-              {/* Страна */}
               <div className="info-item">
                 <span className="info-icon"><Globe2 size={15} /></span>
                 <div>
@@ -1149,7 +1082,6 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
                 </div>
               </div>
 
-              {/* Категория */}
               <div className="info-item">
                 <span className="info-icon"><Film size={15} /></span>
                 <div>
@@ -1168,7 +1100,6 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
                 </div>
               </div>
 
-              {/* Студия */}
               {film.studio && (
                 <div className="info-item">
                   <span className="info-icon"><Clapperboard size={15} /></span>
@@ -1195,7 +1126,8 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
             <button className="outline-btn manage-film" onClick={() => edit(film)}><Pencil size={16} /> Редактировать материал</button>
           )}
         </aside>
-      
+      </div>
+
       {related.length > 0 && (
         <section className="home-section">
           <SectionTitle kicker="ТЕБЕ МОЖЕТ ПОНРАВИТЬСЯ" title="Похожие истории" link="Весь каталог" onClick={() => go('/catalog')} />
@@ -1451,7 +1383,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
           <p className="custom-hint"><GripVertical size={14} /> Перетаскивай блоки ниже, чтобы изменить их порядок. Новые украшения открываются за достижения.</p>
         </div>
       )}
-      
+
       <div className="profile-section-heading">
         <div><span className="eyebrow">ЗАПИСИ И ДОСТИЖЕНИЯ</span><h2>Мой кинодневник</h2></div>
         {editing && <span className="drag-hint"><GripVertical size={16} /> Перетащи, чтобы изменить порядок</span>}
@@ -1721,22 +1653,22 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
     const qs = source.map(f => {
       let question = '', correct = '', options: string[] = [], poster: string | undefined;
       switch (id) {
-        case 'story': question = `Какая история скрывается за этим описанием? «${f.description.slice(0, 120)}...»`; correct = f.title; options = pool(x => x.title, f); break;
-        case 'year': question = `В каком году вышло «${f.title}»?`; correct = String(f.year); options = pool(x => String(x.year), f); break;
-        case 'director': question = `Кто снял «${f.title}»?`; correct = f.director || 'Неизвестно'; options = pool(x => x.director || 'Неизвестно', f); break;
-        case 'genre': question = `Какой жанр есть у «${f.title}»?`; correct = f.genre.split(',')[0].trim(); options = pool(x => x.genre.split(',')[0].trim(), f); break;
-        case 'poster': question = 'Как называется этот фильм?'; correct = f.title; options = pool(x => x.title, f); poster = f.poster; break;
-        case 'duration': question = `Сколько длится «${f.title}»?`; correct = `${f.duration} мин`; options = pool(x => `${x.duration} мин`, f); break;
-        case 'country': question = `Какая страна создала «${f.title}»?`; correct = f.country || 'Неизвестно'; options = pool(x => x.country || 'Неизвестно', f); break;
-        case 'original': question = `Как звучит оригинальное название «${f.title}»?`; correct = f.originalTitle || f.title; options = pool(x => x.originalTitle || x.title, f); break;
-        case 'category': question = `К какой категории относится «${f.title}»?`; correct = f.category; options = pool(x => x.category, f); break;
-        case 'wordle': question = `Угадай фильм: жанр «${f.genre.split(',')[0].trim()}», ${f.year} год, ${f.country}`; correct = f.title; options = pool(x => x.title, f); break;
+        case 'story': { question = `Какая история скрывается за этим описанием? «${f.description.slice(0, 120)}...»`; correct = f.title; options = pool(x => x.title, f); break; }
+        case 'year': { question = `В каком году вышло «${f.title}»?`; correct = String(f.year); options = pool(x => String(x.year), f); break; }
+        case 'director': { question = `Кто снял «${f.title}»?`; correct = f.director || 'Неизвестно'; options = pool(x => x.director || 'Неизвестно', f); break; }
+        case 'genre': { question = `Какой жанр есть у «${f.title}»?`; correct = f.genre.split(',')[0].trim(); options = pool(x => x.genre.split(',')[0].trim(), f); break; }
+        case 'poster': { question = 'Как называется этот фильм?'; correct = f.title; options = pool(x => x.title, f); poster = f.poster; break; }
+        case 'duration': { question = `Сколько длится «${f.title}»?`; correct = `${f.duration} мин`; options = pool(x => `${x.duration} мин`, f); break; }
+        case 'country': { question = `Какая страна создала «${f.title}»?`; correct = f.country || 'Неизвестно'; options = pool(x => x.country || 'Неизвестно', f); break; }
+        case 'original': { question = `Как звучит оригинальное название «${f.title}»?`; correct = f.originalTitle || f.title; options = pool(x => x.originalTitle || x.title, f); break; }
+        case 'category': { question = `К какой категории относится «${f.title}»?`; correct = f.category; options = pool(x => x.category, f); break; }
+        case 'wordle': { question = `Угадай фильм: жанр «${f.genre.split(',')[0].trim()}», ${f.year} год, ${f.country}`; correct = f.title; options = pool(x => x.title, f); break; }
         case 'hangman': { const hidden = f.title.replace(/[а-яёa-z]/gi, '_'); question = `Угадай: ${hidden} (${f.category}, ${f.year})`; correct = f.title; options = pool(x => x.title, f); break; }
         case 'anagram': { const shuffled = f.title.split('').sort(() => Math.random() - 0.5).join(''); question = `Собери название: «${shuffled}» (${f.category})`; correct = f.title; options = pool(x => x.title, f); break; }
         case 'truths': { const lie = `Режиссёр — ${usable.filter(x => x.director !== f.director)[0]?.director || 'неизвестно'}`; question = `Найди ЛОЖЬ о «${f.title}»:`; correct = lie; options = [`Год выпуска — ${f.year}`, `Категория — ${f.category}`, lie].sort(() => Math.random() - 0.5); break; }
-        case 'chrono': question = `Какой из этих фильмов вышел раньше всех?`; correct = source.sort((a, b) => a.year - b.year)[0].title; options = source.slice(0, 4).map(x => x.title).sort(() => Math.random() - 0.5); break;
-        case 'connections': question = `Какой фильм НЕ связан общим жанром «${f.genre.split(',')[0].trim()}»?`; const outsider = usable.filter(x => !x.genre.includes(f.genre.split(',')[0].trim()))[0] || usable[0]; correct = outsider.title; options = [...source.filter(x => x.genre.includes(f.genre.split(',')[0].trim())).slice(0, 3).map(x => x.title), outsider.title].sort(() => Math.random() - 0.5); break;
-        default: question = `Что оценили выше: «${f.title}» или другое кино?`; const others = usable.filter(x => x.rating !== f.rating); const opponent = others[Math.floor(Math.random() * others.length)] || usable[0]; correct = f.rating >= opponent.rating ? f.title : opponent.title; options = [f.title, opponent.title];
+        case 'chrono': { question = `Какой из этих фильмов вышел раньше всех?`; correct = source.sort((a, b) => a.year - b.year)[0].title; options = source.slice(0, 4).map(x => x.title).sort(() => Math.random() - 0.5); break; }
+        case 'connections': { question = `Какой фильм НЕ связан общим жанром «${f.genre.split(',')[0].trim()}»?`; const outsider = usable.filter(x => !x.genre.includes(f.genre.split(',')[0].trim()))[0] || usable[0]; correct = outsider.title; options = [...source.filter(x => x.genre.includes(f.genre.split(',')[0].trim())).slice(0, 3).map(x => x.title), outsider.title].sort(() => Math.random() - 0.5); break; }
+        default: { const others = usable.filter(x => x.rating !== f.rating); const opponent = others[Math.floor(Math.random() * others.length)] || usable[0]; correct = f.rating >= opponent.rating ? f.title : opponent.title; options = [f.title, opponent.title]; question = `Что оценили выше: «${f.title}» или другое кино?`; }
       }
       return { question, correct, options, poster };
     });
@@ -1760,7 +1692,7 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
   return (
     <>
       <div className="page-heading">
-        <div><span className="eyebrow">ИГРА НАЧИНАЕТСЯ</span><h1>Проверь свой <em>кинорадар.</em></h1><p>10 игр. Сотни вопросов. Сколько историй ты узнаешь?</p></div>
+        <div><span className="eyebrow">ИГРА НАЧИНАЕТСЯ</span><h1>Проверь свой <em>кинорадар.</em></h1><p>16 игр. Сотни вопросов. Сколько историй ты узнаешь?</p></div>
         <div className="heading-count"><Gamepad2 size={19} />{gameModes.length} режимов</div>
       </div>
       <div className="games-intro">
@@ -1846,7 +1778,7 @@ function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void
               <div><b>{f.title}</b><small>{f.year} · {f.category} · ★ {f.rating.toFixed(1)}</small></div>
               <span>{f.views} просмотров</span>
               <button onClick={() => edit(f)} title="Редактировать"><Pencil size={18} /></button>
-              {data.user?.role === 'admin' && <button className="danger" onClick={() => { if (confirm(`Удалить «${f.title}»?`)) action({ action: 'movieDelete', id: f.id }, 'Материал удалён'); }} title="Удалить"><Trash2 size={18} /></button>}
+              {data.user?.role === 'admin' && <button className="danger" onClick={() => { if (window.confirm(`Удалить «${f.title}»?`)) action({ action: 'movieDelete', id: f.id }, 'Материал удалён'); }} title="Удалить"><Trash2 size={18} /></button>}
             </div>
           ))}
         </div>
@@ -2480,9 +2412,9 @@ function WrappedPage({ data, go, auth }: { data: Data; go: (s: string) => void; 
   
   const slides = [
     <div className="wrapped-slide wrapped-1" key={1}><h1>Твой 2026 киногод</h1><p>Это было легендарно.</p><button className="primary-btn" onClick={() => setStep(1)}>Начать <ArrowRight size={16} /></button></div>,
-    <div className="wrapped-slide wrapped-2" key={2} onClick={() => setStep(2)}>2<h2>Ты провёл в кино<br /><span>{Math.floor(minutes / 60)} часов</span></h2><p>Это {Math.floor(minutes / 1440)} полных дней без сна!</p></div>,
+    <div className="wrapped-slide wrapped-2" key={2} onClick={() => setStep(2)}><h2>Ты провёл в кино<br /><span>{Math.floor(minutes / 60)} часов</span></h2><p>Это {Math.floor(minutes / 1440)} полных дней без сна!</p></div>,
     <div className="wrapped-slide wrapped-3" key={3} onClick={() => setStep(3)}><h2>Твоя жанровая душа:<br /><span>{topGenre ? topGenre[0] : 'Неизвестно'}</span></h2><p>Ты посмотрел {topGenre ? topGenre[1] : 0} историй в этом жанре.</p></div>,
-    <div className="wrapped-slide wrapped-final" key={4}><h2>MovieGo Wrapped</h2><p>Твой год в цифрах. Делись в сторис!</p><div className="wrapped-card"><b>{data.user.username}</b><p>{data.watches.length} просмотров</p><p>{Math.floor(minutes / 60)} часов</p><p>Любимый жанр: {topGenre ? topGenre[0] : '-'}</p></div><button className="primary-btn" onClick={() => go('/profile')}>Завершить</button></div>
+    <div className="wrapped-slide wrapped-final" key={4}><h2>moviemovie Wrapped</h2><p>Твой год в цифрах. Делись в сторис!</p><div className="wrapped-card"><b>{data.user.username}</b><p>{data.watches.length} просмотров</p><p>{Math.floor(minutes / 60)} часов</p><p>Любимый жанр: {topGenre ? topGenre[0] : '-'}</p></div><button className="primary-btn" onClick={() => go('/profile')}>Завершить</button></div>
   ];
   return <div className="wrapped-container">{slides[step]}</div>;
 }
@@ -2534,13 +2466,14 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
     setFilm(data.films[0] || null);
   }, [data.user, searchParams]);
 
-  if (!data.user) return <Gate title="Кинозал для друзей" description="Войди, чтобы смотреть кино вместе." auth={auth} />;
-
   useEffect(() => { if (msgRef.current) msgRef.current.scrollTop = msgRef.current.scrollHeight; }, [chatLog]);
 
+  if (!data.user) return <Gate title="Кинозал для друзей" description="Войди, чтобы смотреть кино вместе." auth={auth} />;
+
   const sendReaction = (emoji: string) => {
-    setReactions(r => [...r, { id: Date.now(), emoji }]);
-    setTimeout(() => setReactions(r => r.filter(x => x.id !== Date.now())), 2500);
+    const id = Date.now();
+    setReactions(r => [...r, { id, emoji }]);
+    setTimeout(() => setReactions(r => r.filter(x => x.id !== id)), 2500);
   };
   
   const sendChat = () => {
@@ -2614,16 +2547,16 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
     { id: 'auth', icon: <Shield size={20} />, color: 'amber', title: 'Система аккаунтов', subtitle: 'Многоуровневая авторизация и роли', items: ['Регистрация по email + пароль (bcryptjs, стойкость 12)', 'Вход через Telegram Login Widget (NEXT_PUBLIC_TELEGRAM_BOT_NAME)', 'OAuth Яндекс (authorization code flow)', 'Сессии: подписанные JWT, httpOnly cookie, 30 дней', '5 ролей: Гость → Посетитель → VIP → Модератор → Администратор', 'Дополнительный титул по статистике (Легенда экрана, Мастер кадров...)', 'Защита маршрутов: requireAuth на клиенте, проверка роли на сервере', 'Telegram ID привязывается к аккаунту без email'] },
     { id: 'profile', icon: <Users size={20} />, color: 'blue', title: 'Личный кабинет', subtitle: 'Кастомизируемый профиль с прогрессией', items: ['5 уникальных шаблонов шапки профиля', '4 рамки аватара: Золото (500 XP), Неон (1500 XP), Аметист (2500 XP)', '4 рамки шапки профиля с теми же условиями', 'Загрузка аватара: JPG, PNG, WebP до 4 МБ', 'Перетаскиваемые живые виджеты (drag and drop)', '5 виджетов: Статистика, Категории, История, Достижения, Друзья', 'XP-система: 500 XP = 1 уровень', 'Начисление XP: просмотр +35, оценка +10, комментарий +15, игра до +100', 'Прогресс-бар уровня в профиле', 'Отображение стрика активных дней'] },
     { id: 'social', icon: <Users size={20} />, color: 'green', title: 'Социальные функции', subtitle: 'Сообщество, дружба и общение', items: ['Система друзей: заявки, принятие, отклонение', 'Личный чат: переписка между друзьями в реальном времени', 'Опрос чата каждые 4 секунды для живого обновления', 'Поделиться фильмом в чате (прикреплённая карточка)', 'Плавающий Chat Drawer из любого места сайта', 'Страница сравнения /compare/:id — «Кино-Баттл»', 'Просмотр публичных профилей: /user/:id', 'Процент кино-совместимости (алгоритм: просмотры + оценки + жанры)', 'Уведомления: ответ на комментарий, лайк, заявка в друзья, рекомендация', 'Рекомендация фильма другу из карточки или чата', 'Счётчик непрочитанных сообщений в навигации'] },
-    { id: 'stats', icon: <BarChart3 size={20} />, color: 'pink', title: 'Статистика и аналитика', subtitle: 'Детальная картина активности', items: ['Общее количество просмотров, уникальных историй, часов', 'Разбивка по 6 категориям материалов с минутами', 'Топ-жанры пользователя с прогресс-барами', 'История просмотров с датами и деталями', 'Лидерборд: 6 метрик (часы, просмотры, стрик, XP, оценки, игры)', 'Пьедестал почёта с визуализацией трёх лидеров', 'Статистика активности друзей в профиле', 'Общие фильмы с конкретным другом', 'Сравнение оценок: споры и совпадения', 'Итоги месяца (Monthly Wrap-Up)', 'Итоги года MovieGo Wrapped (5 слайдов)'] },
+    { id: 'stats', icon: <BarChart3 size={20} />, color: 'pink', title: 'Статистика и аналитика', subtitle: 'Детальная картина активности', items: ['Общее количество просмотров, уникальных историй, часов', 'Разбивка по 6 категориям материалов с минутами', 'Топ-жанры пользователя с прогресс-барами', 'История просмотров с датами и деталями', 'Лидерборд: 6 метрик (часы, просмотры, стрик, XP, оценки, игры)', 'Пьедестал почёта с визуализацией трёх лидеров', 'Статистика активности друзей в профиле', 'Общие фильмы с конкретным другом', 'Сравнение оценок: споры и совпадения', 'Итоги месяца (Monthly Wrap-Up)', 'Итоги года moviemovie Wrapped (5 слайдов)'] },
     { id: 'games', icon: <Gamepad2 size={20} />, color: 'violet', title: 'Мини-игры', subtitle: '16 режимов в тематике кино', items: ['Угадай по сюжету — описание → название', 'Год премьеры — выбор из 4 вариантов', 'Кто режиссёр — режиссёр фильма', 'Жанровый детектив — жанр по названию', 'Угадай по постеру — название по обложке', 'Хронометраж — длительность фильма', 'Карта кино — страна производства', 'Оригинальное название — перевод названия', 'Тип истории — категория материала', 'Рейтинговая битва — у кого оценка выше', '🟩 Кино-Вордли — угадай по подсказкам', '🔡 Поле Чудес — по буквам', '🔀 Анаграмма — собери буквы', '🤥 Две правды, одна ложь — найди фальшивый факт', '⏳ Хроно-Слайдер — хронология фильмов', '🧩 Кино-Связи — группы по признаку', '5 вопросов за сессию, результат → XP'] },
-    { id: 'gamification', icon: <Trophy size={20} />, color: 'amber', title: 'Геймификация', subtitle: 'Достижения, челленджи, прогрессия', items: ['12 достижений, каждое с 3 тирами (I, II, III)', 'Тиры открываются прогрессивно по порогу прогресса', '52 ежемесячных челленджа — по 3–5 на каждый месяц года', 'Разнообразие: жанровые, категорийные, социальные, ночные, скоростные', 'Прогресс-бар челленджа с процентом выполнения', 'Страница /challenges с навигацией по всем 12 месяцам', 'Сводная панель: выполнено / XP заработано / всего закрыто', '4 Season Pass (зима/весна/лето/осень) с миссиями', 'Коллаборативные подборки с голосованием'] },
+    { id: 'gamification', icon: <Trophy size={20} />, color: 'amber', title: 'Геймификация', subtitle: 'Достижения, челленджи, прогрессия', items: ['30 достижений, каждое с 3 тирами (I, II, III)', 'Тиры открываются прогрессивно по порогу прогресса', 'Ежемесячные челленджи — по 3–5 на каждый месяц года', 'Разнообразие: жанровые, категорийные, социальные, ночные, скоростные', 'Прогресс-бар челленджа с процентом выполнения', 'Страница /challenges с навигацией по всем 12 месяцам', 'Сводная панель: выполнено / XP заработано / всего закрыто', 'Season Pass с миссиями', 'Коллаборативные подборки с голосованием'] },
     { id: 'discovery', icon: <Compass size={20} />, color: 'blue', title: 'Виджеты и контент', subtitle: 'Умные рекомендации и память', items: ['Кино-День: тематический фильтр по дате календаря', '«В этот день» — ретроспектива просмотров и юбилеев фильмов', 'Виджет «Капсула времени» — случайный день из истории', 'Итоги прошлого месяца в профиле', 'Рулетка материалов — анимированный выбор случайного фильма', 'Пульс недели: лучший, худший, новинка, высокий рейтинг', 'Лента «Что сейчас смотрят» по просмотрам', 'Лента «Свежие находки» по году', 'Похожие фильмы на странице материала по жанру', 'Виджет челленджей на главной', 'Сезонный Pass-виджет'] },
-    { id: 'tech', icon: <BarChart3 size={20} />, color: 'green', title: 'Техническая архитектура', subtitle: 'Стек и устройство системы', items: ['Next.js 16 App Router — SSR + клиентские компоненты', 'PostgreSQL + Drizzle ORM — типобезопасные запросы', '11 таблиц БД: users, movies, watches, ratings, comments, reactions, bookmarks, friendships, notifications, messages, challenges...', 'JWT-сессии: jose + httpOnly cookie', 'bcryptjs для паролей (стойкость 12)', 'Единый компонент movie-go-app.tsx (~170 KB кода)', 'REST API: /api/auth, /api/data, /api/action, /api/chat, /api/profile, /api/upload, /api/visit, /api/oauth', 'Загрузка файлов: formData → public/uploads', 'Подсчёт совместимости: взвешенный алгоритм (40% просмотры + 30% рейтинги + 30% жанры)', 'Polling чата каждые 4с через setInterval'] },
+    { id: 'tech', icon: <BarChart3 size={20} />, color: 'green', title: 'Техническая архитектура', subtitle: 'Стек и устройство системы', items: ['Next.js 16 App Router — SSR + клиентские компоненты', 'PostgreSQL + Drizzle ORM — типобезопасные запросы', '16 таблиц БД: users, movies, watches, ratings, comments, reactions, bookmarks, friendships, notifications, messages, challenges...', 'JWT-сессии: jose + httpOnly cookie', 'bcryptjs для паролей (стойкость 12)', 'Единый компонент movie-go-app.tsx', 'REST API: /api/auth, /api/data, /api/action, /api/chat, /api/profile, /api/upload, /api/visit, /api/oauth', 'Загрузка файлов: Base64 Data URI через /api/upload', 'Подсчёт совместимости: взвешенный алгоритм (40% просмотры + 30% рейтинги + 30% жанры)', 'Polling чата каждые 4с через setInterval'] },
     { id: 'design', icon: <Sparkles size={20} />, color: 'pink', title: 'Дизайн-система', subtitle: 'Glassmorphism + 5 тем + адаптив', items: ['Шрифт Inter (Google Fonts): 400–900', 'Glassmorphism: backdrop-filter blur(40px) saturate(1.5) на всех поверхностях', 'CSS-переменные: --bg, --surface, --surface2, --surface3, --border, --accent...', '5 тем: Тёмная, Светлая, Розовая, Фиолетовая, Жёлтая', 'Акцент сохраняется в localStorage + синхронизируется с профилем', 'CSS-анимации: pulse-glow, toast-in, orbit-spin, flyUp, loading', 'Адаптивность: 4 брейкпоинта (1300/1050/760/520px)', 'Компактный сайдбар на планшете (68px), drawer на мобиле', 'Стили рейтинга: золото/бирюза/синий/красный на рамках постеров', 'Рамки аватара с box-shadow свечением', 'Drag & drop для виджетов профиля (native HTML5)'] },
   ];
   const roles = [{ role: 'Гость', icon: '🌐', access: 'Просмотр главной, каталога, карточек материалов' }, { role: 'Посетитель', icon: '👤', access: 'Все функции + профиль, оценки, комментарии, достижения, друзья, чат, игры' }, { role: 'VIP', icon: '💎', access: 'Всё что посетитель + приоритет в поддержке и особый значок' }, { role: 'Модератор', icon: '🛡️', access: 'Всё + добавление и редактирование материалов в каталоге' }, { role: 'Администратор', icon: '👑', access: 'Полный доступ + удаление материалов, управление ролями, страница О проекте' }];
-  const techStack = [{ label: 'Framework', value: 'Next.js 16 App Router', sub: 'React 19 + TypeScript 5' }, { label: 'Database', value: 'PostgreSQL 16', sub: 'Drizzle ORM 0.45' }, { label: 'Auth', value: 'JWT + bcryptjs', sub: 'jose, Telegram, Яндекс OAuth' }, { label: 'Styling', value: 'Custom CSS + Tailwind', sub: 'Inter + glassmorphism' }, { label: 'Storage', value: 'Local filesystem', sub: '/public/uploads' }, { label: 'State', value: 'React useState + REST', sub: 'Polling interval 4s' }];
-  
+  const techStack = [{ label: 'Framework', value: 'Next.js 16 App Router', sub: 'React 19 + TypeScript 5' }, { label: 'Database', value: 'PostgreSQL 16', sub: 'Drizzle ORM 0.45' }, { label: 'Auth', value: 'JWT + bcryptjs', sub: 'jose, Telegram, Яндекс OAuth' }, { label: 'Styling', value: 'Custom CSS + Tailwind', sub: 'Inter + glassmorphism' }, { label: 'Storage', value: 'Base64 Data URI', sub: '/api/upload' }, { label: 'State', value: 'React useState + REST', sub: 'Polling interval 4s' }];
+
   return (
     <div className="about-page">
       <div className="about-hero">
