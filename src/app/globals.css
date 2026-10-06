@@ -801,3 +801,5 @@ p{margin:0}
 @media(max-width:520px){
   .cover-actions-bar .cover-edit{padding:8px 10px;font-size:10px}
 }
+
+@media(max-width:760px){.sidebar{animation:none!important}}
