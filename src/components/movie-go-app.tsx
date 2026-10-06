@@ -1,25 +1,33 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { 
-  Home, Clapperboard, Compass, Trophy, Gamepad2, Users, Bookmark, Shield, Search, 
-  Bell, Sun, Moon, ChevronDown, ChevronRight, ArrowUpRight, ArrowRight, Play, 
-  Plus, Star, Clock3, CalendarDays, Sparkles, Shuffle, Heart, MessageCircle, 
-  Send, Settings2, LogOut, Menu, X, Film, Flame, Eye, SlidersHorizontal, Check, 
-  Pencil, Trash2, Upload, Copy, Share2, Crown, Zap, Award, GripVertical, 
-  RotateCcw, ExternalLink, Volume2, Timer, Layers3, MonitorPlay, UserPlus, 
-  CheckCircle2, LockKeyhole, TrendingUp, BarChart3, BookOpen, GitBranch, Globe2, 
-  CircleHelp, Tv2, Link2, UsersRound 
+import {
+  Home, Clapperboard, Compass, Trophy, Gamepad2, Users, Bookmark, Shield, Search,
+  Bell, Sun, Moon, ChevronDown, ChevronRight, ArrowUpRight, ArrowRight, Play,
+  Plus, Star, Clock3, CalendarDays, Sparkles, Shuffle, Heart, MessageCircle,
+  Send, Settings2, LogOut, Menu, X, Film, Flame, Eye, SlidersHorizontal, Check,
+  Pencil, Trash2, Upload, Copy, Share2, Crown, Zap, Award, GripVertical,
+  RotateCcw, ExternalLink, Volume2, Timer, Layers3, MonitorPlay, UserPlus,
+  CheckCircle2, LockKeyhole, TrendingUp, BarChart3, BookOpen, GitBranch, Globe2,
+  CircleHelp, Tv2, Link2, UsersRound
 } from 'lucide-react';
 import type { Film as FilmType } from '@/lib/data';
 
 // --- Types ---
-type User = { id: number; email: string; username: string; role: string; bio: string | null; avatar: string | null; theme: string | null; language: string | null; headerStyle: number | null; headerImage: string | null; avatarFrame: string | null; headerFrame: string | null; profileEffect: string | null; nameEffect: string | null; nameColor: string | null; tileOrder: string | null; xp: number | null; createdAt: string; };
+type User = {
+  id: number; email: string; username: string; role: string; bio: string | null; avatar: string | null;
+  theme: string | null; language: string | null; headerStyle: number | null; headerImage: string | null;
+  avatarFrame: string | null; headerFrame: string | null; profileEffect: string | null; nameEffect: string | null;
+  nameColor: string | null; tileOrder: string | null; xp: number | null; createdAt: string;
+};
 type Watch = { id: number; movieId: number; watchedAt: string; };
 type Rating = { id: number; movieId: number; value: number; };
-type Comment = { id: number; movieId: number; parentId: number | null; body: string; likes: number | null; createdAt: string; author: { id: number; username: string; avatar: string | null; role: string; }; };
+type Comment = {
+  id: number; movieId: number; parentId: number | null; body: string; likes: number | null; createdAt: string;
+  author: { id: number; username: string; avatar: string | null; role: string; };
+};
 type Person = { id: number; username: string; avatar: string | null; role: string; xp: number | null; };
 type Friend = { id: number; fromId: number; toId: number; status: string; };
 type Notice = { id: number; message: string; link: string | null; read: boolean; createdAt: string; };
@@ -27,25 +35,121 @@ type Leader = Person & { watches: number; minutes: number; streak: number; ratin
 type FriendActivity = { id: number; username: string; avatar: string | null; watches: number; minutes: number; lastWatch: string | null; commonFilms: number; };
 type ChatConversation = { peer: { id: number; username: string; avatar: string | null; role: string; xp: number | null; }; lastMessage: string; lastMessageAt: string; unread: number; hasFilm: boolean; };
 type ChatMessage = { id: number; fromId: number; toId: number; body: string; movieId: number | null; read: boolean; createdAt: string; film: { id: number; title: string; poster: string; year: number; category: string; } | null; };
-type ProfileData = { profile: User; stats: { totalWatches: number; uniqueFilms: number; totalMinutes: number; totalRatings: number; totalComments: number; totalBookmarks: number; activeDays: number; categories: { name: string; count: number; minutes: number; }[]; topGenres: { genre: string; count: number; }[]; level: number; }; recentWatches: { watchedAt: string; film: FilmType | null; }[]; ratings: { movieId: number; value: number; title: string; }[]; friendship: { status: string | null; id: number | null; }; isSelf: boolean; compatibility?: number; };
-type Data = { films: FilmType[]; user: User | null; people: Person[]; watches: Watch[]; ratings: Rating[]; comments: Comment[]; bookmarks: { movieId: number; }[]; friends: Friend[]; notifications: Notice[]; scores: { game: string; score: number; }[]; leaderboard: Leader[]; friendsActivity: FriendActivity[]; unreadMessages: number; lists: any[]; club: any; onThisDay: { text: string; icon: string; }[]; cineDay: { label: string; filter?: string; icon: string; }; monthlySummary: { watches: number; minutes: number; topGenre: string; avgRating: string; achievements: number; } | null; challenges: any[]; season: any; };
+type ProfileData = {
+  profile: User;
+  stats: {
+    totalWatches: number; uniqueFilms: number; totalMinutes: number; totalRatings: number; totalComments: number;
+    totalBookmarks: number; activeDays: number; categories: { name: string; count: number; minutes: number; }[];
+    topGenres: { genre: string; count: number; }[]; level: number;
+  };
+  recentWatches: { watchedAt: string; film: FilmType | null; }[];
+  ratings: { movieId: number; value: number; title: string; }[];
+  friendship: { status: string | null; id: number | null; };
+  isSelf: boolean;
+  compatibility?: number;
+};
+type Data = {
+  films: FilmType[]; user: User | null; people: Person[]; watches: Watch[]; ratings: Rating[]; comments: Comment[];
+  bookmarks: { movieId: number; }[]; friends: Friend[]; notifications: Notice[]; scores: { game: string; score: number; }[];
+  leaderboard: Leader[]; friendsActivity: FriendActivity[]; unreadMessages: number; lists: any[]; club: any;
+  onThisDay: { text: string; icon: string; }[]; cineDay: { label: string; filter?: string; icon: string; };
+  monthlySummary: { watches: number; minutes: number; topGenre: string; avgRating: string; achievements: number; } | null;
+  challenges: any[]; season: any;
+};
 
 // --- Constants & Helpers ---
 const categories = ['Все', 'Фильм', 'Сериал', 'Мультфильм', 'Мультсериал', 'Аниме-сериал', 'Аниме-фильм'];
 const genres = ['Все жанры', 'Фантастика', 'Драма', 'Приключения', 'Анимация', 'Боевик', 'Комедия', 'Аниме', 'Детектив', 'Фэнтези', 'Биография'];
 const themes = ['dark', 'light', 'pink', 'purple', 'yellow'];
-const blank: Data = { films: [], user: null, people: [], watches: [], ratings: [], comments: [], bookmarks: [], friends: [], notifications: [], scores: [], leaderboard: [], friendsActivity: [], unreadMessages: 0, lists: [], club: null, onThisDay: [], cineDay: { label: '', icon: '🎬' }, monthlySummary: null, challenges: [], season: null };
+const blank: Data = {
+  films: [], user: null, people: [], watches: [], ratings: [], comments: [], bookmarks: [], friends: [], notifications: [],
+  scores: [], leaderboard: [], friendsActivity: [], unreadMessages: 0, lists: [], club: null, onThisDay: [],
+  cineDay: { label: '', icon: '🎬' }, monthlySummary: null, challenges: [], season: null
+};
 const image = (f: FilmType) => f.poster || '/posters/dune.jpg';
 const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(f.category) ? f.duration * (f.episodes || 1) : f.duration;
 const tone = (r: number) => r >= 8.5 ? 'gold' : r >= 7 ? 'teal' : r >= 5 ? 'blue' : 'red';
 const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
 function initials(s: string) { return s.slice(0, 2).toUpperCase(); }
-function titleFor(user: User | null, watches: number) { if (!user) return 'Гость'; if (watches >= 30) return 'Легенда экрана'; if (watches >= 15) return 'Мастер кадров'; if (watches >= 5) return 'Киноискатель'; return 'Начинающий зритель'; }
+function titleFor(user: User | null, watches: number) {
+  if (!user) return 'Гость';
+  if (watches >= 30) return 'Легенда экрана';
+  if (watches >= 15) return 'Мастер кадров';
+  if (watches >= 5) return 'Киноискатель';
+  return 'Начинающий зритель';
+}
+
+// --- WatchedIds global context (single source of truth for badges) ---
+const WatchedIdsContext = createContext<Set<number>>(new Set());
+const useWatchedIds = () => useContext(WatchedIdsContext);
 
 function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: string | null; size?: number; frame?: string | null; }) {
   return (
     <span className={`avatar avatar-${frame || 'none'}`} style={{ width: size, height: size, fontSize: size * 0.28 }}>
       {src ? <img src={src} alt={name} /> : initials(name)}
+    </span>
+  );
+}
+
+/**
+ * PosterThumb — универсальная миниатюра с галочкой "просмотрено"
+ * Использовать везде, где раньше был <img ...poster.../>.
+ * movieId опционален: если не передать — галочка не показывается.
+ */
+function PosterThumb({
+  movieId,
+  src,
+  alt = '',
+  wrapClassName,
+  imgClassName,
+  wrapStyle,
+}: {
+  movieId?: number | null;
+  src?: string | null;
+  alt?: string;
+  wrapClassName?: string;
+  imgClassName?: string;
+  wrapStyle?: React.CSSProperties;
+}) {
+  const watchedIds = useWatchedIds();
+  const watched = typeof movieId === 'number' && watchedIds.has(movieId);
+
+  // если src пустой — не ломаем верстку
+  const finalSrc = src || '/posters/dune.jpg';
+
+  return (
+    <span
+      className={wrapClassName}
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        flex: 'none',
+        ...wrapStyle,
+      }}
+    >
+      <img className={imgClassName} src={finalSrc} alt={alt} />
+      {watched && (
+        <span
+          title="Просмотрено"
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            width: 22,
+            height: 22,
+            borderRadius: 999,
+            background: 'rgba(45, 212, 191, 0.95)',
+            color: '#071018',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 10px 25px rgba(0,0,0,.35)',
+            zIndex: 2,
+          }}
+        >
+          <CheckCircle2 size={14} />
+        </span>
+      )}
     </span>
   );
 }
@@ -93,8 +197,11 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatPeerId, setChatPeerId] = useState<number | null>(null);
 
+  // оптимизация: один стабильный Set для watched
+  const watchedIds = useMemo(() => new Set<number>(data.watches.map(w => w.movieId)), [data.watches]);
+
   const notify = (s: string) => { setToast(s); setTimeout(() => setToast(''), 3700); };
-  
+
   const refresh = async () => {
     try {
       const r = await fetch('/api/data', { cache: 'no-store' });
@@ -158,9 +265,22 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const requireAuth = (fn: () => void) => { if (!data.user) setAuthOpen(true); else fn(); };
   const changeTheme = (t: string) => { setTheme(t); if (data.user) action({ action: 'profile', theme: t }); };
   const changeLang = () => { const next = lang === 'ru' ? 'en' : 'ru'; setLang(next); if (data.user) action({ action: 'profile', language: next }); };
-  
+
   const en = lang === 'en';
-  const words = { home: en ? 'Home' : 'Главная', catalog: en ? 'Catalog' : 'Каталог', leaderboard: en ? 'Leaderboard' : 'Рейтинг', achievements: en ? 'Achievements' : 'Достижения', games: en ? 'Mini games' : 'Мини-игры', friends: en ? 'Friends' : 'Друзья', watchlist: en ? 'My list' : 'Мой список', profile: en ? 'My profile' : 'Мой профиль', admin: en ? 'Admin panel' : 'Админ-панель', search: en ? 'Search titles, genres, directors...' : 'Поиск фильмов, жанров, режиссёров...', login: en ? 'Sign in' : 'Войти' };
+  const words = {
+    home: en ? 'Home' : 'Главная',
+    catalog: en ? 'Catalog' : 'Каталог',
+    leaderboard: en ? 'Leaderboard' : 'Рейтинг',
+    achievements: en ? 'Achievements' : 'Достижения',
+    games: en ? 'Mini games' : 'Мини-игры',
+    friends: en ? 'Friends' : 'Друзья',
+    watchlist: en ? 'My list' : 'Мой список',
+    profile: en ? 'My profile' : 'Мой профиль',
+    admin: en ? 'Admin panel' : 'Админ-панель',
+    search: en ? 'Search titles, genres, directors...' : 'Поиск фильмов, жанров, режиссёров...',
+    login: en ? 'Sign in' : 'Войти'
+  };
+
   const unread = data.notifications.filter(n => !n.read).length;
   const filmId = path?.startsWith('/movie/') ? Number(path.split('/')[2]) : 0;
   const viewUserId = path?.startsWith('/user/') ? Number(path.split('/')[2]) : 0;
@@ -198,307 +318,328 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   };
 
   return (
-    <div className="app-shell">
-      <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
-        <div className="side-brand" onClick={() => go('/')}>
-          <span className="brand-mark"><Clapperboard size={21} strokeWidth={2.4} /></span>
-          <BrandWordmark size={17} />
-        </div>
-        <div className="side-scroll">
-          <div className="nav-group-label">{en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ'}</div>
-          <nav className="nav-list">
-            {nav.slice(0, 4).map(n => (
-              <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
-                <n.icon size={19} />
-                <span>{n.label}</span>
-                {n.id === 'watchlist' && data.bookmarks.length > 0 && <small>{data.bookmarks.length}</small>}
-              </button>
-            ))}
-          </nav>
-          
-          <div className="nav-group-label section-gap">{en ? 'COMMUNITY' : 'СООБЩЕСТВО'}</div>
-          <nav className="nav-list">
-            {nav.slice(4).map(n => (
-              <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
-                <n.icon size={19} />
-                <span>{n.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="nav-group-label section-gap">{en ? 'PERSONAL' : 'ЛИЧНОЕ'}</div>
-          <nav className="nav-list">
-            <button className={`nav-item ${active === 'profile' ? 'active' : ''}`} onClick={() => data.user ? go('/profile') : setAuthOpen(true)}>
-              <Users size={19} /><span>{words.profile}</span>
-            </button>
-            <button className={`nav-item ${active === 'friends' ? 'active' : ''}`} onClick={() => data.user ? go('/friends') : setAuthOpen(true)}>
-              <Users size={19} /><span>{words.friends}</span>
-            </button>
-            <button className={`nav-item ${active === 'chat' ? 'active' : ''}`} onClick={() => data.user ? go('/chat') : setAuthOpen(true)}>
-              <MessageCircle size={19} /><span>{en ? 'Chat' : 'Чат'}</span>
-              {data.unreadMessages > 0 && <small>{data.unreadMessages}</small>}
-            </button>
-            {['admin', 'moderator'].includes(data.user?.role || '') && (
-              <button className={`nav-item ${active === 'admin' ? 'active' : ''}`} onClick={() => go('/admin')}>
-                <Shield size={19} /><span>{words.admin}</span>
-              </button>
-            )}
-            {data.user?.role === 'admin' && (
-              <button className={`nav-item ${active === 'about-admin' ? 'active' : ''}`} onClick={() => go('/about-admin')}>
-                <BookOpen size={19} /><span>О проекте</span>
-              </button>
-            )}
-          </nav>
-
-          <div className="sidebar-discover">
-            <div className="discover-icon"><Sparkles size={18} /></div>
-            <h4>Не знаешь, что посмотреть?</h4>
-            <p>Доверь выбор киновселенной.</p>
-            <button onClick={startRoulette}>Случайный фильм <ArrowUpRight size={14} /></button>
+    <WatchedIdsContext.Provider value={watchedIds}>
+      <div className="app-shell">
+        <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
+          <div className="side-brand" onClick={() => go('/')}>
+            <span className="brand-mark"><Clapperboard size={21} strokeWidth={2.4} /></span>
+            <BrandWordmark size={17} />
           </div>
-        </div>
-
-        <div className="sidebar-bottom">
-          <div className="side-status"><span className="status-dot" /> ВСЁ РАБОТАЕТ КАК КИНО</div>
-          <span>© 2026 moviemovie</span>
-        </div>
-      </aside>
-
-      <div className="main-wrap">
-        <header className="topbar">
-          <button className="mobile-menu icon-button" onClick={() => setMobileNav(!mobileNav)}>
-            <Menu size={21} />
-          </button>
-          <div className="top-search">
-            <Search size={18} />
-            <input 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  go('/catalog?search=' + encodeURIComponent(search));
-                  setSearch('');
-                }
-              }} 
-              placeholder={words.search} 
-            />
-            <kbd>⌘ K</kbd>
-            {search && (
-              <button onClick={() => { go('/catalog?search=' + encodeURIComponent(search)); setSearch(''); }}>
-                <ArrowRight size={17} />
-              </button>
-            )}
-            {search.length >= 2 && (
-              <div className="hot-search-drop" onClick={e => e.stopPropagation()}>
-                {(() => {
-                  const results = data.films.filter(f => f.title.toLowerCase().includes(search.toLowerCase())).slice(0, 5);
-                  return results.length ? results.map(f => (
-                    <button key={f.id} className="hot-search-item" onClick={() => { go('/movie/' + f.id); setSearch(''); }}>
-                      <img src={f.poster} alt={f.title} />
-                      <div className="hot-item-info">
-                        <b>{f.title}</b>
-                        <small>{f.year} · {f.category}</small>
-                      </div>
-                      <span className="hot-item-rating">{(f.rating || 0).toFixed(1)}</span>
-                    </button>
-                  )) : <div className="hot-search-empty">Ничего не найдено</div>
-                })()}
-                <button className="hot-search-all" onClick={() => { go('/catalog?search=' + encodeURIComponent(search)); setSearch(''); }}>
-                  Все результаты <ArrowRight size={14} />
+          <div className="side-scroll">
+            <div className="nav-group-label">{en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ'}</div>
+            <nav className="nav-list">
+              {nav.slice(0, 4).map(n => (
+                <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
+                  <n.icon size={19} />
+                  <span>{n.label}</span>
+                  {n.id === 'watchlist' && data.bookmarks.length > 0 && <small>{data.bookmarks.length}</small>}
                 </button>
-              </div>
-            )}
-          </div>
-          <div className="top-actions">
-            <div className="language-switch" onClick={changeLang}>{lang.toUpperCase()} <ChevronDown size={12} /></div>
-            <div className="theme-menu">
-              <button className="icon-button" title="Сменить тему" onClick={() => changeTheme(themes[(themes.indexOf(theme) + 1) % themes.length])}>
-                {theme === 'light' ? <Sun size={19} /> : <Moon size={19} />}
+              ))}
+            </nav>
+
+            <div className="nav-group-label section-gap">{en ? 'COMMUNITY' : 'СООБЩЕСТВО'}</div>
+            <nav className="nav-list">
+              {nav.slice(4).map(n => (
+                <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
+                  <n.icon size={19} />
+                  <span>{n.label}</span>
+                </button>
+              ))}
+            </nav>
+
+            <div className="nav-group-label section-gap">{en ? 'PERSONAL' : 'ЛИЧНОЕ'}</div>
+            <nav className="nav-list">
+              <button className={`nav-item ${active === 'profile' ? 'active' : ''}`} onClick={() => data.user ? go('/profile') : setAuthOpen(true)}>
+                <Users size={19} /><span>{words.profile}</span>
               </button>
-              <div className="theme-pop">
-                {themes.map(t => (
-                  <button key={t} onClick={() => changeTheme(t)}>
-                    <i className={`theme-dot ${t}`} />
-                    {({ dark: 'Тёмная', light: 'Светлая', pink: 'Розовая', purple: 'Фиолетовая', yellow: 'Жёлтая' } as Record<string, string>)[t]}
+              <button className={`nav-item ${active === 'friends' ? 'active' : ''}`} onClick={() => data.user ? go('/friends') : setAuthOpen(true)}>
+                <Users size={19} /><span>{words.friends}</span>
+              </button>
+              <button className={`nav-item ${active === 'chat' ? 'active' : ''}`} onClick={() => data.user ? go('/chat') : setAuthOpen(true)}>
+                <MessageCircle size={19} /><span>{en ? 'Chat' : 'Чат'}</span>
+                {data.unreadMessages > 0 && <small>{data.unreadMessages}</small>}
+              </button>
+              {['admin', 'moderator'].includes(data.user?.role || '') && (
+                <button className={`nav-item ${active === 'admin' ? 'active' : ''}`} onClick={() => go('/admin')}>
+                  <Shield size={19} /><span>{words.admin}</span>
+                </button>
+              )}
+              {data.user?.role === 'admin' && (
+                <button className={`nav-item ${active === 'about-admin' ? 'active' : ''}`} onClick={() => go('/about-admin')}>
+                  <BookOpen size={19} /><span>О проекте</span>
+                </button>
+              )}
+            </nav>
+
+            <div className="sidebar-discover">
+              <div className="discover-icon"><Sparkles size={18} /></div>
+              <h4>Не знаешь, что посмотреть?</h4>
+              <p>Доверь выбор киновселенной.</p>
+              <button onClick={startRoulette}>Случайный фильм <ArrowUpRight size={14} /></button>
+            </div>
+          </div>
+
+          <div className="sidebar-bottom">
+            <div className="side-status"><span className="status-dot" /> ВСЁ РАБОТАЕТ КАК КИНО</div>
+            <span>© 2026 moviemovie</span>
+          </div>
+        </aside>
+
+        <div className="main-wrap">
+          <header className="topbar">
+            <button className="mobile-menu icon-button" onClick={() => setMobileNav(!mobileNav)}>
+              <Menu size={21} />
+            </button>
+
+            <div className="top-search">
+              <Search size={18} />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    go('/catalog?search=' + encodeURIComponent(search));
+                    setSearch('');
+                  }
+                }}
+                placeholder={words.search}
+              />
+              <kbd>⌘ K</kbd>
+
+              {search && (
+                <button onClick={() => { go('/catalog?search=' + encodeURIComponent(search)); setSearch(''); }}>
+                  <ArrowRight size={17} />
+                </button>
+              )}
+
+              {search.length >= 2 && (
+                <div className="hot-search-drop" onClick={e => e.stopPropagation()}>
+                  {(() => {
+                    const results = data.films
+                      .filter(f => f.title.toLowerCase().includes(search.toLowerCase()))
+                      .slice(0, 5);
+
+                    return results.length ? results.map(f => (
+                      <button key={f.id} className="hot-search-item" onClick={() => { go('/movie/' + f.id); setSearch(''); }}>
+                        <PosterThumb movieId={f.id} src={f.poster} alt={f.title} />
+                        <div className="hot-item-info">
+                          <b>{f.title}</b>
+                          <small>{f.year} · {f.category}</small>
+                        </div>
+                        <span className="hot-item-rating">{(f.rating || 0).toFixed(1)}</span>
+                      </button>
+                    )) : <div className="hot-search-empty">Ничего не найдено</div>;
+                  })()}
+
+                  <button className="hot-search-all" onClick={() => { go('/catalog?search=' + encodeURIComponent(search)); setSearch(''); }}>
+                    Все результаты <ArrowRight size={14} />
                   </button>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
-            
-            <div className="popover-anchor">
-              <button className="icon-button notice-button" onClick={() => { setNoticeOpen(!noticeOpen); setProfileOpen(false); if (unread) action({ action: 'notifyRead' }); }}>
-                <Bell size={19} />
-                {unread > 0 && <i className="notice-dot" />}
-              </button>
-              {noticeOpen && (
-                <div className="header-pop notifications">
-                  <div className="pop-head"><strong>Уведомления</strong><span>{data.notifications.length}</span></div>
-                  {data.user ? data.notifications.length ? data.notifications.slice(0, 8).map(n => (
-                    <button key={n.id} onClick={() => go(n.link || '/profile')} className="notice-row">
-                      <span className="notice-ico"><Bell size={15} /></span>
-                      <span>{n.message}<small>{new Date(n.createdAt).toLocaleDateString('ru-RU')}</small></span>
+
+            <div className="top-actions">
+              <div className="language-switch" onClick={changeLang}>
+                {lang.toUpperCase()} <ChevronDown size={12} />
+              </div>
+
+              <div className="theme-menu">
+                <button className="icon-button" title="Сменить тему" onClick={() => changeTheme(themes[(themes.indexOf(theme) + 1) % themes.length])}>
+                  {theme === 'light' ? <Sun size={19} /> : <Moon size={19} />}
+                </button>
+                <div className="theme-pop">
+                  {themes.map(t => (
+                    <button key={t} onClick={() => changeTheme(t)}>
+                      <i className={`theme-dot ${t}`} />
+                      {({ dark: 'Тёмная', light: 'Светлая', pink: 'Розовая', purple: 'Фиолетовая', yellow: 'Жёлтая' } as Record<string, string>)[t]}
                     </button>
-                  )) : <div className="empty-mini">Пока здесь тихо ✨</div> : <div className="empty-mini">Войдите, чтобы видеть уведомления</div>}
+                  ))}
                 </div>
-              )}
-            </div>
-            
-            <span className="top-divider" />
-            
-            <div className="popover-anchor">
-              <button className="user-trigger" onClick={() => data.user ? setProfileOpen(!profileOpen) : setAuthOpen(true)}>
-                <Avatar name={data.user?.username || 'G'} src={data.user?.avatar} size={34} frame={data.user?.avatarFrame} />
-                <span className="user-trigger-name">{data.user?.username || words.login}</span>
-                <ChevronDown size={14} />
-              </button>
-              {profileOpen && (
-                <div className="header-pop user-pop">
-                  <strong>{data.user?.username}</strong>
-                  <small>{data.user?.email}</small>
-                  <button onClick={() => go('/profile')}><Users size={16} /> Мой профиль</button>
-                  <button onClick={() => go('/watchlist')}><Bookmark size={16} /> Мой список</button>
-                  <button onClick={async () => {
-                    await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
-                    await refresh();
-                    setProfileOpen(false);
-                    go('/');
-                  }}><LogOut size={16} /> Выйти</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-
-        <main className="content">
-          {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
-            : active === 'catalog' ? <Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} watchedIds={new Set(data.watches.map(w => w.movieId))} />
-            : active === 'movie' ? <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} edit={setEditFilm} />
-            : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
-            : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
-            : active === 'leaderboard' ? <Leaderboard data={data} go={go} />
-            : active === 'achievements' ? <Achievements data={data} auth={() => setAuthOpen(true)} go={go} />
-            : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-            : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
-            : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
-            : active === 'viewuser' ? <ViewUserProfile key={viewUserId} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
-            : active === 'compare' ? <ComparePage data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
-            : active === 'wrapped' ? <WrappedPage data={data} go={go} auth={() => setAuthOpen(true)} />
-            : active === 'collab' ? <CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-            : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-            : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-            : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
-            : active === 'admin' ? <Admin data={data} go={go} action={action} edit={setEditFilm} />
-            : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
-            : <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
-          }
-        </main>
-        
-        <footer className="footer">
-          <div className="footer-logo"><BrandWordmark size={20} /></div>
-          <p>Твоя история. Твоё кино. Твоя вселенная.</p>
-          <span>Сделано с любовью к кино · 2026</span>
-        </footer>
-      </div>
-
-      {mobileNav && <div className="mobile-scrim" onClick={() => setMobileNav(false)} />}
-      {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
-      
-      {roulette && (
-        <div className="modal-backdrop" onClick={() => setRoulette(false)}>
-          <div className="roulette-modal glass-modal fancy-roulette" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setRoulette(false)}><X size={20} /></button>
-            <div className="roulette-head">
-              <span className="eyebrow"><Sparkles size={14} /> КИНО-СЛУЧАЙ</span>
-              <h2>Чего желает душа?</h2>
-              <div className="roulette-tabs">
-                {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
-                  <button key={cat} className={rouletteCategory === cat ? 'active' : ''} onClick={() => setRouletteCategory(cat)}>{cat}</button>
-                ))}
               </div>
-            </div>
-            
-            <div className="roulette-container">
-              <div className={`roulette-strip ${!rouletteDone ? 'spinning' : ''}`}>
-                {!rouletteDone ? (
-                  Array.from({ length: 10 }).map((_, idx) => (
-                    <div key={idx} className="strip-item">
-                      <img src={data.films[(rouletteIndex + idx) % (data.films.length || 1)]?.poster} alt="" />
-                    </div>
-                  ))
-                ) : (
-                  (() => {
-                    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(x => x.category === rouletteCategory);
-                    const winner = pool[rouletteIndex] || data.films[0];
-                    return (
-                      <div className="strip-winner">
-                        <div className="winner-glow" />
-                        <img src={image(winner)} alt="" />
-                      </div>
-                    );
-                  })()
+
+              <div className="popover-anchor">
+                <button className="icon-button notice-button" onClick={() => { setNoticeOpen(!noticeOpen); setProfileOpen(false); if (unread) action({ action: 'notifyRead' }); }}>
+                  <Bell size={19} />
+                  {unread > 0 && <i className="notice-dot" />}
+                </button>
+                {noticeOpen && (
+                  <div className="header-pop notifications">
+                    <div className="pop-head"><strong>Уведомления</strong><span>{data.notifications.length}</span></div>
+                    {data.user ? data.notifications.length ? data.notifications.slice(0, 8).map(n => (
+                      <button key={n.id} onClick={() => go(n.link || '/profile')} className="notice-row">
+                        <span className="notice-ico"><Bell size={15} /></span>
+                        <span>{n.message}<small>{new Date(n.createdAt).toLocaleDateString('ru-RU')}</small></span>
+                      </button>
+                    )) : <div className="empty-mini">Пока здесь тихо ✨</div> : <div className="empty-mini">Войдите, чтобы видеть уведомления</div>}
+                  </div>
                 )}
               </div>
-              <div className="roulette-pointer"><ChevronDown size={24} /></div>
-            </div>
-            
-            {rouletteDone && (
-              <div className="roulette-result-card">
-                {(() => {
-                  const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
-                  const win = pool[rouletteIndex];
-                  return win ? (
-                    <>
-                      <span className="win-cat">{win.category} · {win.year}</span>
-                      <h3>{win.title}</h3>
-                      <p>{win.genre}</p>
-                      <div className="win-actions">
-                        <button className="primary-btn" onClick={() => { setRoulette(false); go('/movie/' + win.id); }}>
-                          Открыть карточку <ArrowRight size={17} />
-                        </button>
-                        <button className="outline-btn" onClick={startRoulette}>
-                          <RotateCcw size={16} /> Ещё раз
-                        </button>
-                      </div>
-                    </>
-                  ) : null;
-                })()}
+
+              <span className="top-divider" />
+
+              <div className="popover-anchor">
+                <button className="user-trigger" onClick={() => data.user ? setProfileOpen(!profileOpen) : setAuthOpen(true)}>
+                  <Avatar name={data.user?.username || 'G'} src={data.user?.avatar} size={34} frame={data.user?.avatarFrame} />
+                  <span className="user-trigger-name">{data.user?.username || words.login}</span>
+                  <ChevronDown size={14} />
+                </button>
+                {profileOpen && (
+                  <div className="header-pop user-pop">
+                    <strong>{data.user?.username}</strong>
+                    <small>{data.user?.email}</small>
+                    <button onClick={() => go('/profile')}><Users size={16} /> Мой профиль</button>
+                    <button onClick={() => go('/watchlist')}><Bookmark size={16} /> Мой список</button>
+                    <button onClick={async () => {
+                      await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
+                      await refresh();
+                      setProfileOpen(false);
+                      go('/');
+                    }}><LogOut size={16} /> Выйти</button>
+                  </div>
+                )}
               </div>
-            )}
-            {!rouletteDone && (
-              <button className="primary-btn start-spin-btn" onClick={startRoulette}>
-                Запустить барабан <RotateCcw size={17} />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          </header>
 
-      {shareFilm && (
-        <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
-          <div className="glass-modal share-modal" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShareFilm(null)}><X size={20} /></button>
-            <span className="eyebrow">ПОДЕЛИТЬСЯ ВПЕЧАТЛЕНИЕМ</span>
-            <h2>Расскажи друзьям</h2>
-            <p>«{shareFilm.title}» стоит увидеть.</p>
-            <button className="share-copy" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/movie/' + shareFilm.id); notify('Ссылка скопирована'); }}>
-              <Copy size={17} /> Скопировать ссылку <ArrowRight size={16} />
-            </button>
-            <h4>Отправить пользователю</h4>
-            {data.people.filter(p => p.id !== data.user?.id).slice(0, 6).map(p => (
-              <button className="share-person" key={p.id} onClick={async () => { if (await action({ action: 'share', movieId: shareFilm.id, userId: p.id }, 'Рекомендация отправлена')) setShareFilm(null); }}>
-                <Avatar name={p.username} src={p.avatar} size={32} />
-                {p.username}<Send size={15} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+          <main className="content">
+            {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
+              : active === 'catalog' ? <Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} watchedIds={watchedIds} />
+              : active === 'movie' ? <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} edit={setEditFilm} />
+              : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
+              : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
+              : active === 'leaderboard' ? <Leaderboard data={data} go={go} />
+              : active === 'achievements' ? <Achievements data={data} auth={() => setAuthOpen(true)} go={go} />
+              : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
+              : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
+              : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
+              : active === 'viewuser' ? <ViewUserProfile key={viewUserId} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
+              : active === 'compare' ? <ComparePage data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
+              : active === 'wrapped' ? <WrappedPage data={data} go={go} auth={() => setAuthOpen(true)} />
+              : active === 'collab' ? <CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
+              : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
+              : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
+              : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
+              : active === 'admin' ? <Admin data={data} go={go} action={action} edit={setEditFilm} />
+              : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
+              : <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
+            }
+          </main>
 
-      {editFilm !== undefined && <MovieForm film={editFilm} close={() => setEditFilm(undefined)} action={action} notify={notify} />}
-      {chatOpen && chatPeerId && data.user && <ChatDrawer peerId={chatPeerId} data={data} go={go} close={() => { setChatOpen(false); setChatPeerId(null); }} notify={notify} />}
-      {toast && <div className="toast"><Sparkles size={16} />{toast}<button onClick={() => setToast('')}><X size={14} /></button></div>}
-      {loading && <div className="loading-line" />}
-    </div>
+          <footer className="footer">
+            <div className="footer-logo"><BrandWordmark size={20} /></div>
+            <p>Твоя история. Твоё кино. Твоя вселенная.</p>
+            <span>Сделано с любовью к кино · 2026</span>
+          </footer>
+        </div>
+
+        {mobileNav && <div className="mobile-scrim" onClick={() => setMobileNav(false)} />}
+        {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
+
+        {roulette && (
+          <div className="modal-backdrop" onClick={() => setRoulette(false)}>
+            <div className="roulette-modal glass-modal fancy-roulette" onClick={e => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setRoulette(false)}><X size={20} /></button>
+              <div className="roulette-head">
+                <span className="eyebrow"><Sparkles size={14} /> КИНО-СЛУЧАЙ</span>
+                <h2>Чего желает душа?</h2>
+                <div className="roulette-tabs">
+                  {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
+                    <button key={cat} className={rouletteCategory === cat ? 'active' : ''} onClick={() => setRouletteCategory(cat)}>{cat}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="roulette-container">
+                <div className={`roulette-strip ${!rouletteDone ? 'spinning' : ''}`}>
+                  {!rouletteDone ? (
+                    Array.from({ length: 10 }).map((_, idx) => {
+                      const f = data.films[(rouletteIndex + idx) % (data.films.length || 1)];
+                      return (
+                        <div key={idx} className="strip-item">
+                          <PosterThumb movieId={f?.id} src={f?.poster} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
+                        </div>
+                      );
+                    })
+                  ) : (
+                    (() => {
+                      const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(x => x.category === rouletteCategory);
+                      const winner = pool[rouletteIndex] || data.films[0];
+                      return (
+                        <div className="strip-winner">
+                          <div className="winner-glow" />
+                          <PosterThumb movieId={winner?.id} src={image(winner)} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
+                <div className="roulette-pointer"><ChevronDown size={24} /></div>
+              </div>
+
+              {rouletteDone && (
+                <div className="roulette-result-card">
+                  {(() => {
+                    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
+                    const win = pool[rouletteIndex];
+                    return win ? (
+                      <>
+                        <span className="win-cat">{win.category} · {win.year}</span>
+                        <h3>{win.title}</h3>
+                        <p>{win.genre}</p>
+                        <div className="win-actions">
+                          <button className="primary-btn" onClick={() => { setRoulette(false); go('/movie/' + win.id); }}>
+                            Открыть карточку <ArrowRight size={17} />
+                          </button>
+                          <button className="outline-btn" onClick={startRoulette}>
+                            <RotateCcw size={16} /> Ещё раз
+                          </button>
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+
+              {!rouletteDone && (
+                <button className="primary-btn start-spin-btn" onClick={startRoulette}>
+                  Запустить барабан <RotateCcw size={17} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {shareFilm && (
+          <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
+            <div className="glass-modal share-modal" onClick={e => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShareFilm(null)}><X size={20} /></button>
+              <span className="eyebrow">ПОДЕЛИТЬСЯ ВПЕЧАТЛЕНИЕМ</span>
+              <h2>Расскажи друзьям</h2>
+              <p>«{shareFilm.title}» стоит увидеть.</p>
+              <button className="share-copy" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/movie/' + shareFilm.id); notify('Ссылка скопирована'); }}>
+                <Copy size={17} /> Скопировать ссылку <ArrowRight size={16} />
+              </button>
+              <h4>Отправить пользователю</h4>
+              {data.people.filter(p => p.id !== data.user?.id).slice(0, 6).map(p => (
+                <button
+                  className="share-person"
+                  key={p.id}
+                  onClick={async () => { if (await action({ action: 'share', movieId: shareFilm.id, userId: p.id }, 'Рекомендация отправлена')) setShareFilm(null); }}
+                >
+                  <Avatar name={p.username} src={p.avatar} size={32} />
+                  {p.username}<Send size={15} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {editFilm !== undefined && <MovieForm film={editFilm} close={() => setEditFilm(undefined)} action={action} notify={notify} />}
+        {chatOpen && chatPeerId && data.user && <ChatDrawer peerId={chatPeerId} data={data} go={go} close={() => { setChatOpen(false); setChatPeerId(null); }} notify={notify} />}
+        {toast && <div className="toast"><Sparkles size={16} />{toast}<button onClick={() => setToast('')}><X size={14} /></button></div>}
+        {loading && <div className="loading-line" />}
+      </div>
+    </WatchedIdsContext.Provider>
   );
 }
 
@@ -514,23 +655,45 @@ function SectionTitle({ kicker, title, link, onClick }: { kicker?: string; title
 
 function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: string) => void; rank?: number; watched?: boolean; }) {
   const primaryGenre = film.genre.split(',')[0]?.trim();
+
+  // если watched не передан — берем из глобального контекста
+  const watchedIds = useWatchedIds();
+  const isWatched = watched ?? watchedIds.has(film.id);
+
   return (
-    <div className={`film-card tone-${tone(film.rating)}`} role="button" tabIndex={0} onClick={() => go('/movie/' + film.id)} onKeyDown={e => { if (e.key === 'Enter') go('/movie/' + film.id); }}>
+    <div
+      className={`film-card tone-${tone(film.rating)}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => go('/movie/' + film.id)}
+      onKeyDown={e => { if (e.key === 'Enter') go('/movie/' + film.id); }}
+    >
       <div className="poster-wrap">
         <img src={image(film)} alt={film.title} />
         <span className="card-shade" />
         {rank && <span className="rank-num">{String(rank).padStart(2, '0')}</span>}
         <span className="card-score"><Star size={12} fill="currentColor" />{film.rating.toFixed(1)}</span>
         <span className="card-play"><Play size={19} fill="currentColor" /></span>
-        {watched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
+        {isWatched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
       </div>
       <div className="card-info">
         <h3>{film.title}</h3>
-        <p>{film.year} <span>·</span> {film.category} <span>·</span> {['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(film.category) && film.episodes ? `${film.episodes} сер.` : `${film.duration} мин`}</p>
+        <p>
+          {film.year} <span>·</span> {film.category} <span>·</span>{' '}
+          {['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(film.category) && film.episodes
+            ? `${film.episodes} сер.`
+            : `${film.duration} мин`}
+        </p>
         <div className="card-tags">
-          {primaryGenre && <button type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(primaryGenre)); }}>{primaryGenre}</button>}
+          {primaryGenre && (
+            <button type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(primaryGenre)); }}>
+              {primaryGenre}
+            </button>
+          )}
           {film.studio && film.studio.split(',').map((st, i) => (
-            <button key={i} type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(st.trim())); }}>{st.trim()}</button>
+            <button key={i} type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(st.trim())); }}>
+              {st.trim()}
+            </button>
           ))}
         </div>
       </div>
@@ -539,7 +702,11 @@ function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: strin
 }
 
 function FilmGrid({ films, go, watchedIds }: { films: FilmType[]; go: (url: string) => void; watchedIds?: Set<number>; }) {
-  return <div className="film-grid">{films.map(f => <FilmCard key={f.id} film={f} go={go} watched={watchedIds?.has(f.id)} />)}</div>;
+  return (
+    <div className="film-grid">
+      {films.map(f => <FilmCard key={f.id} film={f} go={go} watched={watchedIds?.has(f.id)} />)}
+    </div>
+  );
 }
 
 function Gate({ title, description, auth }: { title: string; description: string; auth: () => void; }) {
@@ -557,11 +724,11 @@ function Gate({ title, description, auth }: { title: string; description: string
 // --- Pages ---
 
 function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; }) {
-  const featured = films.find(f => f.featured) || films[0];
-  const trending = [...films].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
-  
+  const featured = useMemo(() => films.find(f => (f as any).featured) || films[0], [films]);
+  const trending = useMemo(() => [...films].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5), [films]);
+
   if (!featured) return null;
-  
+
   return (
     <>
       <div className="welcome-line">
@@ -712,7 +879,7 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
             { tag: 'ВЫСОКИЙ РЕЙТИНГ', icon: '★', film: [...films].sort((a, b) => b.rating - a.rating)[1], kind: 'rated', caption: 'Рекомендовано сообществом' }
           ].filter(item => item.film).map((item, i) => (
             <button key={i} className={`pulse-card pulse-${item.kind}`} onClick={() => go('/movie/' + item.film!.id)}>
-              <img src={item.film!.poster} alt="" />
+              <PosterThumb movieId={item.film!.id} src={item.film!.poster} alt="" wrapStyle={{ display: 'block' }} />
               <div>
                 <span className="eyebrow">{item.icon} {item.tag}</span>
                 <h3>{item.film!.title}</h3>
@@ -775,13 +942,13 @@ function Catalog({ films, go, searchValue, en, userRole = '', onAdd, watchedIds 
     setYear(searchParams.get('year') || 'Любой год');
   }, [searchParams, searchValue]);
 
-  const filtered = useMemo(() => films.filter(f => 
-    (!query || [f.title, f.originalTitle, f.genre, f.director, f.description, f.category, f.studio || ''].join(' ').toLowerCase().includes(query.toLowerCase())) && 
-    (category === 'Все' || f.category === category) && 
-    (genre === 'Все жанры' || f.genre.includes(genre)) && 
-    (studio === 'Все студии' || (f.studio || '') === studio) && 
-    (year === 'Любой год' || String(f.year) === year) && 
-    f.rating >= Number(minRating) && 
+  const filtered = useMemo(() => films.filter(f =>
+    (!query || [f.title, f.originalTitle, f.genre, f.director, f.description, f.category, f.studio || ''].join(' ').toLowerCase().includes(query.toLowerCase())) &&
+    (category === 'Все' || f.category === category) &&
+    (genre === 'Все жанры' || f.genre.includes(genre)) &&
+    (studio === 'Все студии' || (f.studio || '') === studio) &&
+    (year === 'Любой год' || String(f.year) === year) &&
+    f.rating >= Number(minRating) &&
     (watchFilter === 'all' || (watchFilter === 'watched' && watchedIds.has(f.id)) || (watchFilter === 'unwatched' && !watchedIds.has(f.id)))
   ).sort((a, b) => sort === 'rating' ? b.rating - a.rating : sort === 'new' ? b.year - a.year : sort === 'old' ? a.year - b.year : (b.views || 0) - (a.views || 0)), [films, query, category, genre, studio, year, sort, minRating, watchFilter, watchedIds]);
 
@@ -871,11 +1038,19 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
 
   if (!film) return <div className="empty-state"><h2>История не найдена</h2><button className="primary-btn" onClick={() => go('/catalog')}>К каталогу</button></div>;
 
-  const saved = data.bookmarks.some(b => b.movieId === film.id);
-  const myRating = data.ratings.find(r => r.movieId === film.id)?.value || 0;
-  const movieComments = data.comments.filter(c => c.movieId === film.id);
-  const topComments = movieComments.filter(c => !c.parentId);
-  const related = data.films.filter(f => f.id !== film.id && (f.genre.split(',').some(g => film.genre.includes(g.trim())))).slice(0, 5);
+  const saved = useMemo(() => data.bookmarks.some(b => b.movieId === film.id), [data.bookmarks, film.id]);
+  const myRating = useMemo(() => data.ratings.find(r => r.movieId === film.id)?.value || 0, [data.ratings, film.id]);
+  const isWatched = useMemo(() => data.watches.some(w => w.movieId === film.id), [data.watches, film.id]);
+
+  const movieComments = useMemo(() => data.comments.filter(c => c.movieId === film.id), [data.comments, film.id]);
+  const topComments = useMemo(() => movieComments.filter(c => !c.parentId), [movieComments]);
+
+  const related = useMemo(() => {
+    const genres = new Set(film.genre.split(',').map(x => x.trim()).filter(Boolean));
+    return data.films
+      .filter(f => f.id !== film.id && f.genre.split(',').some(g => genres.has(g.trim())))
+      .slice(0, 5);
+  }, [data.films, film.id, film.genre]);
 
   const submit = async () => {
     if (!comment.trim()) return;
@@ -890,31 +1065,50 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
       <button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
 
       <div className={`detail-hero tone-${tone(film.rating)}`} style={{ backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` }}>
-        <div className="detail-poster"><img src={image(film)} alt={film.title} /></div>
+        <div className="detail-poster">
+          <PosterThumb movieId={film.id} src={image(film)} alt={film.title} wrapStyle={{ display: 'block' }} />
+        </div>
+
         <div className="detail-intro">
           <div className="detail-badges"><span className="eyebrow">{film.category.toUpperCase()}</span><span>·</span><span>{film.year}</span><span>·</span><span>{film.country}</span></div>
           <h1>{film.title}</h1>
           <p className="original-title">{film.originalTitle}</p>
+
           <div className="detail-rating">
             <span className="big-rating"><Star size={22} fill="currentColor" />{film.rating.toFixed(1)}</span>
             <span className="rating-of">/ 10<br /><small>рейтинг сообщества</small></span>
             <span className="detail-views"><Eye size={17} />{fmt(film.views || 0)} просмотров</span>
           </div>
+
           <p className="detail-description">{film.description}</p>
+
           <div className="genre-list">
             {film.genre.split(',').map(g => <button key={g} onClick={() => go('/catalog?search=' + encodeURIComponent(g.trim()))}>{g.trim()}</button>)}
             {film.studio && film.studio.split(',').map((st, i) => <button key={i} onClick={() => go('/catalog?search=' + encodeURIComponent(st.trim()))}>{st.trim()}</button>)}
           </div>
+
           <div className="detail-actions">
-            <button className={data.watches.some(w => w.movieId === film.id) ? 'outline-btn watched-done' : 'primary-btn'} onClick={() => requireAuth(() => action({ action: 'watch', movieId: film.id }, 'Просмотр добавлен'))}>
-              <CheckCircle2 size={17} /> {data.watches.some(w => w.movieId === film.id) ? 'Просмотрено' : 'Отметить просмотренным'}
+            <button
+              className={isWatched ? 'outline-btn watched-done' : 'primary-btn'}
+              onClick={() => requireAuth(() => action(
+                { action: isWatched ? 'unwatch' : 'watch', movieId: film.id },
+                isWatched ? 'Просмотр убран' : 'Просмотр добавлен'
+              ))}
+            >
+              <CheckCircle2 size={17} /> {isWatched ? 'Просмотрено' : 'Отметить просмотренным'}
             </button>
+
             <button className="outline-btn" onClick={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из списка' : 'Добавлено в список'))}>
               <Bookmark size={17} fill={saved ? 'currentColor' : 'none'} />{saved ? 'В списке' : 'В мой список'}
             </button>
+
             <button className="square-btn" onClick={() => requireAuth(() => share(film))} title="Поделиться"><Share2 size={18} /></button>
-            <button className="outline-btn" onClick={() => requireAuth(() => go('/room/' + Math.random().toString(36).slice(2, 8)))} title="Смотреть вместе с другом"><Tv2 size={17} /> Кинозал</button>
+
+            <button className="outline-btn" onClick={() => requireAuth(() => go('/room/' + Math.random().toString(36).slice(2, 8)))} title="Смотреть вместе с другом">
+              <Tv2 size={17} /> Кинозал
+            </button>
           </div>
+
           {film.watchUrl && <a className="watch-external" href={film.watchUrl} target="_blank" rel="noopener noreferrer"><MonitorPlay size={17} /> Где посмотреть <ExternalLink size={15} /></a>}
         </div>
       </div>
@@ -954,7 +1148,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                 <span className="eyebrow">СТАТИСТИКА ГОЛОСОВ</span>
                 <div className="rating-histogram" style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
                   {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((score) => {
-                    const dist = film.ratingDist || {};
+                    const dist = (film as any).ratingDist || {};
                     const count = Number(dist[score] || 0) + Number(dist[score - 0.5] || 0);
                     const pct = film.ratingCount ? (count / film.ratingCount) * 100 : 0;
                     return (
@@ -1171,8 +1365,12 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
   const level = Math.floor((u.xp || 0) / 500) + 1;
   const progress = ((u.xp || 0) % 500) / 5;
   const achieved = achievementDefs.filter(a => a.progress(data) >= a.targets[0]).length;
-  const categoryCounts = categories.slice(1).map(c => ({ name: c, count: watched.filter(w => w.film?.category === c).length, mins: watched.filter(w => w.film?.category === c).reduce((n, w) => n + (w.film ? titleMinutes(w.film) : 0), 0) }));
-  
+  const categoryCounts = categories.slice(1).map(c => ({
+    name: c,
+    count: watched.filter(w => w.film?.category === c).length,
+    mins: watched.filter(w => w.film?.category === c).reduce((n, w) => n + (w.film ? titleMinutes(w.film) : 0), 0)
+  }));
+
   const save = (payload: Record<string, unknown>) => action({ action: 'profile', ...payload }, 'Профиль обновлён');
   const handleUpload = async (file?: File) => {
     if (!file) return;
@@ -1235,7 +1433,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
           <div className="history-list">
             {watched.slice(0, 5).map(w => (
               <button key={w.id} onClick={() => go('/movie/' + w.movieId)}>
-                <img src={w.film?.poster} alt="" />
+                <PosterThumb movieId={w.movieId} src={w.film?.poster} alt="" />
                 <span><b>{w.film?.title}</b><small>{new Date(w.watchedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} · {w.film?.duration} мин</small></span>
                 <ChevronRight size={16} />
               </button>
@@ -1312,7 +1510,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
           </div>
         </div>
       </div>
-      
+
       <div className="profile-level-row">
         <div className="level-card">
           <div className="level-emblem"><Zap size={23} fill="currentColor" /></div>
@@ -1326,7 +1524,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         <div className="profile-mini-stat"><Trophy size={21} /><b>{achieved}</b><small>достижения</small></div>
         <div className="profile-mini-stat"><Flame size={21} /><b>{new Set(data.watches.map(w => new Date(w.watchedAt).toISOString().slice(0, 10))).size}</b><small>активных дней</small></div>
       </div>
-      
+
       {editing && (
         <div className="customize-panel">
           <div className="tile-heading"><span><Settings2 size={18} /> Твоя студия оформления</span><small>Создай профиль под своё настроение</small></div>
@@ -1388,7 +1586,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         <div><span className="eyebrow">ЗАПИСИ И ДОСТИЖЕНИЯ</span><h2>Мой кинодневник</h2></div>
         {editing && <span className="drag-hint"><GripVertical size={16} /> Перетащи, чтобы изменить порядок</span>}
       </div>
-      
+
       <div className="profile-tiles">
         {order.filter(id => tiles[id]).map(id => (
           <div key={id} draggable={editing} onDragStart={() => setDragged(id)} onDragOver={e => e.preventDefault()} onDrop={() => { if (!dragged || dragged === id) return; const next = [...order]; next.splice(next.indexOf(dragged), 1); next.splice(next.indexOf(id), 0, dragged); setOrder(next); save({ tileOrder: next.join(',') }); setDragged(''); }} className={editing ? 'draggable-tile' : ''}>
@@ -1419,9 +1617,9 @@ function Watchlist({ data, go, auth }: { data: Data; go: (s: string) => void; au
 function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
   const [metric, setMetric] = useState<'minutes' | 'watches' | 'streak' | 'xp' | 'ratings' | 'gameScore'>('minutes');
   const labels = { minutes: 'Часы просмотра', watches: 'Просмотры', streak: 'Активные дни', xp: 'Опыт XP', ratings: 'Оценки', gameScore: 'Игровые очки' };
-  const sorted = [...data.leaderboard].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0));
+  const sorted = useMemo(() => [...data.leaderboard].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0)), [data.leaderboard, metric]);
   const value = (p: Leader) => metric === 'minutes' ? `${Math.floor(p.minutes / 60)} ч ${p.minutes % 60} мин` : fmt(Number(p[metric] || 0));
-  
+
   return (
     <>
       <div className="page-heading">
@@ -1494,23 +1692,27 @@ const achievementDefs = [
 function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s: string) => void; }) {
   const [expandedAch, setExpandedAch] = useState<string | null>(null);
   if (!data.user) return <Gate title="Собирай свою историю" description="Открывай достижения, улучшай их до новых тиров и получай награды." auth={auth} />;
+
   const unlocked = achievementDefs.filter(a => a.progress(data) >= a.targets[0]).length;
   const total = achievementDefs.length;
   const pct = Math.round(unlocked / total * 100);
   const cats = [...new Set(achievementDefs.map(a => (a as any).category || 'Прочее'))];
-  
+
   return (
     <>
       <div className="page-heading">
         <div><span className="eyebrow">ТВОИ ПОБЕДЫ</span><h1>Коллекция <em>достижений.</em></h1><p>Маленькие победы складываются в большую историю.</p></div>
         <div className="heading-count"><Award size={19} />{unlocked} / {total} открыто</div>
       </div>
+
       <div className="achievement-summary">
         <span className="achievement-summary-icon">✦</span>
         <div><h3>Твоя коллекция растёт</h3><p>Каждое из {total} достижений имеет 3 тира. Исследуй все категории кино, чтобы собрать коллекцию полностью.</p></div>
         <strong>{pct}%</strong>
       </div>
+
       <div className="ach-progress-outer"><div className="ach-progress-inner" style={{ width: pct + '%' }} /></div>
+
       <div className="ach-cats-row">
         {cats.map(cat => {
           const catDefs = achievementDefs.filter(a => (a as any).category === cat);
@@ -1518,6 +1720,7 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
           return <div key={cat} className="ach-cat-pill"><span>{cat}</span><b>{catUnlocked}/{catDefs.length}</b></div>;
         })}
       </div>
+
       {cats.map(cat => {
         const catDefs = achievementDefs.filter(a => (a as any).category === cat);
         return (
@@ -1528,19 +1731,27 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
                 const value = a.progress(data);
                 const tier = a.targets.filter(t => value >= t).length;
                 const next = a.targets[Math.min(tier, 2)];
-                const pctBar = Math.min(100, value / next * 100);
+                const pctBar = Math.min(100, (value / next) * 100);
+
                 return (
-                  <div className={`achievement-card ${tier ? 'unlocked' : 'locked'} ${tier === 3 ? 'maxed' : ''} ${expandedAch === a.id ? 'expanded' : ''}`} key={a.id} onClick={() => setExpandedAch(expandedAch === a.id ? null : a.id)}>
+                  <div
+                    className={`achievement-card ${tier ? 'unlocked' : 'locked'} ${tier === 3 ? 'maxed' : ''} ${expandedAch === a.id ? 'expanded' : ''}`}
+                    key={a.id}
+                    onClick={() => setExpandedAch(expandedAch === a.id ? null : a.id)}
+                  >
                     <div className="achievement-top">
                       <span className="achievement-icon">{a.icon}</span>
                       <span className="achievement-tier">{tier === 3 ? '✦ МАКС' : tier ? `ТИР ${['', 'I', 'II', 'III'][tier]}` : 'ЗАКРЫТО'}</span>
                     </div>
                     <h3>{a.name}</h3><p>{a.description}</p>
+
                     <div className="achievement-progress">
                       <div><span>{Math.min(value, next)} / {next} {a.unit}</span><b>{tier === 3 ? 'Максимальный тир' : `До тира ${['I', 'II', 'III'][Math.min(tier, 2)]}`}</b></div>
                       <div className="bar-track"><i style={{ width: `${pctBar}%` }} /></div>
                     </div>
+
                     <div className="tier-dots">{a.targets.map((t, i) => <span key={t} className={value >= t ? 'filled' : ''}>{['I', 'II', 'III'][i]}</span>)}</div>
+
                     {expandedAch === a.id && (
                       <div className="ach-detail" onClick={e => e.stopPropagation()}>
                         <div className="ach-tiers-detail">
@@ -1570,13 +1781,14 @@ function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p:
   if (!data.user) return <Gate title="Кино лучше вместе" description="Находи единомышленников, делись фильмами и собирай своё сообщество." auth={auth} />;
   const pending = data.friends.filter(f => f.toId === data.user?.id && f.status === 'pending');
   const peers = data.people.filter(p => p.id !== data.user?.id && p.username.toLowerCase().includes(query.toLowerCase()));
-  
+
   return (
     <>
       <div className="page-heading">
         <div><span className="eyebrow">ОДНО КИНО · ТЫСЯЧИ ИСТОРИЙ</span><h1>Твои <em>люди.</em></h1><p>Делиться впечатлениями лучше с теми, кто поймёт.</p></div>
         <div className="heading-count"><Users size={18} />{data.friends.filter(f => f.status === 'accepted').length} друзей</div>
       </div>
+
       {pending.length > 0 && (
         <section className="friend-section">
           <SectionTitle kicker="ЖДУТ ТВОЕГО ОТВЕТА" title="Заявки в друзья" />
@@ -1594,6 +1806,7 @@ function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p:
           </div>
         </section>
       )}
+
       <section className="friend-section">
         <SectionTitle kicker="НАЙДИ СВОЮ КОМПАНИЮ" title="Кинолюбители" />
         <div className="catalog-search compact"><Search size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Найти пользователя по имени..." /></div>
@@ -1606,10 +1819,17 @@ function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p:
                 <div><b>{p.username}</b><small>{p.role === 'admin' ? 'Администратор' : p.role === 'vip' ? 'VIP участник' : `Уровень ${Math.floor((p.xp || 0) / 500) + 1}`}</small></div>
                 {relation ? (
                   <div className="friend-actions">
-                    {relation.status === 'accepted' && <><button className="outline-btn small" onClick={() => go('/user/' + p.id)}><Eye size={14} /> Профиль</button><button className="outline-btn small" onClick={() => openChat(p.id)}><MessageCircle size={14} /> Чат</button></>}
+                    {relation.status === 'accepted' && (
+                      <>
+                        <button className="outline-btn small" onClick={() => go('/user/' + p.id)}><Eye size={14} /> Профиль</button>
+                        <button className="outline-btn small" onClick={() => openChat(p.id)}><MessageCircle size={14} /> Чат</button>
+                      </>
+                    )}
                     {relation.status === 'pending' && <span className="friend-state">⏳ Заявка</span>}
                   </div>
-                ) : <button className="outline-btn small" onClick={() => action({ action: 'friend', userId: p.id }, 'Заявка отправлена')}><UserPlus size={16} /> Добавить</button>}
+                ) : (
+                  <button className="outline-btn small" onClick={() => action({ action: 'friend', userId: p.id }, 'Заявка отправлена')}><UserPlus size={16} /> Добавить</button>
+                )}
               </div>
             );
           })}
@@ -1643,13 +1863,16 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
   const [choice, setChoice] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<{ question: string; options: string[]; correct: string; poster?: string }[]>([]);
+  const [questions, setQuestions] = useState<{ movieId?: number; question: string; options: string[]; correct: string; poster?: string }[]>([]);
 
   const make = (id: string) => {
     const usable = films.length >= 5 ? films : [...films, ...films, ...films].slice(0, 5);
     const source = [...usable].sort(() => Math.random() - 0.5).slice(0, 5);
-    const pool = (field: (f: FilmType) => string, current: FilmType) => [...new Set([field(current), ...usable.filter(f => f.id !== current.id).sort(() => Math.random() - 0.5).map(field)])].slice(0, 4).sort(() => Math.random() - 0.5);
-    
+    const pool = (field: (f: FilmType) => string, current: FilmType) =>
+      [...new Set([field(current), ...usable.filter(f => f.id !== current.id).sort(() => Math.random() - 0.5).map(field)])]
+        .slice(0, 4)
+        .sort(() => Math.random() - 0.5);
+
     const qs = source.map(f => {
       let question = '', correct = '', options: string[] = [], poster: string | undefined;
       switch (id) {
@@ -1667,11 +1890,24 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
         case 'anagram': { const shuffled = f.title.split('').sort(() => Math.random() - 0.5).join(''); question = `Собери название: «${shuffled}» (${f.category})`; correct = f.title; options = pool(x => x.title, f); break; }
         case 'truths': { const lie = `Режиссёр — ${usable.filter(x => x.director !== f.director)[0]?.director || 'неизвестно'}`; question = `Найди ЛОЖЬ о «${f.title}»:`; correct = lie; options = [`Год выпуска — ${f.year}`, `Категория — ${f.category}`, lie].sort(() => Math.random() - 0.5); break; }
         case 'chrono': { question = `Какой из этих фильмов вышел раньше всех?`; correct = source.sort((a, b) => a.year - b.year)[0].title; options = source.slice(0, 4).map(x => x.title).sort(() => Math.random() - 0.5); break; }
-        case 'connections': { question = `Какой фильм НЕ связан общим жанром «${f.genre.split(',')[0].trim()}»?`; const outsider = usable.filter(x => !x.genre.includes(f.genre.split(',')[0].trim()))[0] || usable[0]; correct = outsider.title; options = [...source.filter(x => x.genre.includes(f.genre.split(',')[0].trim())).slice(0, 3).map(x => x.title), outsider.title].sort(() => Math.random() - 0.5); break; }
-        default: { const others = usable.filter(x => x.rating !== f.rating); const opponent = others[Math.floor(Math.random() * others.length)] || usable[0]; correct = f.rating >= opponent.rating ? f.title : opponent.title; options = [f.title, opponent.title]; question = `Что оценили выше: «${f.title}» или другое кино?`; }
+        case 'connections': {
+          question = `Какой фильм НЕ связан общим жанром «${f.genre.split(',')[0].trim()}»?`;
+          const outsider = usable.filter(x => !x.genre.includes(f.genre.split(',')[0].trim()))[0] || usable[0];
+          correct = outsider.title;
+          options = [...source.filter(x => x.genre.includes(f.genre.split(',')[0].trim())).slice(0, 3).map(x => x.title), outsider.title].sort(() => Math.random() - 0.5);
+          break;
+        }
+        default: {
+          const others = usable.filter(x => x.rating !== f.rating);
+          const opponent = others[Math.floor(Math.random() * others.length)] || usable[0];
+          correct = f.rating >= opponent.rating ? f.title : opponent.title;
+          options = [f.title, opponent.title];
+          question = `Что оценили выше: «${f.title}» или другое кино?`;
+        }
       }
-      return { question, correct, options, poster };
+      return { movieId: f.id, question, correct, options, poster };
     });
+
     setQuestions(qs);
     setMode(gameModes.find(g => g.id === id) || null);
     setRound(0);
@@ -1700,6 +1936,7 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
         <div><h3>Играй. Побеждай. Прокачивайся.</h3><p>За каждый верный ответ получай очки. За прохождение — опыт XP для профиля.</p></div>
         <span>+ XP</span>
       </div>
+
       <div className="games-grid">
         {gameModes.map((g, i) => (
           <button key={g.id} className={`game-card game-${g.color}`} onClick={() => make(g.id)}>
@@ -1709,24 +1946,48 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
           </button>
         ))}
       </div>
+
       {mode && (
         <div className="modal-backdrop" onClick={() => setMode(null)}>
           <div className="glass-modal game-modal" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setMode(null)}><X size={20} /></button>
             <span className="eyebrow">{mode.icon} {mode.name.toUpperCase()}</span>
+
             {round < 5 && questions[round] ? (
               <>
                 <div className="game-counter"><span>ВОПРОС {round + 1} / 5</span><b>{score} ОЧКОВ</b></div>
                 <div className="game-progress"><i style={{ width: `${(round + 1) * 20}%` }} /></div>
-                {questions[round].poster && <img className="game-poster" src={questions[round].poster} alt="Загадочный постер" />}
+
+                {questions[round].poster && (
+                  <PosterThumb
+                    movieId={questions[round].movieId}
+                    src={questions[round].poster}
+                    alt="Загадочный постер"
+                    imgClassName="game-poster"
+                    wrapStyle={{ display: 'block', width: '100%' }}
+                  />
+                )}
+
                 <h2>{questions[round].question}</h2>
+
                 <div className="game-options">
                   {questions[round].options.map((option, i) => (
-                    <button key={i} disabled={choice !== null} className={choice !== null ? (option === questions[round].correct ? 'correct' : choice === option ? 'incorrect' : '') : ''} onClick={() => { if (choice !== null) return; setChoice(option); if (option === questions[round].correct) setScore(score + 1); }}>
-                      <span>{String.fromCharCode(65 + i)}</span>{option}{choice !== null && option === questions[round].correct && <Check size={18} />}
+                    <button
+                      key={i}
+                      disabled={choice !== null}
+                      className={choice !== null ? (option === questions[round].correct ? 'correct' : choice === option ? 'incorrect' : '') : ''}
+                      onClick={() => {
+                        if (choice !== null) return;
+                        setChoice(option);
+                        if (option === questions[round].correct) setScore(score + 1);
+                      }}
+                    >
+                      <span>{String.fromCharCode(65 + i)}</span>{option}
+                      {choice !== null && option === questions[round].correct && <Check size={18} />}
                     </button>
                   ))}
                 </div>
+
                 {choice !== null && (
                   <div className="game-next">
                     <span>{choice === questions[round].correct ? 'Верно! Ты знаешь своё кино ✨' : 'Не совсем. Но теперь ты знаешь ответ!'}</span>
@@ -1753,7 +2014,7 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
 function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; edit: (f: FilmType | null) => void; }) {
   const [tab, setTab] = useState('films');
   if (!['admin', 'moderator'].includes(data.user?.role || '')) return <div className="gate"><Shield size={40} /><h1>Доступ закрыт</h1><p>Этот раздел доступен только команде moviemovie.</p><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>;
-  
+
   return (
     <>
       <div className="page-heading">
@@ -1770,11 +2031,12 @@ function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void
         <button className={tab === 'films' ? 'selected' : ''} onClick={() => setTab('films')}>Материалы</button>
         {data.user?.role === 'admin' && <button className={tab === 'users' ? 'selected' : ''} onClick={() => setTab('users')}>Пользователи и роли</button>}
       </div>
+
       {tab === 'films' ? (
         <div className="admin-list">
           {data.films.map(f => (
             <div className="admin-row" key={f.id}>
-              <img src={f.poster} alt="" />
+              <PosterThumb movieId={f.id} src={f.poster} alt="" />
               <div><b>{f.title}</b><small>{f.year} · {f.category} · ★ {f.rating.toFixed(1)}</small></div>
               <span>{f.views} просмотров</span>
               <button onClick={() => edit(f)} title="Редактировать"><Pencil size={18} /></button>
@@ -1845,7 +2107,14 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
     if (!botName || !tgRef.current) return;
     tgRef.current.innerHTML = '';
     const script = document.createElement('script');
-    script.async = true; script.src = 'https://telegram.org/js/telegram-widget.js?22'; script.setAttribute('data-telegram-login', botName); script.setAttribute('data-size', 'large'); script.setAttribute('data-radius', '20'); script.setAttribute('data-request-access', 'write'); script.setAttribute('data-userpic', 'false'); script.setAttribute('data-onauth', 'MovieGoTelegramAuth(user)');
+    script.async = true;
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.setAttribute('data-telegram-login', botName);
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-radius', '20');
+    script.setAttribute('data-request-access', 'write');
+    script.setAttribute('data-userpic', 'false');
+    script.setAttribute('data-onauth', 'MovieGoTelegramAuth(user)');
     tgRef.current.appendChild(script);
     return () => { if (tgRef.current) tgRef.current.innerHTML = ''; delete (globalThis as { MovieGoTelegramAuth?: unknown; }).MovieGoTelegramAuth; };
   }, [botName]);
@@ -1883,10 +2152,26 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
 }
 
 function MovieForm({ film, close, action, notify }: { film: FilmType | null; close: () => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; notify: (s: string) => void; }) {
-  const [form, setForm] = useState({ title: film?.title || '', originalTitle: film?.originalTitle || '', description: film?.description || '', category: film?.category || 'Фильм', genre: film?.genre || '', studio: film?.studio || '', year: film?.year || 2026, duration: film?.duration || 90, episodes: film?.episodes || 0, mood: film?.mood || '', poster: film?.poster || '', backdrop: film?.backdrop || '', watchUrl: film?.watchUrl || '', director: film?.director || '', country: film?.country || '' });
+  const [form, setForm] = useState({
+    title: film?.title || '',
+    originalTitle: (film as any)?.originalTitle || '',
+    description: (film as any)?.description || '',
+    category: film?.category || 'Фильм',
+    genre: (film as any)?.genre || '',
+    studio: (film as any)?.studio || '',
+    year: film?.year || 2026,
+    duration: film?.duration || 90,
+    episodes: (film as any)?.episodes || 0,
+    mood: (film as any)?.mood || '',
+    poster: film?.poster || '',
+    backdrop: (film as any)?.backdrop || '',
+    watchUrl: (film as any)?.watchUrl || '',
+    director: (film as any)?.director || '',
+    country: (film as any)?.country || ''
+  });
   const [busy, setBusy] = useState(false);
   const field = (key: keyof typeof form, value: string | number) => setForm(v => ({ ...v, [key]: value }));
-  
+
   const upload = async (file?: File) => {
     if (!file) return;
     const fd = new FormData(); fd.append('file', file); fd.append('kind', 'poster');
@@ -1899,7 +2184,7 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const ok = await action({ action: 'movieSave', id: film?.id, ...form }, film ? 'Материал обновлён' : 'Материал добавлен');
+    const ok = await action({ action: 'movieSave', id: (film as any)?.id, ...form }, film ? 'Материал обновлён' : 'Материал добавлен');
     setBusy(false);
     if (ok) close();
   };
@@ -1966,12 +2251,14 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
   const p = profile.profile;
   const s = profile.stats;
   const level = s.level;
-  const myWatchedIds = new Set(data.watches.map(w => w.movieId));
+
+  const myWatchedIds = useWatchedIds(); // оптимизация: берем из контекста
   const commonFilms = profile.recentWatches.filter(w => w.film && myWatchedIds.has(w.film.id)).length;
 
   return (
     <>
       <button className="back-link" onClick={() => go('/friends')}>← Назад к друзьям</button>
+
       <div className={`profile-cover header-style- effect-${p.profileEffect || 'none'} ${p.headerImage && p.headerStyle === 5 ? 'custom-header' : ''}`} style={p.headerImage && p.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${p.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={p.headerStyle || 1} data-frame={p.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
@@ -2004,7 +2291,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
           </div>
         </div>
       </div>
-      
+
       <div className="profile-level-row">
         <div className="level-card">
           <div className="level-emblem"><Zap size={23} fill="currentColor" /></div>
@@ -2033,7 +2320,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
               <div><span className="stat-icon pink-icon"><Flame size={18} /></span><b>{s.activeDays}</b><small>дней стрик</small></div>
             </div>
           </div>
-          
+
           <div className="profile-tile">
             <div className="tile-heading"><span><Sparkles size={18} /> Жанровые предпочтения</span></div>
             <div className="top-genres-list">
@@ -2052,7 +2339,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
             <div className="history-list">
               {profile.ratings.sort((a, b) => b.value - a.value).slice(0, 5).map((r, i) => (
                 <button key={i} onClick={() => go('/movie/' + r.movieId)}>
-                  <img src={data.films.find(f => f.id === r.movieId)?.poster} alt="" />
+                  <PosterThumb movieId={r.movieId} src={data.films.find(f => f.id === r.movieId)?.poster} alt="" />
                   <span><b>{r.title}</b><small>Оценка: {r.value.toFixed(1)} / 10</small></span>
                   <Star size={14} fill="var(--gold)" color="var(--gold)" />
                 </button>
@@ -2081,8 +2368,8 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
               <div className="history-list">
                 {profile.recentWatches.map((w, i) => w.film && (
                   <button key={i} onClick={() => go('/movie/' + w.film!.id)}>
-                    <img src={w.film.poster} alt="" />
-                    <span><b>{w.film.title}</b><small>{new Date(w.watchedAt).toLocaleDateString('ru-RU')} · {w.film.category}</small></span>
+                    <PosterThumb movieId={w.film!.id} src={w.film!.poster} alt="" />
+                    <span><b>{w.film!.title}</b><small>{new Date(w.watchedAt).toLocaleDateString('ru-RU')} · {w.film!.category}</small></span>
                     <ChevronRight size={16} />
                   </button>
                 ))}
@@ -2094,9 +2381,9 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
             <div className="profile-tile common-films-tile">
               <div className="tile-heading"><span><Heart size={18} /> Кино-связь</span></div>
               <div className="common-films-visual">
-                 <Avatar name={data.user.username} src={data.user.avatar} size={50} />
-                 <div className="common-heart"><Heart size={20} fill="var(--accent)" /></div>
-                 <Avatar name={p.username} src={p.avatar} size={50} />
+                <Avatar name={data.user.username} src={data.user.avatar} size={50} />
+                <div className="common-heart"><Heart size={20} fill="var(--accent)" /></div>
+                <Avatar name={p.username} src={p.avatar} size={50} />
               </div>
               <p className="common-count">У вас <b>{commonFilms}</b> общих {commonFilms === 1 ? 'фильм' : commonFilms < 5 ? 'фильма' : 'фильмов'}.</p>
               <p className="muted" style={{ fontSize: 11 }}>Ваши вкусы совпадают на {profile.compatibility}%!</p>
@@ -2135,7 +2422,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
     try {
       await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toId: activePeer, text: text.trim() || '', movieId: movieId || null }) });
       setText(''); setShareOpen(false); await loadThread(activePeer); await loadInbox();
-    } catch {} finally { setSending(false); }
+    } catch { } finally { setSending(false); }
   };
 
   const peer = activePeer ? data.people.find(p => p.id === activePeer) : null;
@@ -2151,6 +2438,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
         <div><span className="eyebrow">КИНОБЕСЕДЫ</span><h1>Личные <em>сообщения.</em></h1><p>Обсуждай кино с друзьями и делись впечатлениями.</p></div>
         <div className="heading-count"><MessageCircle size={18} />{conversations.length} диалогов</div>
       </div>
+
       <div className="chat-layout">
         <div className="chat-sidebar">
           <div className="chat-sidebar-head"><h3>Диалоги</h3><span>{conversations.reduce((n, c) => n + c.unread, 0)} непрочит.</span></div>
@@ -2164,6 +2452,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
               <span className="chat-time">{new Date(c.lastMessageAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span>
             </button>
           ))}
+
           {friendsWithoutConvo.length > 0 && (
             <>
               <div className="chat-sidebar-divider">Начать диалог</div>
@@ -2175,6 +2464,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
               ))}
             </>
           )}
+
           {conversations.length === 0 && friendsWithoutConvo.length === 0 && (
             <div className="chat-empty-sidebar">
               <MessageCircle size={28} />
@@ -2183,6 +2473,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
             </div>
           )}
         </div>
+
         <div className="chat-main">
           {activePeer && peer ? (
             <>
@@ -2193,6 +2484,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
                 </button>
                 <button className="outline-btn small" onClick={() => go('/user/' + peer.id)}><Eye size={14} /> Профиль</button>
               </div>
+
               <div className="chat-messages" ref={scrollRef}>
                 {thread.map(m => (
                   <div key={m.id} className={`chat-bubble ${m.fromId === data.user?.id ? 'mine' : 'theirs'}`}>
@@ -2200,17 +2492,21 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
                       <p>{m.body}</p>
                       {m.film && (
                         <button className="shared-film-card" onClick={() => go('/movie/' + m.film!.id)}>
-                          <img src={m.film.poster} alt="" />
-                          <div><b>{m.film.title}</b><small>{m.film.year} · {m.film.category}</small></div>
+                          <PosterThumb movieId={m.film!.id} src={m.film!.poster} alt="" />
+                          <div><b>{m.film!.title}</b><small>{m.film!.year} · {m.film!.category}</small></div>
                           <ArrowUpRight size={14} />
                         </button>
                       )}
                     </div>
-                    <span className="bubble-time">{new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}{m.fromId === data.user?.id && <>{m.read ? ' ✓✓' : ' ✓'}</>}</span>
+                    <span className="bubble-time">
+                      {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                      {m.fromId === data.user?.id && <>{m.read ? ' ✓✓' : ' ✓'}</>}
+                    </span>
                   </div>
                 ))}
                 {thread.length === 0 && <div className="chat-empty-thread"><Sparkles size={28} /><p>Напиши первое сообщение!</p></div>}
               </div>
+
               <div className="chat-compose">
                 {shareOpen && (
                   <div className="chat-share-panel">
@@ -2219,7 +2515,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
                     <div className="chat-share-list">
                       {shareFilms.map(f => (
                         <button key={f.id} onClick={() => sendMessage(f.id)} className="chat-share-item">
-                          <img src={f.poster} alt="" />
+                          <PosterThumb movieId={f.id} src={f.poster} alt="" />
                           <div><b>{f.title}</b><small>{f.year} · ★ {f.rating.toFixed(1)}</small></div>
                           <Send size={14} />
                         </button>
@@ -2227,6 +2523,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
                     </div>
                   </div>
                 )}
+
                 <div className="chat-input-row">
                   <button className="chat-attach-btn" onClick={() => setShareOpen(!shareOpen)} title="Поделиться фильмом"><Film size={19} /></button>
                   <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Написать сообщение..." />
@@ -2310,6 +2607,7 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
           <button onClick={close}><X size={18} /></button>
         </div>
       </div>
+
       <div className="chat-messages chat-drawer-messages" ref={scrollRef}>
         {thread.map(m => (
           <div key={m.id} className={`chat-bubble ${m.fromId === data.user?.id ? 'mine' : 'theirs'}`}>
@@ -2317,8 +2615,8 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
               <p>{m.body}</p>
               {m.film && (
                 <button className="shared-film-card" onClick={() => { close(); go('/movie/' + m.film!.id); }}>
-                  <img src={m.film.poster} alt="" />
-                  <div><b>{m.film.title}</b><small>{m.film.year} · {m.film.category}</small></div>
+                  <PosterThumb movieId={m.film!.id} src={m.film!.poster} alt="" />
+                  <div><b>{m.film!.title}</b><small>{m.film!.year} · {m.film!.category}</small></div>
                   <ArrowUpRight size={14} />
                 </button>
               )}
@@ -2328,6 +2626,7 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
         ))}
         {thread.length === 0 && <div className="chat-empty-thread"><Sparkles size={24} /><p>Начни разговор!</p></div>}
       </div>
+
       <div className="chat-compose">
         {shareOpen && (
           <div className="chat-share-panel drawer-share">
@@ -2336,7 +2635,7 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
             <div className="chat-share-list">
               {shareFilms.map(f => (
                 <button key={f.id} onClick={() => sendMessage(f.id)} className="chat-share-item">
-                  <img src={f.poster} alt="" />
+                  <PosterThumb movieId={f.id} src={f.poster} alt="" />
                   <div><b>{f.title}</b><small>★ {f.rating.toFixed(1)}</small></div>
                   <Send size={13} />
                 </button>
@@ -2344,6 +2643,7 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
             </div>
           </div>
         )}
+
         <div className="chat-input-row">
           <button className="chat-attach-btn" onClick={() => setShareOpen(!shareOpen)}><Film size={17} /></button>
           <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Сообщение..." />
@@ -2357,25 +2657,34 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
 function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: number; go: (s: string) => void; auth: () => void; }) {
   const [compData, setCompData] = useState<ProfileData | null>(null);
   useEffect(() => { fetch('/api/profile?id=' + compareId).then(r => r.json()).then(d => setCompData(d.profile ? d : null)); }, [compareId]);
-  
+
   if (!data.user) return <Gate title="Битва вкусов" description="Войди, чтобы сравнить свои вкусы с друзьями." auth={auth} />;
   if (!compData) return <div className="empty-state">Загрузка...</div>;
-  
+
   const myRatingsMap = new Map(data.ratings.map(r => [r.movieId, r.value]));
-  const disputes = compData.ratings.filter(r => myRatingsMap.has(r.movieId)).map(r => ({ film: data.films.find(f => f.id === r.movieId), my: myRatingsMap.get(r.movieId)!, their: r.value })).sort((a, b) => Math.abs(b.my - b.their) - Math.abs(a.my - a.their)).slice(0, 5);
-  const agreements = compData.ratings.filter(r => myRatingsMap.has(r.movieId) && Math.abs(r.value - myRatingsMap.get(r.movieId)!) <= 1 && r.value >= 8).map(r => ({ film: data.films.find(f => f.id === r.movieId), my: myRatingsMap.get(r.movieId)!, their: r.value })).slice(0, 5);
-  
+  const disputes = compData.ratings
+    .filter(r => myRatingsMap.has(r.movieId))
+    .map(r => ({ film: data.films.find(f => f.id === r.movieId), my: myRatingsMap.get(r.movieId)!, their: r.value }))
+    .sort((a, b) => Math.abs(b.my - b.their) - Math.abs(a.my - a.their))
+    .slice(0, 5);
+
+  const agreements = compData.ratings
+    .filter(r => myRatingsMap.has(r.movieId) && Math.abs(r.value - myRatingsMap.get(r.movieId)!) <= 1 && r.value >= 8)
+    .map(r => ({ film: data.films.find(f => f.id === r.movieId), my: myRatingsMap.get(r.movieId)!, their: r.value }))
+    .slice(0, 5);
+
   return (
     <>
       <button className="back-link" onClick={() => go('/user/' + compareId)}>← Назад к профилю</button>
       <div className="page-heading">
         <div><span className="eyebrow">КИНО-БАТТЛ ДРУЗЕЙ</span><h1>Сравнение вкусов.</h1><p>Ты и {compData.profile.username}</p></div>
       </div>
+
       <div className="compare-section">
         <SectionTitle title="Главные споры" />
         {disputes.length ? disputes.map((d, i) => (
           <div key={i} className="compare-row">
-            <img src={d.film?.poster} alt="" />
+            <PosterThumb movieId={d.film?.id} src={d.film?.poster} alt="" />
             <div className="compare-info"><b>{d.film?.title}</b></div>
             <div className="compare-scores">
               <div className="mine"><span>Ты</span><b>{d.my}</b></div>
@@ -2384,11 +2693,12 @@ function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: num
           </div>
         )) : <p className="muted">Нет общих оценок для споров.</p>}
       </div>
+
       <div className="compare-section">
         <SectionTitle title="Единодушие" />
         {agreements.length ? agreements.map((d, i) => (
           <div key={i} className="compare-row">
-            <img src={d.film?.poster} alt="" />
+            <PosterThumb movieId={d.film?.id} src={d.film?.poster} alt="" />
             <div className="compare-info"><b>{d.film?.title}</b></div>
             <div className="compare-scores">
               <div className="mine"><span>Ты</span><b>{d.my}</b></div>
@@ -2404,12 +2714,12 @@ function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: num
 function WrappedPage({ data, go, auth }: { data: Data; go: (s: string) => void; auth: () => void; }) {
   const [step, setStep] = useState(0);
   if (!data.user) return <Gate title="Итоги Киногода" description="Смотри фильмы весь год, чтобы получить персональную статистику." auth={auth} />;
-  
+
   const minutes = data.watches.reduce((n, w) => n + (data.films.find(f => f.id === w.movieId)?.duration || 0), 0);
   const genreMap = new Map<string, number>();
   data.watches.forEach(w => { const f = data.films.find(x => x.id === w.movieId); if (f) f.genre.split(',').forEach(g => genreMap.set(g.trim(), (genreMap.get(g.trim()) || 0) + 1)); });
   const topGenre = [...genreMap.entries()].sort((a, b) => b[1] - a[1])[0];
-  
+
   const slides = [
     <div className="wrapped-slide wrapped-1" key={1}><h1>Твой 2026 киногод</h1><p>Это было легендарно.</p><button className="primary-btn" onClick={() => setStep(1)}>Начать <ArrowRight size={16} /></button></div>,
     <div className="wrapped-slide wrapped-2" key={2} onClick={() => setStep(2)}><h2>Ты провёл в кино<br /><span>{Math.floor(minutes / 60)} часов</span></h2><p>Это {Math.floor(minutes / 1440)} полных дней без сна!</p></div>,
@@ -2437,7 +2747,7 @@ function CollabLists({ data, go, action, auth }: { data: Data; go: (s: string) =
             <h3>{l.title}</h3>
             {l.items?.map((i: any) => (
               <div key={i.id} className="collab-item">
-                <img src={i.film?.poster} alt="" />
+                <PosterThumb movieId={i.film?.id} src={i.film?.poster} alt="" />
                 <span>{i.film?.title}</span>
                 <button onClick={() => action({ action: 'voteList', itemId: i.id })}><Heart size={14} /> {i.votes}</button>
               </div>
@@ -2462,9 +2772,12 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
   useEffect(() => {
     if (!data.user) return;
     const mId = searchParams.get('movie');
-    if (mId) { const f = data.films.find(x => x.id === Number(mId)); if (f) { setFilm(f); return; } }
+    if (mId) {
+      const f = data.films.find(x => x.id === Number(mId));
+      if (f) { setFilm(f); return; }
+    }
     setFilm(data.films[0] || null);
-  }, [data.user, searchParams]);
+  }, [data.user, searchParams, data.films]);
 
   useEffect(() => { if (msgRef.current) msgRef.current.scrollTop = msgRef.current.scrollHeight; }, [chatLog]);
 
@@ -2475,7 +2788,7 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
     setReactions(r => [...r, { id, emoji }]);
     setTimeout(() => setReactions(r => r.filter(x => x.id !== id)), 2500);
   };
-  
+
   const sendChat = () => {
     if (!chat.trim()) return;
     setChatLog(l => [...l, { id: Date.now(), user: data.user?.username || 'Гость', text: chat.trim() }]);
@@ -2498,6 +2811,7 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
         <div><span className="eyebrow"><Tv2 size={14} /> КИНОЗАЛ · КОД: {roomId}</span><h1 style={{ fontSize: 24, margin: '5px 0 0' }}>{film.title}</h1></div>
         <button className="outline-btn small" onClick={() => go('/watchroom')}>← Выйти из зала</button>
       </div>
+
       <div className="room-layout">
         <div className="room-player">
           <div className="room-video-area">
@@ -2512,11 +2826,19 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
                 </div>
                 <span className="room-disclaimer">Синхронизация происходит автоматически при вставке ссылки.</span>
               </div>
-            ) : <iframe src={activeEmbed} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="room-iframe"></iframe>}
+            ) : (
+              <iframe
+                src={activeEmbed}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="room-iframe"
+              />
+            )}
             <div className="reaction-track">{reactions.map(r => <span key={r.id} className="flying-reaction">{r.emoji}</span>)}</div>
           </div>
         </div>
-        
+
         <div className="room-chat">
           <div className="room-reactions">
             <button onClick={() => sendReaction('🍿')}>🍿</button>
@@ -2541,7 +2863,18 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
 
 function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
   if (data.user?.role !== 'admin') return <div className="gate"><LockKeyhole size={40} /><h1>Только для администраторов</h1><p>Этот раздел содержит закрытую документацию проекта.</p><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>;
-  const stats = [{ icon: '🎬', label: 'Материалов в каталоге', value: data.films.length }, { icon: '👥', label: 'Зарегистрированных участников', value: data.people.length }, { icon: '👁️', label: 'Всего просмотров', value: data.leaderboard.reduce((n, p) => n + p.watches, 0) }, { icon: '⭐', label: 'Поставлено оценок', value: data.leaderboard.reduce((n, p) => n + p.ratings, 0) }, { icon: '💬', label: 'Комментариев', value: data.comments.length }, { icon: '🏆', label: 'Активных челленджей', value: data.challenges.filter((c: any) => c.current).length }, { icon: '✉️', label: 'Сообщений в чате', value: '-' }, { icon: '🤝', label: 'Дружеских связей', value: data.leaderboard.length }];
+
+  const stats = [
+    { icon: '🎬', label: 'Материалов в каталоге', value: data.films.length },
+    { icon: '👥', label: 'Зарегистрированных участников', value: data.people.length },
+    { icon: '👁️', label: 'Всего просмотров', value: data.leaderboard.reduce((n, p) => n + p.watches, 0) },
+    { icon: '⭐', label: 'Поставлено оценок', value: data.leaderboard.reduce((n, p) => n + p.ratings, 0) },
+    { icon: '💬', label: 'Комментариев', value: data.comments.length },
+    { icon: '🏆', label: 'Активных челленджей', value: data.challenges.filter((c: any) => c.current).length },
+    { icon: '✉️', label: 'Сообщений в чате', value: '-' },
+    { icon: '🤝', label: 'Дружеских связей', value: data.leaderboard.length }
+  ];
+
   const sections = [
     { id: 'catalog', icon: <Film size={20} />, color: 'violet', title: 'Каталог материалов', subtitle: 'Хранилище всего контента проекта', items: ['12+ материалов в стартовом каталоге', '6 категорий: Фильм, Сериал, Мультфильм, Мультсериал, Аниме-сериал, Аниме-фильм', 'Поиск по названию, жанру, режиссёру, описанию', 'Фильтры: год, жанр, минимальный рейтинг, категория', 'Сортировка: популярные, по рейтингу, новые, старые', 'Рейтинговые цвета карточек: золото (8.5+), бирюза (7+), синий (5+), красный', 'Счётчик уникальных просмотров страниц материала', 'Поле «Серии» для сериалов и аниме', 'Тег настроения (mood) для фильтров', 'Кнопка «Добавить материал» в каталоге для admin/moderator'] },
     { id: 'auth', icon: <Shield size={20} />, color: 'amber', title: 'Система аккаунтов', subtitle: 'Многоуровневая авторизация и роли', items: ['Регистрация по email + пароль (bcryptjs, стойкость 12)', 'Вход через Telegram Login Widget (NEXT_PUBLIC_TELEGRAM_BOT_NAME)', 'OAuth Яндекс (authorization code flow)', 'Сессии: подписанные JWT, httpOnly cookie, 30 дней', '5 ролей: Гость → Посетитель → VIP → Модератор → Администратор', 'Дополнительный титул по статистике (Легенда экрана, Мастер кадров...)', 'Защита маршрутов: requireAuth на клиенте, проверка роли на сервере', 'Telegram ID привязывается к аккаунту без email'] },
@@ -2554,8 +2887,23 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
     { id: 'tech', icon: <BarChart3 size={20} />, color: 'green', title: 'Техническая архитектура', subtitle: 'Стек и устройство системы', items: ['Next.js 16 App Router — SSR + клиентские компоненты', 'PostgreSQL + Drizzle ORM — типобезопасные запросы', '16 таблиц БД: users, movies, watches, ratings, comments, reactions, bookmarks, friendships, notifications, messages, challenges...', 'JWT-сессии: jose + httpOnly cookie', 'bcryptjs для паролей (стойкость 12)', 'Единый компонент movie-go-app.tsx', 'REST API: /api/auth, /api/data, /api/action, /api/chat, /api/profile, /api/upload, /api/visit, /api/oauth', 'Загрузка файлов: Base64 Data URI через /api/upload', 'Подсчёт совместимости: взвешенный алгоритм (40% просмотры + 30% рейтинги + 30% жанры)', 'Polling чата каждые 4с через setInterval'] },
     { id: 'design', icon: <Sparkles size={20} />, color: 'pink', title: 'Дизайн-система', subtitle: 'Glassmorphism + 5 тем + адаптив', items: ['Шрифт Inter (Google Fonts): 400–900', 'Glassmorphism: backdrop-filter blur(40px) saturate(1.5) на всех поверхностях', 'CSS-переменные: --bg, --surface, --surface2, --surface3, --border, --accent...', '5 тем: Тёмная, Светлая, Розовая, Фиолетовая, Жёлтая', 'Акцент сохраняется в localStorage + синхронизируется с профилем', 'CSS-анимации: pulse-glow, toast-in, orbit-spin, flyUp, loading', 'Адаптивность: 4 брейкпоинта (1300/1050/760/520px)', 'Компактный сайдбар на планшете (68px), drawer на мобиле', 'Стили рейтинга: золото/бирюза/синий/красный на рамках постеров', 'Рамки аватара с box-shadow свечением', 'Drag & drop для виджетов профиля (native HTML5)'] },
   ];
-  const roles = [{ role: 'Гость', icon: '🌐', access: 'Просмотр главной, каталога, карточек материалов' }, { role: 'Посетитель', icon: '👤', access: 'Все функции + профиль, оценки, комментарии, достижения, друзья, чат, игры' }, { role: 'VIP', icon: '💎', access: 'Всё что посетитель + приоритет в поддержке и особый значок' }, { role: 'Модератор', icon: '🛡️', access: 'Всё + добавление и редактирование материалов в каталоге' }, { role: 'Администратор', icon: '👑', access: 'Полный доступ + удаление материалов, управление ролями, страница О проекте' }];
-  const techStack = [{ label: 'Framework', value: 'Next.js 16 App Router', sub: 'React 19 + TypeScript 5' }, { label: 'Database', value: 'PostgreSQL 16', sub: 'Drizzle ORM 0.45' }, { label: 'Auth', value: 'JWT + bcryptjs', sub: 'jose, Telegram, Яндекс OAuth' }, { label: 'Styling', value: 'Custom CSS + Tailwind', sub: 'Inter + glassmorphism' }, { label: 'Storage', value: 'Base64 Data URI', sub: '/api/upload' }, { label: 'State', value: 'React useState + REST', sub: 'Polling interval 4s' }];
+
+  const roles = [
+    { role: 'Гость', icon: '🌐', access: 'Просмотр главной, каталога, карточек материалов' },
+    { role: 'Посетитель', icon: '👤', access: 'Все функции + профиль, оценки, комментарии, достижения, друзья, чат, игры' },
+    { role: 'VIP', icon: '💎', access: 'Всё что посетитель + приоритет в поддержке и особый значок' },
+    { role: 'Модератор', icon: '🛡️', access: 'Всё + добавление и редактирование материалов в каталоге' },
+    { role: 'Администратор', icon: '👑', access: 'Полный доступ + удаление материалов, управление ролями, страница О проекте' }
+  ];
+
+  const techStack = [
+    { label: 'Framework', value: 'Next.js 16 App Router', sub: 'React 19 + TypeScript 5' },
+    { label: 'Database', value: 'PostgreSQL 16', sub: 'Drizzle ORM 0.45' },
+    { label: 'Auth', value: 'JWT + bcryptjs', sub: 'jose, Telegram, Яндекс OAuth' },
+    { label: 'Styling', value: 'Custom CSS + Tailwind', sub: 'Inter + glassmorphism' },
+    { label: 'Storage', value: 'Base64 Data URI', sub: '/api/upload' },
+    { label: 'State', value: 'React useState + REST', sub: 'Polling interval 4s' }
+  ];
 
   return (
     <div className="about-page">
@@ -2569,10 +2917,22 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
           <div className="about-hero-meta"><span>Версия 2.0</span><span>·</span><span>2026 год</span><span>·</span><span>Next.js 16</span><span>·</span><span>PostgreSQL</span></div>
         </div>
       </div>
+
       <div className="about-live-stats">
         <div className="als-header"><span className="eyebrow"><Globe2 size={13} /> LIVE-СТАТИСТИКА СИСТЕМЫ</span></div>
-        <div className="als-grid">{stats.map((s, i) => <div className="als-card" key={i}><span className="als-icon">{s.icon}</span><div><b>{typeof s.value === 'number' ? new Intl.NumberFormat('ru-RU').format(s.value) : s.value}</b><small>{s.label}</small></div></div>)}</div>
+        <div className="als-grid">
+          {stats.map((s, i) => (
+            <div className="als-card" key={i}>
+              <span className="als-icon">{s.icon}</span>
+              <div>
+                <b>{typeof s.value === 'number' ? new Intl.NumberFormat('ru-RU').format(s.value) : s.value}</b>
+                <small>{s.label}</small>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
       <div className="about-sections">
         <div className="about-section-label"><span className="eyebrow"><GitBranch size={13} /> ФУНКЦИОНАЛЬНЫЕ МОДУЛИ</span></div>
         <div className="as-grid">
@@ -2584,6 +2944,7 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
           ))}
         </div>
       </div>
+
       <div className="about-roles">
         <div className="about-section-label"><span className="eyebrow"><Shield size={13} /> СИСТЕМА РОЛЕЙ</span></div>
         <div className="roles-table">
@@ -2596,12 +2957,14 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
           ))}
         </div>
       </div>
+
       <div className="about-stack">
         <div className="about-section-label"><span className="eyebrow"><BarChart3 size={13} /> ТЕХНИЧЕСКИЙ СТЕК</span></div>
         <div className="stack-grid">
           {techStack.map((t, i) => <div className="stack-card" key={i}><small>{t.label}</small><b>{t.value}</b><span>{t.sub}</span></div>)}
         </div>
       </div>
+
       <div className="about-accounts">
         <div className="about-section-label"><span className="eyebrow"><Globe2 size={13} /> ТЕСТОВЫЕ АККАУНТЫ</span></div>
         <div className="accounts-grid">
@@ -2611,6 +2974,7 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
           <div className="account-card"><div className="account-role mod">МОДЕРАТОР</div><b>neo@moviego.ru</b><span>Demo12345!</span><p>neonight · XP 760</p></div>
         </div>
       </div>
+
       <div className="about-footer-note">
         <Sparkles size={18} />
         <div>
@@ -2627,35 +2991,78 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
   const [selected, setSelected] = useState<FilmType | null>(null);
   const [roomLink, setRoomLink] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  
+
   if (!data.user) return <Gate title="Кинозал для друзей" description="Войди, чтобы создать комнату и смотреть кино вместе с друзьями онлайн." auth={auth} />;
-  
+
   const filtered = data.films.filter(f => !search || f.title.toLowerCase().includes(search.toLowerCase())).slice(0, 12);
-  
+
   return (
     <>
       <div className="page-heading">
         <div><span className="eyebrow"><Tv2 size={14} /> СОВМЕСТНЫЙ ПРОСМОТР</span><h1>Виртуальный <em>кинозал.</em></h1><p>Выбери фильм, создай комнату и поделись ссылкой с другом — смотрите синхронно.</p></div>
       </div>
+
       <div className="watchroom-layout">
         <div className="watchroom-create-card">
           <div className="wrc-header"><span className="wrc-icon"><Sparkles size={22} /></span><div><h3>Создать новую комнату</h3><p>Сгенерируй ссылку и отправь другу</p></div></div>
+
           <div className="wrc-film-picker">
             <span className="eyebrow">ВЫБЕРИ ФИЛЬМ ДЛЯ ПРОСМОТРА</span>
             <div className="catalog-search compact" style={{ marginTop: 12 }}><Search size={16} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск фильма..." /></div>
-            <div className="wrc-film-grid">{filtered.map(f => <button key={f.id} className={`wrc-film-item ${selected?.id === f.id ? 'selected' : ''}`} onClick={() => setSelected(f)}><img src={f.poster} alt="" /><span>{f.title}</span>{selected?.id === f.id && <Check size={14} />}</button>)}</div>
+            <div className="wrc-film-grid">
+              {filtered.map(f => (
+                <button key={f.id} className={`wrc-film-item ${selected?.id === f.id ? 'selected' : ''}`} onClick={() => setSelected(f)}>
+                  <PosterThumb movieId={f.id} src={f.poster} alt="" />
+                  <span>{f.title}</span>
+                  {selected?.id === f.id && <Check size={14} />}
+                </button>
+              ))}
+            </div>
           </div>
-          {selected && <div className="wrc-selected"><img src={selected.poster} alt="" /><div><b>{selected.title}</b><small>{selected.year} · {selected.category} · {selected.duration} мин</small></div></div>}
-          <button className="primary-btn wrc-start" onClick={() => { if (!selected) return; const code = Math.random().toString(36).slice(2, 8).toUpperCase(); const url = window.location.origin + '/room/' + code; setRoomLink(url); navigator.clipboard.writeText(url).catch(() => {}); go(`/room/${code}?movie=${selected.id}`); }} disabled={!selected}>
+
+          {selected && (
+            <div className="wrc-selected">
+              <PosterThumb movieId={selected.id} src={selected.poster} alt="" />
+              <div><b>{selected.title}</b><small>{selected.year} · {selected.category} · {selected.duration} мин</small></div>
+            </div>
+          )}
+
+          <button
+            className="primary-btn wrc-start"
+            onClick={() => {
+              if (!selected) return;
+              const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+              const url = window.location.origin + '/room/' + code;
+              setRoomLink(url);
+              navigator.clipboard.writeText(url).catch(() => {});
+              go(`/room/${code}?movie=${selected.id}`);
+            }}
+            disabled={!selected}
+          >
             <Tv2 size={18} />{selected ? `Открыть зал «${selected.title.slice(0, 20)}...»` : 'Сначала выбери фильм'}
           </button>
+
           {roomLink && <div className="wrc-link-box"><Link2 size={15} /><span>{roomLink}</span><button onClick={() => navigator.clipboard.writeText(roomLink).then(() => {})}><Copy size={14} /></button></div>}
           <p className="wrc-hint">Ссылка скопирована в буфер — отправь другу в чат 🍿</p>
         </div>
+
         <div className="watchroom-join-card">
           <div className="wrc-header"><span className="wrc-icon join-icon"><UsersRound size={22} /></span><div><h3>Войти в комнату</h3><p>Введи код комнаты от друга</p></div></div>
-          <div className="wrc-join-form"><label>Код комнаты<input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="XXXXXX" maxLength={6} /></label><button className="primary-btn" disabled={joinCode.length < 4} onClick={() => go('/room/' + joinCode + '?movie=1')}><ArrowRight size={17} /> Войти в зал</button></div>
-          <div className="wrc-how"><span className="eyebrow">КАК ЭТО РАБОТАЕТ</span><div className="wrc-steps"><div><span>1</span><p>Один создаёт комнату и выбирает фильм</p></div><div><span>2</span><p>Копирует ссылку и отправляет другу</p></div><div><span>3</span><p>Все жмут «Старт» — таймер запускается синхронно</p></div><div><span>4</span><p>Обсуждаете в чате и кидаете реакции 🍿😱🤯</p></div></div></div>
+          <div className="wrc-join-form">
+            <label>Код комнаты<input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="XXXXXX" maxLength={6} /></label>
+            <button className="primary-btn" disabled={joinCode.length < 4} onClick={() => go('/room/' + joinCode + '?movie=1')}><ArrowRight size={17} /> Войти в зал</button>
+          </div>
+
+          <div className="wrc-how">
+            <span className="eyebrow">КАК ЭТО РАБОТАЕТ</span>
+            <div className="wrc-steps">
+              <div><span>1</span><p>Один создаёт комнату и выбирает фильм</p></div>
+              <div><span>2</span><p>Копирует ссылку и отправляет другу</p></div>
+              <div><span>3</span><p>Все жмут «Старт» — таймер запускается синхронно</p></div>
+              <div><span>4</span><p>Обсуждаете в чате и кидаете реакции 🍿😱🤯</p></div>
+            </div>
+          </div>
+
           <div className="wrc-friends">
             <span className="eyebrow">ПРИГЛАСИ ДРУГА</span>
             {data.friends.filter(f => f.status === 'accepted').slice(0, 4).map(f => {
@@ -2679,26 +3086,28 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
   const currentMonth = new Date().getMonth() + 1;
-  
+
   if (!data.user) return <Gate title="Испытания ждут" description="Войди, чтобы принять вызов и заработать XP за каждый челлендж." auth={auth} />;
-  
+
   const filtered = data.challenges.filter((c: any) => c.month === selectedMonth);
   const totalCurrent = data.challenges.filter((c: any) => c.current).length;
   const completedCurrent = data.challenges.filter((c: any) => c.current && c.completed).length;
   const totalXP = data.challenges.filter((c: any) => c.completed).reduce((n: number, c: any) => n + c.xpReward, 0);
-  
+
   return (
     <>
       <div className="page-heading">
         <div><span className="eyebrow">ИСПЫТАНИЯ КИНОВСЕЛЕННОЙ</span><h1>Челленджи <em>месяца.</em></h1><p>Каждый месяц — новые задания. Каждый вызов — новый опыт.</p></div>
         <div className="heading-count"><Flame size={19} />{completedCurrent}/{totalCurrent} в этом месяце</div>
       </div>
+
       <div className="challenge-overview">
         <div className="challenge-overview-card"><span className="challenge-ov-icon">🔥</span><div><b>{completedCurrent} / {totalCurrent}</b><small>выполнено в этом месяце</small></div></div>
         <div className="challenge-overview-card"><span className="challenge-ov-icon">⚡</span><div><b>{totalXP} XP</b><small>заработано за все челленджи</small></div></div>
         <div className="challenge-overview-card"><span className="challenge-ov-icon">🏆</span><div><b>{data.challenges.filter((c: any) => c.completed).length}</b><small>челленджей закрыто</small></div></div>
         <div className="challenge-overview-card"><span className="challenge-ov-icon">📅</span><div><b>{data.challenges.length}</b><small>доступно за весь год</small></div></div>
       </div>
+
       <div className="challenge-month-tabs">
         {months.map((m, i) => (
           <button key={i} className={`challenge-month-tab ${selectedMonth === i + 1 ? 'active' : ''} ${i + 1 === currentMonth ? 'current' : ''}`} onClick={() => setSelectedMonth(i + 1)}>
@@ -2706,6 +3115,7 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
           </button>
         ))}
       </div>
+
       <div className="challenge-grid">
         {filtered.length ? filtered.map((c: any) => {
           const pct = c.target ? Math.min(100, Math.round(c.progress / c.target * 100)) : 0;
