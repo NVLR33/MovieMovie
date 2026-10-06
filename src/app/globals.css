@@ -803,3 +803,36 @@ p{margin:0}
 }
 
 @media(max-width:760px){.sidebar{animation:none!important}}
+
+/* [STYLE:RATING_PANEL_FIX] Исправление переполнения панели оценки */
+.rating-panel-advanced{
+  grid-template-columns:minmax(0,1fr) minmax(0,280px) !important;
+  gap:20px !important;
+}
+.rating-selector-box,
+.rating-histogram{
+  min-width:0 !important;
+}
+.fancy-stars{
+  flex-wrap:wrap !important;
+  justify-content:center !important;
+}
+.hist-row{
+  min-width:0 !important;
+}
+.hist-bar-wrap{
+  min-width:0 !important;
+  flex:1 1 auto !important;
+}
+
+/* Уменьшаем звёзды на средних и узких экранах, чтобы они гарантированно помещались в одну строку */
+@media(max-width:1400px){
+  .star-wrapper{width:26px !important;height:26px !important}
+  .fancy-stars{gap:2px !important}
+}
+@media(max-width:1100px){
+  .rating-panel-advanced{grid-template-columns:1fr !important}
+}
+@media(max-width:760px){
+  .star-wrapper{width:22px !important;height:22px !important}
+}
