@@ -2043,15 +2043,14 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
         <span>+ XP</span>
       </div>
 
+      {films.length < 4 && (
+        <div className="empty-state" style={{ marginBottom: 20 }}>
+          <CircleHelp size={30} />
+          <h3>Игры пока недоступны</h3>
+          <p>Нужно минимум 4 материала в каталоге, чтобы собрать корректные варианты ответов.</p>
+        </div>
+      )}
       <div className="games-grid">
-        {gameModes.map((g, i) => (
-          <button key={g.id} className={`game-card game-${g.color}`} onClick={() => make(g.id)}>
-            <div className="game-card-top"><span className="game-emoji">{g.icon}</span><small>ИГРА {String(i + 1).padStart(2, '0')}</small></div>
-            <div><h3>{g.name}</h3><p>{g.description}</p></div>
-            <span className="game-launch">Играть <ArrowUpRight size={17} /></span>
-          </button>
-        ))}
-      </div>
 
       {mode && (
         <div className="modal-backdrop" onClick={() => setMode(null)}>
