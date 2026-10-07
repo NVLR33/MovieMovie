@@ -306,31 +306,41 @@ useEffect(() => {
 const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 const spinningRef = useRef(false);
 
-const startRoulette = () => {
-  if (spinningRef.current) return; // защита от двойного запуска
-  const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
-  if (pool.length < 2) { notify('Нужно хотя бы два фильма для рулетки'); return; }
-  spinningRef.current = true;
-  setSpinning(true);
-  setRoulette(true);
-  setRouletteDone(false);
-
-  let step = 0;
-  const totalSteps = 25;
-  const tick = () => {
-    setRouletteIndex(Math.floor(Math.random() * pool.length));
-    step++;
-    if (step >= totalSteps) {
-      spinningRef.current = false;
-      setSpinning(false);
-      setRouletteDone(true);
-      return;
-    }
-    const delay = 50 + Math.pow(step / totalSteps, 2) * 450; // 50мс → ~500мс, честное торможение
-    rouletteTimer.current = setTimeout(tick, delay);
+  const stopRoulette = () => {
+    if (rouletteTimer.current) { clearTimeout(rouletteTimer.current); rouletteTimer.current = null; }
   };
-  tick();
-};
+
+  const closeRoulette = () => { stopRoulette(); setRoulette(false); };
+
+  const startRoulette = (cat?: string) => {
+    const useCat = cat ?? rouletteCategory;
+    const pool = useCat === 'Все' ? data.films : data.films.filter(f => f.category === useCat);
+    if (!pool.length) { notify('В этой категории пока нет материалов'); return; }
+    stopRoulette();
+    setRoulettePool(pool);
+    setRouletteWinner(null);
+    setRoulette(true);
+    setRouletteDone(false);
+    const totalSteps = 25;
+    let i = 0;
+    const tick = () => {
+      const idx = Math.floor(Math.random() * pool.length);
+      setRouletteIndex(idx);
+      i++;
+      if (i >= totalSteps) {
+        rouletteTimer.current = null;
+        setRouletteWinner(pool[idx]);
+        setRouletteDone(true);
+        return;
+      }
+      // реальное замедление барабана
+      rouletteTimer.current = setTimeout(tick, 50 + Math.round(Math.pow(i / totalSteps, 2.2) * 260));
+    };
+    tick();
+  };
+
+  // очистка таймера при размонтировании
+  useEffect(() => () => stopRoulette(), []);
 
 const stopRoulette = () => {
   if (rouletteTimer.current) clearTimeout(rouletteTimer.current);
