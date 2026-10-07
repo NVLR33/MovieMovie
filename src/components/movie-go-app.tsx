@@ -2433,28 +2433,16 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
 function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId: number; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; openChat: (id: number) => void; auth: () => void; }) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const myWatchedIds = useWatchedIds(); // ХУК — строго до любых return
+  
+  // Хук вызывается безусловно на самом верху
+  const myWatchedIds = useWatchedIds();
 
   useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    fetch('/api/profile?id=' + userId)
-      .then(r => r.ok ? r.json() : Promise.reject(new Error('http')))
-      .then(d => { if (alive) setProfile(d?.profile ? d : null); })
-      .catch(() => { if (alive) setProfile(null); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+    fetch('/api/profile?id=' + userId).then(r => r.json()).then(d => {
+      if (d.profile) setProfile(d);
+      else setProfile(null);
+    }).catch(() => setProfile(null)).finally(() => setLoading(false));
   }, [userId]);
-
-  const commonFilms = useMemo(
-    () => (profile?.recentWatches || []).filter(w => w.film && myWatchedIds.has(w.film.id)).length,
-    [profile, myWatchedIds]
-  );
-
-  const bestRated = useMemo(
-    () => [...(profile?.ratings || [])].sort((a, b) => b.value - a.value).slice(0, 5),
-    [profile]
-  );
 
   if (loading) return <div className="empty-state"><h3>Загрузка...</h3></div>;
   if (!profile) return <div className="empty-state"><h3>Пользователь не найден</h3><button className="primary-btn" onClick={() => go('/friends')}>Назад</button></div>;
@@ -2462,15 +2450,13 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
   const p = profile.profile;
   const s = profile.stats;
   const level = s.level;
-
-  const myWatchedIds = useWatchedIds(); // оптимизация: берем из контекста
   const commonFilms = profile.recentWatches.filter(w => w.film && myWatchedIds.has(w.film.id)).length;
 
   return (
     <>
       <button className="back-link" onClick={() => go('/friends')}>← Назад к друзьям</button>
 
-      <div className={`profile-cover header-style- effect-${p.profileEffect || 'none'} ${p.headerImage && p.headerStyle === 5 ? 'custom-header' : ''}`} style={p.headerImage && p.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${p.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={p.headerStyle || 1} data-frame={p.headerFrame || 'none'}>
+      <div className={`profile-cover effect-${p.profileEffect || 'none'} ${p.headerImage && p.headerStyle === 5 ? 'custom-header' : ''}`} style={p.headerImage && p.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${p.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={p.headerStyle || 1} data-frame={p.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
         <span className="cover-label">moviemovie · ПРОФИЛЬ УЧАСТНИКА</span>
@@ -2538,7 +2524,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
               {s.topGenres.map(g => (
                 <div className="top-genre-item" key={g.genre}>
                   <span>{g.genre}</span>
-                  <div className="bar-track"><i style={{ width: `${Math.max(5, g.count / Math.max(1, s.topGenres[0]?.count || 1) * 100)}%` }} /></div>
+                  <div className="bar-track"><i style={{ width: `${Math.max(5, g.count / Math.max(1, s.topGenres[0].count) * 100)}%` }} /></div>
                   <b>{Math.round(g.count / Math.max(1, s.totalWatches) * 100)}%</b>
                 </div>
               ))}
@@ -2548,7 +2534,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
           <div className="profile-tile">
             <div className="tile-heading"><span><TrendingUp size={18} /> Лучшее из просмотренного</span></div>
             <div className="history-list">
-              {bestRated.map((r, i) => (
+              {profile.ratings.sort((a, b) => b.value - a.value).slice(0, 5).map((r, i) => (
                 <button key={i} onClick={() => go('/movie/' + r.movieId)}>
                   <PosterThumb movieId={r.movieId} src={data.films.find(f => f.id === r.movieId)?.poster} alt="" />
                   <span><b>{r.title}</b><small>Оценка: {r.value.toFixed(1)} / 10</small></span>
