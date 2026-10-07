@@ -3192,7 +3192,7 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
           <div className="wrc-header"><span className="wrc-icon join-icon"><UsersRound size={22} /></span><div><h3>Войти в комнату</h3><p>Введи код комнаты от друга</p></div></div>
           <div className="wrc-join-form">
             <label>Код комнаты<input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="XXXXXX" maxLength={6} /></label>
-            <button className="primary-btn" disabled={joinCode.length < 4} onClick={() => go('/room/' + joinCode + '?movie=1')}><ArrowRight size={17} /> Войти в зал</button>
+            <button className="primary-btn" disabled={joinCode.length < 4} onClick={() => go('/room/' + joinCode.trim().toUpperCase())}><ArrowRight size={17} /> Войти в зал</button>
           </div>
 
           <div className="wrc-how">
@@ -3210,7 +3210,7 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
             {data.friends.filter(f => f.status === 'accepted').slice(0, 4).map(f => {
               const peer = data.people.find(p => p.id === (f.fromId === data.user?.id ? f.toId : f.fromId));
               return peer && (
-                <button key={f.id} className="wrc-friend-btn" onClick={() => action({ action: 'share', movieId: selected?.id || 1, userId: peer.id })}>
+                <button key={f.id} className="wrc-friend-btn" disabled={!selected} title={selected ? '' : 'Сначала выбери фильм'} onClick={() => { if (selected) action({ action: 'share', movieId: selected.id, userId: peer.id }); }}>
                   <div style={{ flex: 'none', display: 'flex' }}><Avatar name={peer.username} src={peer.avatar} size={36} /></div>
                   <span>{peer.username}</span>
                   <Send size={14} />
