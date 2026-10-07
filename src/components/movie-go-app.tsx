@@ -1116,12 +1116,18 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
   };
 
   const submit = async () => {
-    if (!comment.trim()) return;
-    if (await action({ action: 'comment', movieId: film.id, text: comment, parentId: reply }, 'Комментарий опубликован')) {
+    if (!film) return;
+    const text = comment.trim();
+    if (!text) return;
+    // если отвечаем на вложенный комментарий — указываем адресата в теле
+    const body = reply?.nested ? `@${reply.to}, ${text}` : text;
+    if (await action({ action: 'comment', movieId: film.id, text: body, parentId: reply?.parentId ?? null }, 'Комментарий опубликован')) {
       setComment('');
       setReply(null);
     }
   };
+
+  if (!film) return <div className="empty-state"><h2>История не найдена</h2><button className="primary-btn" onClick={() => go('/catalog')}>К каталогу</button></div>;
 
   return (
     <div className="movie-detail-page">
