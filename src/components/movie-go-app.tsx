@@ -69,11 +69,23 @@ const blank: Data = {
 const image = (f: FilmType) => f.poster || '/posters/dune.jpg';
 const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(f.category) ? f.duration * (f.episodes || 1) : f.duration;
 const tone = (r: number) => r >= 8.5 ? 'gold' : r >= 7 ? 'teal' : r >= 5 ? 'blue' : 'red';
-const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
+const fmt = (n: number) =>
+  new Intl.NumberFormat('ru-RU').format(n);
+
+function shuffleArr<T>(items: readonly T[]): T[] {
+  const result = [...items];
+
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
 
 function initials(value: string): string {
-  const clean = value.trim();
-  return clean ? clean.slice(0, 2).toUpperCase() : '??';
+  const result = value.trim().slice(0, 2).toUpperCase();
+  return result || 'G';
 }
 
 function titleFor(user: User | null, watches: number) {
