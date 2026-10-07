@@ -440,8 +440,8 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
                   {(() => {
                     const q = search.toLowerCase();
                     const results = data.films
-                      .filter(f => [f.title, f.originalTitle, f.genre, f.director, f.studio || ''].join(' ').toLowerCase().includes(q))
-                      .slice(0, 5);
+                    .filter(f => [f.title, f.originalTitle, f.genre, f.director, f.studio || ''].join(' ').toLowerCase().includes(q))
+                    .slice(0, 5);
 
                     return results.length ? results.map(f => (
                       <button key={f.id} className="hot-search-item" onClick={() => { go('/movie/' + f.id); setSearch(''); }}>
