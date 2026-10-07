@@ -657,25 +657,25 @@ const startSpin = () => {
     setOffset(0);
 
     // Запуск прокрутки к карточке TARGET_INDEX
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        const jitter = (Math.random() - 0.5) * 14;
-    
-        const targetX =
-          TARGET_INDEX * (CARD_W + GAP) +
-          CARD_W / 2 +
-          jitter;
-    
-        setOffset(targetX);
-      }, 50);
-    });
+requestAnimationFrame(() => {
+  moveTimerRef.current = setTimeout(() => {
+    const jitter = (Math.random() - 0.5) * 14;
 
-    // Остановка через 4.2 секунды
-    setTimeout(() => {
-      setSpinning(false);
-      setDone(true);
-    }, 4300);
-  };
+    const targetX =
+      TARGET_INDEX * (CARD_W + GAP) +
+      CARD_W / 2 +
+      jitter;
+
+    setOffset(targetX);
+    moveTimerRef.current = null;
+  }, 50);
+});
+
+finishTimerRef.current = setTimeout(() => {
+  setSpinning(false);
+  setDone(true);
+  finishTimerRef.current = null;
+}, 4300);
 
   return (
     <div className="modal-backdrop" onClick={spinning ? undefined : onClose} style={{ zIndex: 1000 }}>
