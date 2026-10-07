@@ -2903,14 +2903,9 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!data.user) return;
-    const mId = searchParams.get('movie');
-    if (mId) {
-      const f = data.films.find(x => x.id === Number(mId));
-      if (f) { setFilm(f); return; }
-    }
-    setFilm(data.films[0] || null);
-  }, [data.user, searchParams, data.films]);
+    const mId = Number(searchParams.get('movie'));
+    setFilm(mId ? (data.films.find(x => x.id === mId) || null) : null);
+  }, [searchParams, data.films]);
 
   useEffect(() => { if (msgRef.current) msgRef.current.scrollTop = msgRef.current.scrollHeight; }, [chatLog]);
 
