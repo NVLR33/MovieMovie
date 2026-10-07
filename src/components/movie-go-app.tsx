@@ -3120,10 +3120,19 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
 }
 
 function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>) => Promise<boolean>; auth: () => void; }) {
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<FilmType | null>(null);
   const [roomLink, setRoomLink] = useState('');
   const [joinCode, setJoinCode] = useState('');
+
+  useEffect(() => {
+    const mId = Number(searchParams.get('movie'));
+    if (mId) {
+      const f = data.films.find(x => x.id === mId);
+      if (f) setSelected(f);
+    }
+  }, [searchParams, data.films]);
 
   if (!data.user) return <Gate title="Кинозал для друзей" description="Войди, чтобы создать комнату и смотреть кино вместе с друзьями онлайн." auth={auth} />;
 
