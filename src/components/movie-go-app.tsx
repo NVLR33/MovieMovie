@@ -200,7 +200,12 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   // оптимизация: один стабильный Set для watched
   const watchedIds = useMemo(() => new Set<number>(data.watches.map(w => w.movieId)), [data.watches]);
 
-  const notify = (s: string) => { setToast(s); setTimeout(() => setToast(''), 3700); };
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+const notify = (s: string) => {
+  setToast(s);
+  if (toastTimer.current) clearTimeout(toastTimer.current);
+  toastTimer.current = setTimeout(() => setToast(''), 3700);
+};
 
   const refresh = async () => {
     try {
