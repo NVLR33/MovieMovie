@@ -573,15 +573,25 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
         {roulette && (
-          <div className="modal-backdrop" onClick={() => setRoulette(false)}>
+          <div className="modal-backdrop" onClick={closeRoulette}>
             <div className="roulette-modal glass-modal fancy-roulette" onClick={e => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setRoulette(false)}><X size={20} /></button>
+              <button className="modal-close" onClick={closeRoulette}><X size={20} /></button>
               <div className="roulette-head">
                 <span className="eyebrow"><Sparkles size={14} /> КИНО-СЛУЧАЙ</span>
                 <h2>Чего желает душа?</h2>
                 <div className="roulette-tabs">
                   {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
-                  <button key={cat} disabled={spinning} className={rouletteCategory === cat ? 'active' : ''} onClick={() => pickCategory(cat)}>{cat}</button>
+                    <button
+                      key={cat}
+                      className={rouletteCategory === cat ? 'active' : ''}
+                      onClick={() => {
+                        stopRoulette();
+                        setRouletteCategory(cat);
+                        setRouletteDone(false);
+                        setRouletteWinner(null);
+                        setRoulettePool(cat === 'Все' ? data.films : data.films.filter(f => f.category === cat));
+                      }}
+                    >{cat}</button>
                   ))}
                 </div>
               </div>
@@ -590,93 +600,45 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
                 <div className={`roulette-strip ${!rouletteDone ? 'spinning' : ''}`}>
                   {!rouletteDone ? (
                     Array.from({ length: 10 }).map((_, idx) => {
-                      const f = data.films[(rouletteIndex + idx) % (data.films.length || 1)];
+                      const src = roulettePool.length ? roulettePool : data.films;
+                      const f = src.length ? src[(rouletteIndex + idx) % src.length] : undefined;
                       return (
                         <div key={idx} className="strip-item">
                           <PosterThumb movieId={f?.id} src={f?.poster} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
                         </div>
                       );
                     })
-                  ) : (
-                    (() => {
-                      const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(x => x.category === rouletteCategory);
-                      const winner = pool[rouletteIndex] || data.films[0];
-                      return (
-                        <div className="strip-winner">
-                          <div className="winner-glow" />
-                          <PosterThumb movieId={winner?.id} src={image(winner)} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
-                        </div>
-                      );
-                    })()
-                  )}
+                  ) : rouletteWinner ? (
+                    <div className="strip-winner">
+                      <div className="winner-glow" />
+                      <PosterThumb movieId={rouletteWinner.id} src={image(rouletteWinner)} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
+                    </div>
+                  ) : null}
                 </div>
                 <div className="roulette-pointer"><ChevronDown size={24} /></div>
               </div>
 
-              {rouletteDone && (
+              {rouletteDone && rouletteWinner && (
                 <div className="roulette-result-card">
-                  {(() => {
-                    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
-                    const win = pool[rouletteIndex];
-                    return win ? (
-                      <>
-                        <span className="win-cat">{win.category} · {win.year}</span>
-                        <h3>{win.title}</h3>
-                        <p>{win.genre}</p>
-                        <div className="win-actions">
-                          <button className="primary-btn" onClick={() => { setRoulette(false); go('/movie/' + win.id); }}>
-                            Открыть карточку <ArrowRight size={17} />
-                          </button>
-                          <button className="outline-btn" onClick={startRoulette}>
-                            <RotateCcw size={16} /> Ещё раз
-                          </button>
-                        </div>
-                      </>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-
-              {!rouletteDone && (
-                <button className="primary-btn start-spin-btn" onClick={startRoulette}>
-                  Запустить барабан <RotateCcw size={17} />
-                </button>
-              )}
-            </div>
-          </div>
-      
-              {capsule && (
-                <div className="modal-backdrop" onClick={() => setCapsule(null)}>
-                  <div className="glass-modal" onClick={e => e.stopPropagation()}>
-                    <button className="modal-close" onClick={() => setCapsule(null)}><X size={20} /></button>
-                    <span className="eyebrow">КАПСУЛА ВРЕМЕНИ</span>
-                    <h2>Вспомни этот сеанс</h2>
-                    <p style={{ whiteSpace: 'pre-line' }}>{capsule}</p>
+                  <span className="win-cat">{rouletteWinner.category} · {rouletteWinner.year}</span>
+                  <h3>{rouletteWinner.title}</h3>
+                  <p>{rouletteWinner.genre}</p>
+                  <div className="win-actions">
+                    <button className="primary-btn" onClick={() => { closeRoulette(); go('/movie/' + rouletteWinner.id); }}>
+                      Открыть карточку <ArrowRight size={17} />
+                    </button>
+                    <button className="outline-btn" onClick={() => startRoulette()}>
+                      <RotateCcw size={16} /> Ещё раз
+                    </button>
                   </div>
                 </div>
               )}
 
-        {shareFilm && (
-          <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
-            <div className="glass-modal share-modal" onClick={e => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setShareFilm(null)}><X size={20} /></button>
-              <span className="eyebrow">ПОДЕЛИТЬСЯ ВПЕЧАТЛЕНИЕМ</span>
-              <h2>Расскажи друзьям</h2>
-              <p>«{shareFilm.title}» стоит увидеть.</p>
-              <button className="share-copy" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/movie/' + shareFilm.id); notify('Ссылка скопирована'); }}>
-                <Copy size={17} /> Скопировать ссылку <ArrowRight size={16} />
-              </button>
-              <h4>Отправить пользователю</h4>
-              {data.people.filter(p => p.id !== data.user?.id).slice(0, 6).map(p => (
-                <button
-                  className="share-person"
-                  key={p.id}
-                  onClick={async () => { if (await action({ action: 'share', movieId: shareFilm.id, userId: p.id }, 'Рекомендация отправлена')) setShareFilm(null); }}
-                >
-                  <Avatar name={p.username} src={p.avatar} size={32} />
-                  {p.username}<Send size={15} />
+              {!rouletteDone && (
+                <button className="primary-btn start-spin-btn" onClick={() => startRoulette()}>
+                  Запустить барабан <RotateCcw size={17} />
                 </button>
-              ))}
+              )}
             </div>
           </div>
         )}
