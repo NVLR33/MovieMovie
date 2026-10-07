@@ -92,9 +92,9 @@ function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: 
 }
 
 /**
- * PosterThumb — универсальная миниатюра с галочкой "просмотрено"
- * Использовать везде, где раньше был <img ...poster.../>.
- * movieId опционален: если не передать — галочка не показывается.
+ * PosterThumb — универсальная миниатюра.
+ * ВАЖНО: галочка "просмотрено" выключена по умолчанию.
+ * Если где-то она нужна — передай showBadge={true}.
  */
 function PosterThumb({
   movieId,
@@ -103,6 +103,7 @@ function PosterThumb({
   wrapClassName,
   imgClassName,
   wrapStyle,
+  showBadge = false, // <-- по умолчанию НЕ показываем галочку
 }: {
   movieId?: number | null;
   src?: string | null;
@@ -110,11 +111,12 @@ function PosterThumb({
   wrapClassName?: string;
   imgClassName?: string;
   wrapStyle?: React.CSSProperties;
+  showBadge?: boolean; // <-- новый проп
 }) {
+  // оптимизация: вообще не трогаем watchedIds, если бейдж не нужен
   const watchedIds = useWatchedIds();
-  const watched = typeof movieId === 'number' && watchedIds.has(movieId);
+  const watched = showBadge && typeof movieId === 'number' && watchedIds.has(movieId);
 
-  // если src пустой — не ломаем верстку
   const finalSrc = src || '/posters/dune.jpg';
 
   return (
@@ -128,6 +130,7 @@ function PosterThumb({
       }}
     >
       <img className={imgClassName} src={finalSrc} alt={alt} />
+
       {watched && (
         <span
           title="Просмотрено"
