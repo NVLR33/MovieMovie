@@ -1443,24 +1443,7 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
   );
 }
 
-function Profile({
-  data,
-  go,
-  action,
-  notify,
-  auth,
-  refresh
-}: {
-  data: Data;
-  go: (s: string) => void;
-  action: (
-    p: Record<string, unknown>,
-    s?: string
-  ) => Promise<boolean>;
-  notify: (s: string) => void;
-  auth: () => void;
-  refresh: () => Promise<void>;
-}) {
+function Profile({ data, go, action, notify, auth, refresh }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; notify: (s: string) => void; auth: () => void; refresh: () => Promise<void>; }) {
   const u = data.user;
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(u?.bio || '');
@@ -1483,32 +1466,16 @@ function Profile({
     mins: watched.filter(w => w.film?.category === c).reduce((n, w) => n + (w.film ? titleMinutes(w.film) : 0), 0)
   }));
 
-const handleUpload = async (file?: File) => {
-  if (!file) return;
+  const save = (payload: Record<string, unknown>) => action({ action: 'profile', ...payload }, 'Профиль обновлён');
 
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('kind', 'avatar');
-
-  try {
-    const r = await fetch('/api/upload', {
-      method: 'POST',
-      body: fd
-    });
-
-    const result = await r.json();
-
-    if (!r.ok) {
-      notify(result.error || 'Не удалось загрузить');
-      return;
-    }
-
-    notify('Аватар обновлён');
-    await refresh();
-  } catch {
-    notify('Ошибка загрузки аватара');
-  }
-};
+  const handleUpload = async (file?: File) => {
+    if (!file) return;
+    const fd = new FormData(); fd.append('file', file); fd.append('kind', 'avatar');
+    const r = await fetch('/api/upload', { method: 'POST', body: fd });
+    const v = await r.json();
+    if (r.ok) { notify('Аватар обновлён'); await refresh(); }
+    else notify(v.error || 'Не удалось загрузить');
+  };
 
   const getCatGroup = (c: string) => { if (c.includes('Аниме')) return 'anime'; if (c.includes('Мульт')) return 'cartoon'; if (c.includes('Сериал')) return 'tv'; return 'movie'; };
   const tabData = watched.filter(w => statTab === 'all' || getCatGroup(w.film?.category || '') === statTab);
@@ -1612,7 +1579,7 @@ const handleUpload = async (file?: File) => {
 
   return (
     <>
-      <div className={`profile-cover header-style- effect-${u.profileEffect || 'none'} ${u.headerImage && u.headerStyle === 5 ? 'custom-header' : ''}`} style={u.headerImage && u.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${u.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={u.headerStyle || 1} data-frame={u.headerFrame || 'none'}>
+      <div className={`profile-cover effect-${u.profileEffect || 'none'} ${u.headerImage && u.headerStyle === 5 ? 'custom-header' : ''}`} style={u.headerImage && u.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${u.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={u.headerStyle || 1} data-frame={u.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
         <span className="cover-label">moviemovie · MEMBER PROFILE</span>
@@ -1723,22 +1690,6 @@ const handleUpload = async (file?: File) => {
           </div>
         ))}
       </div>
-    </>
-  );
-}
-
-function Watchlist({ data, go, auth }: { data: Data; go: (s: string) => void; auth: () => void; }) {
-  if (!data.user) return <Gate title="Сохраняй то, что вдохновляет" description="Все истории, которые ты хочешь увидеть, в одном месте." auth={auth} />;
-  const saved = data.films.filter(f => data.bookmarks.some(b => b.movieId === f.id));
-  return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">ТВОЯ ПОДБОРКА</span><h1>Мой <em>список.</em></h1><p>Истории, которые ты отложил на потом.</p></div>
-        <div className="heading-count"><Bookmark size={18} />{saved.length} сохранено</div>
-      </div>
-      {saved.length ? <FilmGrid films={saved} go={go} /> : (
-        <div className="empty-state"><Bookmark size={38} /><h3>Здесь пока пусто</h3><p>Найди что-нибудь интересное и добавь в свой список.</p><button className="primary-btn" onClick={() => go('/catalog')}>Исследовать каталог <ArrowRight size={17} /></button></div>
-      )}
     </>
   );
 }
