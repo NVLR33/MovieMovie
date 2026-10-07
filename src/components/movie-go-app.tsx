@@ -1173,7 +1173,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
 
             <button className="square-btn" onClick={() => requireAuth(() => share(film))} title="Поделиться"><Share2 size={18} /></button>
 
-                        <button className="outline-btn" onClick={() => requireAuth(() => go('/watchroom?movie=' + film.id))} title="Смотреть вместе с другом">
+            <button className="outline-btn" onClick={() => requireAuth(() => go('/watchroom?movie=' + film.id))} title="Смотреть вместе с другом">
               <Tv2 size={17} /> Кинозал
             </button>
           </div>
