@@ -2633,7 +2633,17 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
   );
 }
 
-function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) => void; openChat: (id: number) => void; auth: () => void; }) {
+function ChatPage({
+  data,
+  go,
+  openChat,
+  auth
+}: {
+  data: Data;
+  go: (s: string) => void;
+  openChat: (id: number) => void;
+  auth: () => void;
+}) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activePeer, setActivePeer] = useState<number | null>(null);
   const [thread, setThread] = useState<ChatMessage[]>([]);
