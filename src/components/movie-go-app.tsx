@@ -881,14 +881,13 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
 
       {data.user && data.watches.length > 0 && (
         <div className="time-capsule-banner" onClick={() => {
-          const rw = data.watches[Math.floor(Math.random() * data.watches.length)];
-          const f = data.films.find(x => x.id === rw.movieId);
-          if (f) {
-            const d = new Date(rw.watchedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-            const r = data.ratings.find(x => x.movieId === f.id);
-            alert(`🕰 Капсула времени!\n\n${d} ты посмотрел(а) «${f.title}»${r ? ' и поставил(а) ' + r.value + '/10' : ''}\n\nЖанр: ${f.genre}\nГод: ${f.year}`);
-          }
-        }}>
+           const rw = data.watches[Math.floor(Math.random() * data.watches.length)];
+           const f = data.films.find(x => x.id === rw.movieId);
+            if (!f) return;
+          const d = new Date(rw.watchedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+           const r = data.ratings.find(x => x.movieId === f.id);
+            setCapsule(`${d} ты посмотрел(а) «${f.title}»${r ? ' и поставил(а) ' + r.value + '/10' : ''}\n\nЖанр: ${f.genre}\nГод: ${f.year}`);
+            }}>
           <RotateCcw size={20} />
           <div><b>Капсула времени</b><small>Перемотай время и вспомни случайный сеанс</small></div>
         </div>
