@@ -1862,7 +1862,11 @@ function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p:
         <div className="catalog-search compact"><Search size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Найти пользователя по имени..." /></div>
         <div className="people-grid">
           {peers.map(p => {
-            const relation = data.friends.find(f => (f.fromId === p.id || f.toId === p.id));
+            const relation = data.friends.find(f =>
+              (f.fromId === meId && f.toId === p.id) || (f.fromId === p.id && f.toId === meId)
+            );
+            const incoming = relation?.status === 'pending' && relation.toId === meId;
+            const outgoing = relation?.status === 'pending' && relation.fromId === meId;
             return (
               <div className="person-card" key={p.id}>
                 <Avatar name={p.username} src={p.avatar} size={48} />
