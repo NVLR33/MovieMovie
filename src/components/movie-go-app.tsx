@@ -197,9 +197,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [rouletteIndex, setRouletteIndex] = useState(0);
   const [rouletteDone, setRouletteDone] = useState(false);
   const [rouletteCategory, setRouletteCategory] = useState('Все');
-  const [roulettePool, setRoulettePool] = useState<FilmType[]>([]);
-  const [rouletteWinner, setRouletteWinner] = useState<FilmType | null>(null);
-  const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
@@ -208,15 +205,18 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatPeerId, setChatPeerId] = useState<number | null>(null);
 
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spinningRef = useRef(false);
+
   // оптимизация: один стабильный Set для watched
   const watchedIds = useMemo(() => new Set<number>(data.watches.map(w => w.movieId)), [data.watches]);
 
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-const notify = (s: string) => {
-  setToast(s);
-  if (toastTimer.current) clearTimeout(toastTimer.current);
-  toastTimer.current = setTimeout(() => setToast(''), 3700);
-};
+  const notify = (s: string) => {
+    setToast(s);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 3700);
+  };
 
   const refresh = async () => {
     try {
@@ -236,11 +236,27 @@ const notify = (s: string) => {
     }
   };
 
-useEffect(() => {
-  refresh()
+  useEffect(() => {
+    refresh();
+    const a = searchParams.get('auth');
+    if (a) {
+      setAuthOpen(true);
+      notify(a === 'config' ? 'Для входа через соцсети настройте OAuth-ключи сервера' : 'Не удалось выполнить вход через провайдера');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('auth');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('mg_theme', theme); }, [theme]);
   useEffect(() => { localStorage.setItem('mg_lang', lang); }, [lang]);
+
+  useEffect(() => {
+    return () => {
+      if (rouletteTimer.current) clearTimeout(rouletteTimer.current);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   const go = (url: string) => {
     router.push(url);
@@ -307,91 +323,50 @@ useEffect(() => {
     { id: 'leaderboard', label: words.leaderboard, icon: BarChart3, url: '/leaderboard' },
     { id: 'achievements', label: words.achievements, icon: Trophy, url: '/achievements' },
     { id: 'challenges', label: en ? 'Challenges' : 'Челленджи', icon: Flame, url: '/challenges' },
-    { id: 'games', label: words.games, icon: Gamepad2, url: '/games' },
-    { id: 'watchroom', label: en ? 'Watch room' : 'Кинозал', icon: Tv2, url: '/watchroom' }
+    { id: 'games', label: words.games, icon: Gamepad2, url: '/games' }
   ];
-const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-const spinningRef = useRef(false);
 
-const startRoulette = () => {
-  if (spinningRef.current) return;
-
-  const pool =
-    rouletteCategory === 'Все'
-      ? data.films
-      : data.films.filter(f => f.category === rouletteCategory);
-
-  if (pool.length < 2) {
-    notify('Нужно хотя бы два фильма для рулетки');
-    return;
-  }
-
-  spinningRef.current = true;
-  setSpinning(true);
-  setRoulette(true);
-  setRouletteDone(false);
-
-  let step = 0;
-  const totalSteps = 25;
-
-  const tick = () => {
-    setRouletteIndex(Math.floor(Math.random() * pool.length));
-    step += 1;
-
-    if (step >= totalSteps) {
-      spinningRef.current = false;
-      setSpinning(false);
-      setRouletteDone(true);
-      rouletteTimer.current = null;
+  const startRoulette = () => {
+    if (spinningRef.current) return;
+    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
+    if (pool.length < 2) {
+      notify('Нужно хотя бы два фильма для рулетки');
       return;
     }
+    spinningRef.current = true;
+    setSpinning(true);
+    setRoulette(true);
+    setRouletteDone(false);
 
-    const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
-
-    rouletteTimer.current = setTimeout(tick, delay);
+    let step = 0;
+    const totalSteps = 25;
+    const tick = () => {
+      setRouletteIndex(Math.floor(Math.random() * pool.length));
+      step++;
+      if (step >= totalSteps) {
+        spinningRef.current = false;
+        setSpinning(false);
+        setRouletteDone(true);
+        return;
+      }
+      const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
+      rouletteTimer.current = setTimeout(tick, delay);
+    };
+    tick();
   };
 
-  tick();
-};
-
-const stopRoulette = () => {
-  if (rouletteTimer.current) {
-    clearTimeout(rouletteTimer.current);
-    rouletteTimer.current = null;
-  }
-
-  spinningRef.current = false;
-  setSpinning(false);
-  setRoulette(false);
-};
-
-const pickCategory = (category: string) => {
-  if (spinningRef.current) return;
-  setRouletteCategory(category);
-  setRouletteDone(false);
-};
-
-useEffect(() => {
-  return () => {
-    if (rouletteTimer.current) {
-      clearTimeout(rouletteTimer.current);
-    }
+  const stopRoulette = () => {
+    if (rouletteTimer.current) clearTimeout(rouletteTimer.current);
+    spinningRef.current = false;
+    setSpinning(false);
+    setRoulette(false);
   };
-}, []);
 
-  // очистка таймера при размонтировании
-  useEffect(() => () => stopRoulette(), []);
-
-const stopRoulette = () => {
-  if (rouletteTimer.current) clearTimeout(rouletteTimer.current);
-  spinningRef.current = false;
-  setSpinning(false);
-  setRoulette(false);
-};
-
-const pickCategory = (c: string) => { setRouletteCategory(c); setRouletteDone(false); };
-
-useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.current); }, []);
+  const pickCategory = (cat: string) => {
+    if (spinning) return;
+    setRouletteCategory(cat);
+    setRouletteDone(false);
+  };
 
   return (
     <WatchedIdsContext.Provider value={watchedIds}>
@@ -493,8 +468,8 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
                   {(() => {
                     const q = search.toLowerCase();
                     const results = data.films
-                    .filter(f => [f.title, f.originalTitle, f.genre, f.director, f.studio || ''].join(' ').toLowerCase().includes(q))
-                    .slice(0, 5);
+                      .filter(f => [f.title, f.originalTitle, f.genre, f.director, f.studio || ''].join(' ').toLowerCase().includes(q))
+                      .slice(0, 5);
 
                     return results.length ? results.map(f => (
                       <button key={f.id} className="hot-search-item" onClick={() => { go('/movie/' + f.id); setSearch(''); }}>
@@ -595,7 +570,7 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
               : active === 'collab' ? <CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-              : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} notify={notify} />
+              : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} notify={notify} />
               : active === 'admin' ? <Admin data={data} go={go} action={action} edit={setEditFilm} />
               : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
               : <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
@@ -613,9 +588,9 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
         {roulette && (
-          <div className="modal-backdrop" onClick={closeRoulette}>
+          <div className="modal-backdrop" onClick={stopRoulette}>
             <div className="roulette-modal glass-modal fancy-roulette" onClick={e => e.stopPropagation()}>
-              <button className="modal-close" onClick={closeRoulette}><X size={20} /></button>
+              <button className="modal-close" onClick={stopRoulette}><X size={20} /></button>
               <div className="roulette-head">
                 <span className="eyebrow"><Sparkles size={14} /> КИНО-СЛУЧАЙ</span>
                 <h2>Чего желает душа?</h2>
@@ -623,15 +598,12 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
                   {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
                     <button
                       key={cat}
+                      disabled={spinning}
                       className={rouletteCategory === cat ? 'active' : ''}
-                      onClick={() => {
-                        stopRoulette();
-                        setRouletteCategory(cat);
-                        setRouletteDone(false);
-                        setRouletteWinner(null);
-                        setRoulettePool(cat === 'Все' ? data.films : data.films.filter(f => f.category === cat));
-                      }}
-                    >{cat}</button>
+                      onClick={() => pickCategory(cat)}
+                    >
+                      {cat}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -640,7 +612,8 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
                 <div className={`roulette-strip ${!rouletteDone ? 'spinning' : ''}`}>
                   {!rouletteDone ? (
                     Array.from({ length: 10 }).map((_, idx) => {
-                      const src = roulettePool.length ? roulettePool : data.films;
+                      const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
+                      const src = pool.length ? pool : data.films;
                       const f = src.length ? src[(rouletteIndex + idx) % src.length] : undefined;
                       return (
                         <div key={idx} className="strip-item">
@@ -648,37 +621,76 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
                         </div>
                       );
                     })
-                  ) : rouletteWinner ? (
-                    <div className="strip-winner">
-                      <div className="winner-glow" />
-                      <PosterThumb movieId={rouletteWinner.id} src={image(rouletteWinner)} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
-                    </div>
-                  ) : null}
+                  ) : (
+                    (() => {
+                      const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(x => x.category === rouletteCategory);
+                      const winner = pool[rouletteIndex] || data.films[0];
+                      return (
+                        <div className="strip-winner">
+                          <div className="winner-glow" />
+                          <PosterThumb movieId={winner?.id} src={image(winner)} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
+                        </div>
+                      );
+                    })()
+                  )}
                 </div>
                 <div className="roulette-pointer"><ChevronDown size={24} /></div>
               </div>
 
-              {rouletteDone && rouletteWinner && (
+              {rouletteDone && (
                 <div className="roulette-result-card">
-                  <span className="win-cat">{rouletteWinner.category} · {rouletteWinner.year}</span>
-                  <h3>{rouletteWinner.title}</h3>
-                  <p>{rouletteWinner.genre}</p>
-                  <div className="win-actions">
-                    <button className="primary-btn" onClick={() => { closeRoulette(); go('/movie/' + rouletteWinner.id); }}>
-                      Открыть карточку <ArrowRight size={17} />
-                    </button>
-                    <button className="outline-btn" onClick={() => startRoulette()}>
-                      <RotateCcw size={16} /> Ещё раз
-                    </button>
-                  </div>
+                  {(() => {
+                    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
+                    const win = pool[rouletteIndex];
+                    return win ? (
+                      <>
+                        <span className="win-cat">{win.category} · {win.year}</span>
+                        <h3>{win.title}</h3>
+                        <p>{win.genre}</p>
+                        <div className="win-actions">
+                          <button className="primary-btn" onClick={() => { stopRoulette(); go('/movie/' + win.id); }}>
+                            Открыть карточку <ArrowRight size={17} />
+                          </button>
+                          <button className="outline-btn" onClick={startRoulette}>
+                            <RotateCcw size={16} /> Ещё раз
+                          </button>
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
                 </div>
               )}
 
               {!rouletteDone && (
-                <button className="primary-btn start-spin-btn" onClick={() => startRoulette()}>
-                  Запустить барабан <RotateCcw size={17} />
+                <button className="primary-btn start-spin-btn" disabled={spinning} onClick={startRoulette}>
+                  {spinning ? 'Крутим барабан...' : 'Запустить барабан'} <RotateCcw size={17} />
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {shareFilm && (
+          <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
+            <div className="glass-modal share-modal" onClick={e => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShareFilm(null)}><X size={20} /></button>
+              <span className="eyebrow">ПОДЕЛИТЬСЯ ВПЕЧАТЛЕНИЕМ</span>
+              <h2>Расскажи друзьям</h2>
+              <p>«{shareFilm.title}» стоит увидеть.</p>
+              <button className="share-copy" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/movie/' + shareFilm.id); notify('Ссылка скопирована'); }}>
+                <Copy size={17} /> Скопировать ссылку <ArrowRight size={16} />
+              </button>
+              <h4>Отправить пользователю</h4>
+              {data.people.filter(p => p.id !== data.user?.id).slice(0, 6).map(p => (
+                <button
+                  className="share-person"
+                  key={p.id}
+                  onClick={async () => { if (await action({ action: 'share', movieId: shareFilm.id, userId: p.id }, 'Рекомендация отправлена')) setShareFilm(null); }}
+                >
+                  <Avatar name={p.username} src={p.avatar} size={32} />
+                  {p.username}<Send size={15} />
+                </button>
+              ))}
             </div>
           </div>
         )}
