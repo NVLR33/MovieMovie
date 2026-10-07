@@ -1915,14 +1915,22 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
   const [score, setScore] = useState(0);
   const [choice, setChoice] = useState<string | null>(null);
   const [questions, setQuestions] = useState<{ movieId?: number; question: string; options: string[]; correct: string; poster?: string }[]>([]);
+  const scoreRef = useRef(0);
+  const savingRef = useRef(false);
 
   const make = (id: string) => {
-    const usable = films.length >= 5 ? films : [...films, ...films, ...films].slice(0, 5);
-    const source = [...usable].sort(() => Math.random() - 0.5).slice(0, 5);
-    const pool = (field: (f: FilmType) => string, current: FilmType) =>
-      [...new Set([field(current), ...usable.filter(f => f.id !== current.id).sort(() => Math.random() - 0.5).map(field)])]
-        .slice(0, 4)
-        .sort(() => Math.random() - 0.5);
+    if (films.length < 4) return; // защита от дубликатов в вариантах
+    const usable = films;
+    const source = shuffleArr(usable).slice(0, 5);
+
+    // 4 УНИКАЛЬНЫХ варианта, правильный ровно один
+    const pool = (field: (f: FilmType) => string, current: FilmType) => {
+      const correct = field(current);
+      const distractors = [...new Set(
+        shuffleArr(usable).filter(f => f.id !== current.id).map(field)
+      )].filter(v => v && v !== correct).slice(0, 3);
+      return shuffleArr([correct, ...distractors]);
+    };
 
     const qs = source.map(f => {
       let question = '', correct = '', options: string[] = [], poster: string | undefined;
@@ -1936,24 +1944,65 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
         case 'country': { question = `Какая страна создала «${f.title}»?`; correct = f.country || 'Неизвестно'; options = pool(x => x.country || 'Неизвестно', f); break; }
         case 'original': { question = `Как звучит оригинальное название «${f.title}»?`; correct = f.originalTitle || f.title; options = pool(x => x.originalTitle || x.title, f); break; }
         case 'category': { question = `К какой категории относится «${f.title}»?`; correct = f.category; options = pool(x => x.category, f); break; }
-        case 'wordle': { question = `Угадай фильм: жанр «${f.genre.split(',')[0].trim()}», ${f.year} год, ${f.country}`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'hangman': { const hidden = f.title.replace(/[а-яёa-z]/gi, '_'); question = `Угадай: ${hidden} (${f.category}, ${f.year})`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'anagram': { const shuffled = f.title.split('').sort(() => Math.random() - 0.5).join(''); question = `Собери название: «${shuffled}» (${f.category})`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'truths': { const lie = `Режиссёр — ${usable.filter(x => x.director !== f.director)[0]?.director || 'неизвестно'}`; question = `Найди ЛОЖЬ о «${f.title}»:`; correct = lie; options = [`Год выпуска — ${f.year}`, `Категория — ${f.category}`, lie].sort(() => Math.random() - 0.5); break; }
-        case 'chrono': { question = `Какой из этих фильмов вышел раньше всех?`; correct = source.sort((a, b) => a.year - b.year)[0].title; options = source.slice(0, 4).map(x => x.title).sort(() => Math.random() - 0.5); break; }
+        case 'wordle': { question = `Угадай фильм: жанр «${f.genre.split(',')[0].trim()}», ${f.year} год, ${f.country || '—'}`; correct = f.title; options = pool(x => x.title, f); break; }
+        case 'hangman': {
+          // показываем первую и последнюю буквы каждого слова
+          const hidden = f.title.split(' ').map(w =>
+            w.length <= 2 ? w : w[0] + '_'.repeat(Math.max(1, w.length - 2)) + w[w.length - 1]
+          ).join(' ');
+          question = `Угадай: ${hidden} (${f.category}, ${f.year})`;
+          correct = f.title; options = pool(x => x.title, f); break;
+        }
+        case 'anagram': {
+          const shuffled = shuffleArr(f.title.replace(/\s+/g, '').split('')).join(' ');
+          question = `Собери название: «${shuffled}» (${f.category}, ${f.year})`;
+          correct = f.title; options = pool(x => x.title, f); break;
+        }
+        case 'truths': {
+          const other = shuffleArr(usable).find(x => x.id !== f.id);
+          const facts = [
+            { t: `Год выпуска — ${f.year}`, l: `Год выпуска — ${f.year + 2 + Math.floor(Math.random() * 5)}` },
+            { t: `Категория — ${f.category}`, l: `Категория — ${shuffleArr(categories.slice(1).filter(c => c !== f.category))[0]}` },
+            { t: `Режиссёр — ${f.director || 'неизвестен'}`, l: `Режиссёр — ${other?.director || 'Квентин Тарантино'}` },
+            { t: `Длительность — ${f.duration} мин`, l: `Длительность — ${f.duration + 35 + Math.floor(Math.random() * 30)} мин` },
+            { t: `Страна — ${f.country || 'неизвестна'}`, l: `Страна — ${other?.country && other.country !== f.country ? other.country : 'Исландия'}` },
+          ].filter(x => x.t !== x.l);
+          const picked = shuffleArr(facts).slice(0, 3);
+          const lieIdx = Math.floor(Math.random() * picked.length);
+          const opts = picked.map((x, i) => (i === lieIdx ? x.l : x.t));
+          question = `Найди ЛОЖЬ о «${f.title}»:`;
+          correct = opts[lieIdx];
+          options = shuffleArr(opts);
+          break;
+        }
+        case 'chrono': {
+          const quad = shuffleArr(usable).slice(0, 4);
+          const earliest = [...quad].sort((a, b) => a.year - b.year)[0];
+          question = 'Какой из этих фильмов вышел раньше всех?';
+          correct = earliest.title;
+          options = shuffleArr(quad.map(x => x.title));
+          break;
+        }
         case 'connections': {
-          question = `Какой фильм НЕ связан общим жанром «${f.genre.split(',')[0].trim()}»?`;
-          const outsider = usable.filter(x => !x.genre.includes(f.genre.split(',')[0].trim()))[0] || usable[0];
-          correct = outsider.title;
-          options = [...source.filter(x => x.genre.includes(f.genre.split(',')[0].trim())).slice(0, 3).map(x => x.title), outsider.title].sort(() => Math.random() - 0.5);
+          const g = f.genre.split(',')[0].trim();
+          const same = shuffleArr(usable.filter(x => x.id !== f.id && x.genre.includes(g))).slice(0, 3);
+          const outsider = shuffleArr(usable).find(x => !x.genre.includes(g));
+          if (outsider && same.length >= 2) {
+            question = `Какой фильм НЕ относится к жанру «${g}»?`;
+            correct = outsider.title;
+            options = shuffleArr([...same.map(x => x.title), outsider.title]);
+          } else {
+            question = `В каком году вышло «${f.title}»?`;
+            correct = String(f.year);
+            options = pool(x => String(x.year), f);
+          }
           break;
         }
         default: {
-          const others = usable.filter(x => x.rating !== f.rating);
-          const opponent = others[Math.floor(Math.random() * others.length)] || usable[0];
+          const opponent = shuffleArr(usable).find(x => x.id !== f.id && x.rating !== f.rating) || shuffleArr(usable).find(x => x.id !== f.id)!;
           correct = f.rating >= opponent.rating ? f.title : opponent.title;
-          options = [f.title, opponent.title];
-          question = `Что оценили выше: «${f.title}» или другое кино?`;
+          options = shuffleArr([f.title, opponent.title]);
+          question = `Что оценили выше: «${f.title}» или «${opponent.title}»?`;
         }
       }
       return { movieId: f.id, question, correct, options, poster };
@@ -1962,14 +2011,20 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
     setQuestions(qs);
     setMode(gameModes.find(g => g.id === id) || null);
     setRound(0);
+    scoreRef.current = 0;
     setScore(0);
     setChoice(null);
   };
 
   const next = async () => {
     if (round === 4) {
-      if (user) await action({ action: 'game', game: mode?.id, score }, `+${score * 10} XP за игру!`);
+      const finalScore = scoreRef.current;
       setRound(5);
+      if (user && mode && !savingRef.current) {
+        savingRef.current = true;
+        try { await action({ action: 'game', game: mode.id, score: finalScore }, `+${finalScore * 10} XP за игру!`); }
+        finally { savingRef.current = false; }
+      }
     } else {
       setRound(round + 1);
       setChoice(null);
