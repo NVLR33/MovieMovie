@@ -1443,12 +1443,23 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
   );
 }
 
-function Profile({ data, go, action, notify, auth }: {
+function Profile({
+  data,
+  go,
+  action,
+  notify,
+  auth,
+  refresh
+}: {
   data: Data;
   go: (s: string) => void;
-  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+  action: (
+    p: Record<string, unknown>,
+    s?: string
+  ) => Promise<boolean>;
   notify: (s: string) => void;
   auth: () => void;
+  refresh: () => Promise<void>;
 }) {
   const u = data.user;
   const [editing, setEditing] = useState(false);
