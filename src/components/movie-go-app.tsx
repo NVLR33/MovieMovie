@@ -505,12 +505,12 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
               : active === 'catalog' ? <Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} watchedIds={watchedIds} />
               : active === 'movie' ? <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} edit={setEditFilm} />
-              : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
+              : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} refresh={refresh} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'leaderboard' ? <Leaderboard data={data} go={go} />
               : active === 'achievements' ? <Achievements data={data} auth={() => setAuthOpen(true)} go={go} />
               : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-              : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
+              : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} notify={notify} />
               : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
               : active === 'viewuser' ? <ViewUserProfile key={viewUserId} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
               : active === 'compare' ? <ComparePage data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
@@ -518,7 +518,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
               : active === 'collab' ? <CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-              : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
+              : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} notify={notify} />
               : active === 'admin' ? <Admin data={data} go={go} action={action} edit={setEditFilm} />
               : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
               : <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
