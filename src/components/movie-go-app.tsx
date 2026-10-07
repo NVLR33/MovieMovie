@@ -750,6 +750,7 @@ function Gate({ title, description, auth }: { title: string; description: string
 function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; }) {
   const featured = useMemo(() => films.find(f => (f as any).featured) || films[0], [films]);
   const trending = useMemo(() => [...films].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5), [films]);
+  const [capsule, setCapsule] = useState<string | null>(null);
 
   if (!featured) return null;
 
