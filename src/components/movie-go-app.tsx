@@ -331,73 +331,8 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const startRoulette = () => setRoulette(true);
 
   return (
-
-  const pool =
-    rouletteCategory === 'Все'
-      ? data.films
-      : data.films.filter(f => f.category === rouletteCategory);
-
-  if (pool.length < 2) {
-    notify('Нужно хотя бы два фильма для рулетки');
-    return;
-  }
-
-  if (rouletteTimer.current) {
-    clearTimeout(rouletteTimer.current);
-    rouletteTimer.current = null;
-  }
-
-  spinningRef.current = true;
-  setSpinning(true);
-  setRoulette(true);
-  setRouletteDone(false);
-
-  let step = 0;
-  const totalSteps = 25;
-
-  const tick = () => {
-    const nextIndex = Math.floor(Math.random() * pool.length);
-
-    setRouletteIndex(nextIndex);
-    step += 1;
-
-    if (step >= totalSteps) {
-      rouletteTimer.current = null;
-      spinningRef.current = false;
-      setSpinning(false);
-      setRouletteDone(true);
-      return;
-    }
-
-    const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
-    rouletteTimer.current = setTimeout(tick, delay);
-  };
-
-  tick();
-};
-
-const stopRoulette = () => {
-  if (rouletteTimer.current) {
-    clearTimeout(rouletteTimer.current);
-    rouletteTimer.current = null;
-  }
-
-  spinningRef.current = false;
-  setSpinning(false);
-  setRoulette(false);
-  setRouletteDone(false);
-};
-
-const pickCategory = (cat: string) => {
-  if (spinningRef.current) return;
-
-  setRouletteCategory(cat);
-  setRouletteIndex(0);
-  setRouletteDone(false);
-};
-
-  return (
     <WatchedIdsContext.Provider value={watchedIds}>
+      <div className="app-shell">
       <div className="app-shell">
         <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
           <div className="side-brand" onClick={() => go('/')}>
