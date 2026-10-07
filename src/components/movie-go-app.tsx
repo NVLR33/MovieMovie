@@ -190,6 +190,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [rouletteIndex, setRouletteIndex] = useState(0);
   const [rouletteDone, setRouletteDone] = useState(false);
   const [rouletteCategory, setRouletteCategory] = useState('Все');
+  const [spinning, setSpinning] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
   const [shareFilm, setShareFilm] = useState<FilmType | null>(null);
