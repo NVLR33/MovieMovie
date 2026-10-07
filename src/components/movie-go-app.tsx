@@ -71,8 +71,9 @@ const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал',
 const tone = (r: number) => r >= 8.5 ? 'gold' : r >= 7 ? 'teal' : r >= 5 ? 'blue' : 'red';
 const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
 
-function initials(s: string) {
-  return (s || '??').slice(0, 2).toUpperCase();
+function initials(value: string): string {
+  const clean = value.trim();
+  return clean ? clean.slice(0, 2).toUpperCase() : '??';
 }
 
 function titleFor(user: User | null, watches: number) {
@@ -315,47 +316,72 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     { id: 'games', label: words.games, icon: Gamepad2, url: '/games' }
   ];
 
-  const startRoulette = () => {
-    if (spinningRef.current) return;
-    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
-    if (pool.length < 2) {
-      notify('Нужно хотя бы два фильма для рулетки');
+const startRoulette = () => {
+  if (spinningRef.current) return;
+
+  const pool =
+    rouletteCategory === 'Все'
+      ? data.films
+      : data.films.filter(f => f.category === rouletteCategory);
+
+  if (pool.length < 2) {
+    notify('Нужно хотя бы два фильма для рулетки');
+    return;
+  }
+
+  if (rouletteTimer.current) {
+    clearTimeout(rouletteTimer.current);
+    rouletteTimer.current = null;
+  }
+
+  spinningRef.current = true;
+  setSpinning(true);
+  setRoulette(true);
+  setRouletteDone(false);
+
+  let step = 0;
+  const totalSteps = 25;
+
+  const tick = () => {
+    const nextIndex = Math.floor(Math.random() * pool.length);
+
+    setRouletteIndex(nextIndex);
+    step += 1;
+
+    if (step >= totalSteps) {
+      rouletteTimer.current = null;
+      spinningRef.current = false;
+      setSpinning(false);
+      setRouletteDone(true);
       return;
     }
-    spinningRef.current = true;
-    setSpinning(true);
-    setRoulette(true);
-    setRouletteDone(false);
 
-    let step = 0;
-    const totalSteps = 25;
-    const tick = () => {
-      setRouletteIndex(Math.floor(Math.random() * pool.length));
-      step++;
-      if (step >= totalSteps) {
-        spinningRef.current = false;
-        setSpinning(false);
-        setRouletteDone(true);
-        return;
-      }
-      const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
-      rouletteTimer.current = setTimeout(tick, delay);
-    };
-    tick();
+    const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
+    rouletteTimer.current = setTimeout(tick, delay);
   };
 
-  const stopRoulette = () => {
-    if (rouletteTimer.current) clearTimeout(rouletteTimer.current);
-    spinningRef.current = false;
-    setSpinning(false);
-    setRoulette(false);
-  };
+  tick();
+};
 
-  const pickCategory = (cat: string) => {
-    if (spinning) return;
-    setRouletteCategory(cat);
-    setRouletteDone(false);
-  };
+const stopRoulette = () => {
+  if (rouletteTimer.current) {
+    clearTimeout(rouletteTimer.current);
+    rouletteTimer.current = null;
+  }
+
+  spinningRef.current = false;
+  setSpinning(false);
+  setRoulette(false);
+  setRouletteDone(false);
+};
+
+const pickCategory = (cat: string) => {
+  if (spinningRef.current) return;
+
+  setRouletteCategory(cat);
+  setRouletteIndex(0);
+  setRouletteDone(false);
+};
 
   return (
     <WatchedIdsContext.Provider value={watchedIds}>
@@ -610,18 +636,37 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
                         </div>
                       );
                     })
-                  ) : (
-                    (() => {
-                      const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(x => x.category === rouletteCategory);
-                      const winner = pool[rouletteIndex] || data.films[0];
-                      return (
-                        <div className="strip-winner">
-                          <div className="winner-glow" />
-                          <PosterThumb movieId={winner?.id} src={image(winner)} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
-                        </div>
+                ) : (
+              (() => {
+                const pool =
+                  rouletteCategory === 'Все'
+                    ? data.films
+                    : data.films.filter(
+                        film => film.category === rouletteCategory
                       );
-                    })()
-                  )}
+            
+                const winner =
+                  pool[rouletteIndex] || data.films[0];
+            
+                if (!winner) return null;
+            
+                return (
+                  <div className="strip-winner">
+                    <div className="winner-glow" />
+            
+                    <PosterThumb
+                      movieId={winner.id}
+                      src={image(winner)}
+                      alt={winner.title}
+                      wrapStyle={{
+                        width: '100%',
+                        height: '100%'
+                      }}
+                    />
+                  </div>
+                );
+              })()
+            )}
                 </div>
                 <div className="roulette-pointer"><ChevronDown size={24} /></div>
               </div>
@@ -915,19 +960,52 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
         </div>
       </div>
 
-      {data.user && data.watches.length > 0 && (
-        <div className="time-capsule-banner" onClick={() => {
-           const rw = data.watches[Math.floor(Math.random() * data.watches.length)];
-           const f = data.films.find(x => x.id === rw.movieId);
-            if (!f) return;
-          const d = new Date(rw.watchedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-           const r = data.ratings.find(x => x.movieId === f.id);
-            setCapsule(`${d} ты посмотрел(а) «${f.title}»${r ? ' и поставил(а) ' + r.value + '/10' : ''}\n\nЖанр: ${f.genre}\nГод: ${f.year}`);
-            }}>
-          <RotateCcw size={20} />
-          <div><b>Капсула времени</b><small>Перемотай время и вспомни случайный сеанс</small></div>
-        </div>
-      )}
+{data.user && data.watches.length > 0 && (
+  <div
+    className="time-capsule-banner"
+    onClick={() => {
+      const randomWatch =
+        data.watches[
+          Math.floor(Math.random() * data.watches.length)
+        ];
+
+      const film = data.films.find(
+        item => item.id === randomWatch.movieId
+      );
+
+      if (!film) return;
+
+      const date = new Date(
+        randomWatch.watchedAt
+      ).toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      const rating = data.ratings.find(
+        item => item.movieId === film.id
+      );
+
+      setCapsule(
+        `${date} ты посмотрел(а) «${film.title}»${
+          rating
+            ? ` и поставил(а) ${rating.value}/10`
+            : ''
+        }\n\nЖанр: ${film.genre}\nГод: ${film.year}`
+      );
+    }}
+  >
+    <RotateCcw size={20} />
+
+    <div>
+      <b>Капсула времени</b>
+      <small>
+        Перемотай время и вспомни случайный сеанс
+      </small>
+    </div>
+  </div>
+)}
 
       <section className="home-section pulse-section">
         <SectionTitle kicker={en ? 'CINEMA PULSE' : 'КИНОПУЛЬС'} title={en ? 'This week' : 'На этой неделе'} />
