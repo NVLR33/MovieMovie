@@ -198,6 +198,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [roulette, setRoulette] = useState(false);
   const [rouletteIndex, setRouletteIndex] = useState(0);
   const [rouletteDone, setRouletteDone] = useState(false);
+  const [rouletteCategory, setRouletteCategory] = useState('Все');
   const [spinning, setSpinning] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
@@ -327,7 +328,72 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     { id: 'games', label: words.games, icon: Gamepad2, url: '/games' }
   ];
 
-  const startRoulette = () => setRoulette(true);
+const startRoulette = () => {
+  if (spinningRef.current) return;
+
+  const pool =
+    rouletteCategory === 'Все'
+      ? data.films
+      : data.films.filter(f => f.category === rouletteCategory);
+
+  if (pool.length < 2) {
+    notify('Нужно хотя бы два фильма для рулетки');
+    return;
+  }
+
+  if (rouletteTimer.current) {
+    clearTimeout(rouletteTimer.current);
+    rouletteTimer.current = null;
+  }
+
+  spinningRef.current = true;
+  setSpinning(true);
+  setRoulette(true);
+  setRouletteDone(false);
+
+  let step = 0;
+  const totalSteps = 25;
+
+  const tick = () => {
+    const nextIndex = Math.floor(Math.random() * pool.length);
+
+    setRouletteIndex(nextIndex);
+    step += 1;
+
+    if (step >= totalSteps) {
+      rouletteTimer.current = null;
+      spinningRef.current = false;
+      setSpinning(false);
+      setRouletteDone(true);
+      return;
+    }
+
+    const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
+    rouletteTimer.current = setTimeout(tick, delay);
+  };
+
+  tick();
+};
+
+const stopRoulette = () => {
+  if (rouletteTimer.current) {
+    clearTimeout(rouletteTimer.current);
+    rouletteTimer.current = null;
+  }
+
+  spinningRef.current = false;
+  setSpinning(false);
+  setRoulette(false);
+  setRouletteDone(false);
+};
+
+const pickCategory = (cat: string) => {
+  if (spinningRef.current) return;
+
+  setRouletteCategory(cat);
+  setRouletteIndex(0);
+  setRouletteDone(false);
+};
 
   return (
     <WatchedIdsContext.Provider value={watchedIds}>
@@ -549,14 +615,105 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
         {roulette && (
-          <RouletteModal
-            films={data.films}
-            onClose={() => setRoulette(false)}
-            onOpenMovie={(id) => {
-              setRoulette(false);
-              go('/movie/' + id);
-            }}
-          />
+          <div className="modal-backdrop" onClick={stopRoulette}>
+            <div className="roulette-modal glass-modal fancy-roulette" onClick={e => e.stopPropagation()}>
+              <button className="modal-close" onClick={stopRoulette}><X size={20} /></button>
+              <div className="roulette-head">
+                <span className="eyebrow"><Sparkles size={14} /> КИНО-СЛУЧАЙ</span>
+                <h2>Чего желает душа?</h2>
+                <div className="roulette-tabs">
+                  {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
+                    <button
+                      key={cat}
+                      disabled={spinning}
+                      className={rouletteCategory === cat ? 'active' : ''}
+                      onClick={() => pickCategory(cat)}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="roulette-container">
+                <div className={`roulette-strip ${!rouletteDone ? 'spinning' : ''}`}>
+                  {!rouletteDone ? (
+                    Array.from({ length: 10 }).map((_, idx) => {
+                      const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
+                      const src = pool.length ? pool : data.films;
+                      const f = src.length ? src[(rouletteIndex + idx) % src.length] : undefined;
+                      return (
+                        <div key={idx} className="strip-item">
+                          <PosterThumb movieId={f?.id} src={f?.poster} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
+                        </div>
+                      );
+                    })
+                ) : (
+              (() => {
+                const pool =
+                  rouletteCategory === 'Все'
+                    ? data.films
+                    : data.films.filter(
+                        film => film.category === rouletteCategory
+                      );
+            
+                const winner =
+                  pool[rouletteIndex] || data.films[0];
+            
+                if (!winner) return null;
+            
+                return (
+                  <div className="strip-winner">
+                    <div className="winner-glow" />
+            
+                    <PosterThumb
+                      movieId={winner.id}
+                      src={image(winner)}
+                      alt={winner.title}
+                      wrapStyle={{
+                        width: '100%',
+                        height: '100%'
+                      }}
+                    />
+                  </div>
+                );
+              })()
+            )}
+                </div>
+                <div className="roulette-pointer"><ChevronDown size={24} /></div>
+              </div>
+
+              {rouletteDone && (
+                <div className="roulette-result-card">
+                  {(() => {
+                    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
+                    const win = pool[rouletteIndex];
+                    return win ? (
+                      <>
+                        <span className="win-cat">{win.category} · {win.year}</span>
+                        <h3>{win.title}</h3>
+                        <p>{win.genre}</p>
+                        <div className="win-actions">
+                          <button className="primary-btn" onClick={() => { stopRoulette(); go('/movie/' + win.id); }}>
+                            Открыть карточку <ArrowRight size={17} />
+                          </button>
+                          <button className="outline-btn" onClick={startRoulette}>
+                            <RotateCcw size={16} /> Ещё раз
+                          </button>
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+
+              {!rouletteDone && (
+                <button className="primary-btn start-spin-btn" disabled={spinning} onClick={startRoulette}>
+                  {spinning ? 'Крутим барабан...' : 'Запустить барабан'} <RotateCcw size={17} />
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
         {shareFilm && (
@@ -590,332 +747,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
         {loading && <div className="loading-line" />}
       </div>
     </WatchedIdsContext.Provider>
-  );
-}
-
-function RouletteModal({
-  films,
-  category: initialCat = 'Все',
-  onClose,
-  onOpenMovie,
-}: {
-  films: FilmType[];
-  category?: string;
-  onClose: () => void;
-  onOpenMovie: (id: number) => void;
-}) {
-  const [cat, setCat] = useState('Все');
-  const [spinning, setSpinning] = useState(false);
-  const [winner, setWinner] = useState<FilmType | null>(null);
-  const [done, setDone] = useState(false);
-  const [strip, setStrip] = useState<FilmType[]>([]);
-  const [offset, setOffset] = useState(0);
-
-  const CARD_W = 120; // ширина карточки в пикселях
-  const GAP = 12;     // отступ между карточками
-  const TARGET_INDEX = 32; // на каком элементе ленты остановится барабан
-
-  // Фильтруем фильмы по выбранной категории
-  const pool = useMemo(() => {
-    const list = cat === 'Все' ? films : films.filter(f => f.category === cat);
-    return list.length ? list : films;
-  }, [films, cat]);
-
-  // Генерация длинной ленты для прокрутки (42 карточки)
-  const buildStrip = (winItem: FilmType) => {
-    return Array.from({ length: 42 }).map((_, i) => {
-      if (i === TARGET_INDEX) return winItem;
-      return pool[Math.floor(Math.random() * pool.length)];
-    });
-  };
-
-  // Пересобираем ленту при открытии или смене категории
-  useEffect(() => {
-    if (!pool.length) return;
-    const initialWin = pool[Math.floor(Math.random() * pool.length)];
-    setStrip(buildStrip(initialWin));
-    setWinner(null);
-    setDone(false);
-    setOffset(0);
-  }, [cat, pool]);
-
-const startSpin = () => {
-  if (spinning || pool.length === 0) return;
-
-  clearRouletteTimers();
-
-    // Выбираем победителя
-    const win = pool[Math.floor(Math.random() * pool.length)];
-    const newStrip = buildStrip(win);
-    setStrip(newStrip);
-    setWinner(win);
-    setDone(false);
-    setSpinning(true);
-
-    // Сброс позиции в 0
-    setOffset(0);
-
-    // Запуск прокрутки к карточке TARGET_INDEX
-requestAnimationFrame(() => {
-  moveTimerRef.current = setTimeout(() => {
-    const jitter = (Math.random() - 0.5) * 14;
-
-    const targetX =
-      TARGET_INDEX * (CARD_W + GAP) +
-      CARD_W / 2 +
-      jitter;
-
-    setOffset(targetX);
-    moveTimerRef.current = null;
-  }, 50);
-});
-
-finishTimerRef.current = setTimeout(() => {
-  setSpinning(false);
-  setDone(true);
-  finishTimerRef.current = null;
-}, 4300);
-
-  return (
-    <div className="modal-backdrop" onClick={spinning ? undefined : onClose} style={{ zIndex: 1000 }}>
-      <div
-        className="glass-modal fancy-roulette"
-        onClick={e => e.stopPropagation()}
-        style={{
-          maxWidth: 620,
-          width: '92vw',
-          padding: '28px 24px',
-          background: 'radial-gradient(ellipse at top, #161b2c 0%, #0c0f18 100%)',
-          borderRadius: 24,
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(168, 85, 247, 0.15)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Кнопка закрытия */}
-        <button
-          className="modal-close"
-          disabled={spinning}
-          onClick={onClose}
-          style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}
-        >
-          <X size={20} />
-        </button>
-
-        {/* Заголовок и табы категорий */}
-        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <span className="eyebrow" style={{ color: 'var(--accent, #a855f7)', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
-            <Sparkles size={14} /> КИНО-СЛУЧАЙ
-          </span>
-          <h2 style={{ fontSize: 26, fontWeight: 800, margin: '6px 0 16px', letterSpacing: '-0.02em' }}>
-            Чего желает душа?
-          </h2>
-
-          <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', padding: 4, borderRadius: 99, gap: 4 }}>
-            {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(c => (
-              <button
-                key={c}
-                disabled={spinning}
-                onClick={() => setCat(c)}
-                style={{
-                  padding: '6px 16px',
-                  borderRadius: 99,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  border: 'none',
-                  cursor: spinning ? 'not-allowed' : 'pointer',
-                  background: cat === c ? 'var(--accent, #a855f7)' : 'transparent',
-                  color: cat === c ? '#fff' : 'rgba(255,255,255,0.6)',
-                  transition: 'all 0.2s ease',
-                  boxShadow: cat === c ? '0 4px 12px rgba(168, 85, 247, 0.4)' : 'none'
-                }}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Окно барабана / ленты */}
-        <div
-          ref={reelRef}
-          style={{
-            position: 'relative',
-            height: 185,
-            width: '100%',
-            borderRadius: 16,
-            background: 'rgba(5, 7, 12, 0.75)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            overflow: 'hidden',
-            boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)'
-          }}
-        >
-          {/* Верхний и нижний указатели центра */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 0,
-              height: 0,
-              borderLeft: '9px solid transparent',
-              borderRight: '9px solid transparent',
-              borderTop: '11px solid #a855f7',
-              zIndex: 10,
-              filter: 'drop-shadow(0 0 8px #a855f7)'
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 0,
-              height: 0,
-              borderLeft: '9px solid transparent',
-              borderRight: '9px solid transparent',
-              borderBottom: '11px solid #a855f7',
-              zIndex: 10,
-              filter: 'drop-shadow(0 0 8px #a855f7)'
-            }}
-          />
-
-          {/* Центральный прожектор */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              bottom: 0,
-              left: '50%',
-              width: CARD_W + 8,
-              transform: 'translateX(-50%)',
-              borderLeft: '1px dashed rgba(168, 85, 247, 0.35)',
-              borderRight: '1px dashed rgba(168, 85, 247, 0.35)',
-              background: 'radial-gradient(ellipse at center, rgba(168, 85, 247, 0.12) 0%, transparent 70%)',
-              pointerEvents: 'none',
-              zIndex: 5
-            }}
-          />
-
-          {/* Затемнения по краям (виньетка) */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(90deg, rgba(12,15,24,0.95) 0%, transparent 22%, transparent 78%, rgba(12,15,24,0.95) 100%)',
-              pointerEvents: 'none',
-              zIndex: 6
-            }}
-          />
-
-          {/* Сама лента карточек */}
-          <div
-            style={{
-              display: 'flex',
-              gap: GAP,
-              height: '100%',
-              alignItems: 'center',
-              paddingLeft: '50%',
-              transform: `translate3d(-${offset}px, 0, 0)`,
-              transition: spinning ? 'transform 4.2s cubic-bezier(0.12, 0.8, 0.25, 1)' : 'none',
-              willChange: 'transform'
-            }}
-          >
-            {strip.map((f, idx) => (
-              <div
-                key={idx}
-                style={{
-                  width: CARD_W,
-                  height: 160,
-                  flexShrink: 0,
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                  background: '#1a1f30',
-                  position: 'relative',
-                  border: done && idx === TARGET_INDEX ? '2px solid #a855f7' : '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: done && idx === TARGET_INDEX ? '0 0 25px rgba(168,85,247,0.6)' : 'none',
-                  transform: done && idx === TARGET_INDEX ? 'scale(1.04)' : 'scale(1)',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <img
-                  src={image(f)}
-                  alt={f.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 0%, transparent 55%)',
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    padding: 6
-                  }}
-                >
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', lineHeight: 1.1, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                    {f.title}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Результат или кнопка запуска */}
-        <div style={{ marginTop: 22, textAlign: 'center', minHeight: 90 }}>
-          {done && winner ? (
-            <div>
-              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
-                {winner.category} · {winner.year}
-              </span>
-              <h3 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 2px', color: '#fff' }}>
-                {winner.title}
-              </h3>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '0 0 16px' }}>
-                {winner.genre} · ★ {winner.rating.toFixed(1)}
-              </p>
-
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button
-                  className="primary-btn"
-                  onClick={() => onOpenMovie(winner.id)}
-                  style={{ padding: '10px 22px', fontSize: 14 }}
-                >
-                  Открыть карточку <ArrowRight size={16} />
-                </button>
-                <button
-                  className="outline-btn"
-                  onClick={startSpin}
-                  style={{ padding: '10px 18px', fontSize: 14 }}
-                >
-                  <RotateCcw size={15} /> Ещё раз
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ paddingTop: 10 }}>
-              <button
-                className="primary-btn"
-                disabled={spinning}
-                onClick={startSpin}
-                style={{
-                  padding: '12px 32px',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  boxShadow: '0 8px 24px rgba(168, 85, 247, 0.45)'
-                }}
-              >
-                {spinning ? 'Выбираем историю...' : 'Запустить барабан'} <Sparkles size={17} />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -3720,4 +3551,5 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
         }) : <div className="challenge-empty"><p>В {months[selectedMonth - 1].toLowerCase()} пока нет челленджей.</p></div>}
       </div>
     </>
-
+  );
+}
