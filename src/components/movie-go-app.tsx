@@ -157,6 +157,7 @@ function PosterThumb({
   );
 }
 
+
 /* --- БРЕНД: НОВЫЙ ЛОГОТИП "moviemovie" (movie над movie) --- */
 function BrandWordmark({ size = 15, align = 'left' }: { size?: number; align?: 'left' | 'center'; }) {
   return (
