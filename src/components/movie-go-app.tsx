@@ -1249,7 +1249,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
                 </div>
                 <div className="compose-footer">
                   <span>
-                    {reply ? `Ответ на комментарий #${reply}` : 'Будь добрым к другим зрителям ✨'}
+                    {reply ? `Ответ для @${reply.to}` : 'Будь добрым к другим зрителям ✨'}
                     {reply && <button onClick={() => setReply(null)}>Отмена</button>}
                   </span>
                   <button className="primary-btn small" onClick={() => requireAuth(submit)}><Send size={15} /> Опубликовать</button>
