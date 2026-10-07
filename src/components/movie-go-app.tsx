@@ -226,14 +226,8 @@ const notify = (s: string) => {
     }
   };
 
-  useEffect(() => {
-    refresh();
-    if (searchParams.get('auth')) {
-      setAuthOpen(true);
-      if (searchParams.get('auth') === 'config') notify('Для входа через соцсети настройте OAuth-ключи сервера');
-      else notify('Не удалось выполнить вход через провайдера');
-    }
-  }, [searchParams]);
+useEffect(() => {
+  refresh()
 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('mg_theme', theme); }, [theme]);
   useEffect(() => { localStorage.setItem('mg_lang', lang); }, [lang]);
