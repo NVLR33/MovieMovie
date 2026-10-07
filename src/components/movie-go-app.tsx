@@ -2020,8 +2020,11 @@ function Games({
   const scoreRef = useRef(0);
   const savingRef = useRef(false);
 
-  const make = (id: string) => {
-    if (films.length < 4) return; // защита от дубликатов в вариантах
+const make = (id: string) => {
+  if (films.length < 4) {
+    notify('Для игр нужно минимум 4 фильма в каталоге');
+    return;
+  }
     const usable = films;
     const source = shuffleArr(usable).slice(0, 5);
 
