@@ -548,16 +548,16 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
         {mobileNav && <div className="mobile-scrim" onClick={() => setMobileNav(false)} />}
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
-{roulette && (
-  <RouletteModal
-    films={data.films}
-    onClose={() => setRoulette(false)}
-    onOpenMovie={(id) => {
-      setRoulette(false);
-      go('/movie/' + id);
-    }}
-  />
-)}
+        {roulette && (
+          <RouletteModal
+            films={data.films}
+            onClose={() => setRoulette(false)}
+            onOpenMovie={(id) => {
+              setRoulette(false);
+              go('/movie/' + id);
+            }}
+          />
+        )}
 
         {shareFilm && (
           <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
@@ -604,13 +604,12 @@ function RouletteModal({
   onClose: () => void;
   onOpenMovie: (id: number) => void;
 }) {
-  const [cat, setCat] = useState(initialCat);
+  const [cat, setCat] = useState('Все');
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<FilmType | null>(null);
   const [done, setDone] = useState(false);
   const [strip, setStrip] = useState<FilmType[]>([]);
   const [offset, setOffset] = useState(0);
-  const reelRef = useRef<HTMLDivElement>(null);
 
   const CARD_W = 120; // ширина карточки в пикселях
   const GAP = 12;     // отступ между карточками
