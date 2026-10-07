@@ -2637,12 +2637,14 @@ function ChatPage({
   data,
   go,
   openChat,
-  auth
+  auth,
+  notify
 }: {
   data: Data;
   go: (s: string) => void;
   openChat: (id: number) => void;
   auth: () => void;
+  notify: (s: string) => void;
 }) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activePeer, setActivePeer] = useState<number | null>(null);
