@@ -826,6 +826,66 @@ function Gate({ title, description, auth }: { title: string; description: string
   );
 }
 
+function Watchlist({
+  data,
+  go,
+  auth
+}: {
+  data: Data;
+  go: (s: string) => void;
+  auth: () => void;
+}) {
+  if (!data.user) {
+    return (
+      <Gate
+        title="Сохраняй то, что вдохновляет"
+        description="Все истории, которые ты хочешь увидеть, в одном месте."
+        auth={auth}
+      />
+    );
+  }
+
+  const saved = data.films.filter(film =>
+    data.bookmarks.some(bookmark => bookmark.movieId === film.id)
+  );
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">ТВОЯ ПОДБОРКА</span>
+          <h1>
+            Мой <em>список.</em>
+          </h1>
+          <p>Истории, которые ты отложил на потом.</p>
+        </div>
+
+        <div className="heading-count">
+          <Bookmark size={18} />
+          {saved.length} сохранено
+        </div>
+      </div>
+
+      {saved.length > 0 ? (
+        <FilmGrid films={saved} go={go} />
+      ) : (
+        <div className="empty-state">
+          <Bookmark size={38} />
+          <h3>Здесь пока пусто</h3>
+          <p>Найди что-нибудь интересное и добавь в свой список.</p>
+
+          <button
+            className="primary-btn"
+            onClick={() => go('/catalog')}
+          >
+            Исследовать каталог <ArrowRight size={17} />
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 // --- Pages ---
 
 function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; }) {
