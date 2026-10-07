@@ -2896,6 +2896,7 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
   const [film, setFilm] = useState<FilmType | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
   const [activeEmbed, setActiveEmbed] = useState('');
+  const [embedError, setEmbedError] = useState('');
   const [chatLog, setChatLog] = useState<{ id: number, user: string, text: string }[]>([]);
   const [chat, setChat] = useState('');
   const [reactions, setReactions] = useState<{ id: number, emoji: string }[]>([]);
