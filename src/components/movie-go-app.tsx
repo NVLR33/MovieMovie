@@ -2421,7 +2421,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
           <div className="profile-tile">
             <div className="tile-heading"><span><TrendingUp size={18} /> Лучшее из просмотренного</span></div>
             <div className="history-list">
-              {profile.ratings.sort((a, b) => b.value - a.value).slice(0, 5).map((r, i) => (
+              {bestRated.map((r, i) => (
                 <button key={i} onClick={() => go('/movie/' + r.movieId)}>
                   <PosterThumb movieId={r.movieId} src={data.films.find(f => f.id === r.movieId)?.poster} alt="" />
                   <span><b>{r.title}</b><small>Оценка: {r.value.toFixed(1)} / 10</small></span>
