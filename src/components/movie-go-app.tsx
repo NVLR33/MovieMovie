@@ -306,22 +306,45 @@ const notify = (s: string) => {
     { id: 'games', label: words.games, icon: Gamepad2, url: '/games' }
   ];
 
-  const startRoulette = () => {
-    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
-    if (!pool.length) return;
-    setRoulette(true);
-    setRouletteDone(false);
-    let i = 0;
-    const totalSteps = 25;
-    const interval = setInterval(() => {
-      setRouletteIndex(Math.floor(Math.random() * pool.length));
-      i++;
-      if (i >= totalSteps) {
-        clearInterval(interval);
-        setRouletteDone(true);
-      }
-    }, 60 + (i * 12));
+const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+const spinningRef = useRef(false);
+
+const startRoulette = () => {
+  if (spinningRef.current) return; // защита от двойного запуска
+  const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
+  if (pool.length < 2) { notify('Нужно хотя бы два фильма для рулетки'); return; }
+  spinningRef.current = true;
+  setSpinning(true);
+  setRoulette(true);
+  setRouletteDone(false);
+
+  let step = 0;
+  const totalSteps = 25;
+  const tick = () => {
+    setRouletteIndex(Math.floor(Math.random() * pool.length));
+    step++;
+    if (step >= totalSteps) {
+      spinningRef.current = false;
+      setSpinning(false);
+      setRouletteDone(true);
+      return;
+    }
+    const delay = 50 + Math.pow(step / totalSteps, 2) * 450; // 50мс → ~500мс, честное торможение
+    rouletteTimer.current = setTimeout(tick, delay);
   };
+  tick();
+};
+
+const stopRoulette = () => {
+  if (rouletteTimer.current) clearTimeout(rouletteTimer.current);
+  spinningRef.current = false;
+  setSpinning(false);
+  setRoulette(false);
+};
+
+const pickCategory = (c: string) => { setRouletteCategory(c); setRouletteDone(false); };
+
+useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.current); }, []);
 
   return (
     <WatchedIdsContext.Provider value={watchedIds}>
