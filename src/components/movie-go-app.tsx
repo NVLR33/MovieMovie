@@ -789,7 +789,7 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
 
       <div className="quick-stats">
         <div className="quick-stat"><span className="quick-icon violet"><Clapperboard size={19} /></span><div><b>{fmt(films.length)}</b><small>{en ? 'stories in the library' : 'историй в каталоге'}</small></div></div>
-        <div className="quick-stat"><span className="quick-icon amber"><Star size={19} /></span><div><b>{(films.reduce((n, f) => n + f.rating, 0) / films.length).toFixed(1)}</b><small>{en ? 'average rating' : 'средний рейтинг'}</small></div></div>
+        <div className="quick-stat"><span className="quick-icon amber"><Star size={19} /></span><div><b>{films.length ? (films.reduce((n, f) => n + f.rating, 0) / films.length).toFixed(1) : '—'}</b><small>{en ? 'average rating' : 'средний рейтинг'}</small></div></div>
         <div className="quick-stat"><span className="quick-icon blue"><Users size={19} /></span><div><b>{fmt(data.people.length)}</b><small>{en ? 'movie lovers' : 'кинолюбителей'}</small></div></div>
         <div className="quick-stat"><span className="quick-icon green"><Sparkles size={19} /></span><div><b>{data.user ? fmt(data.watches.length) : '∞'}</b><small>{data.user ? (en ? 'your watches' : 'твоих просмотров') : (en ? 'moments ahead' : 'впечатлений впереди')}</small></div></div>
       </div>
