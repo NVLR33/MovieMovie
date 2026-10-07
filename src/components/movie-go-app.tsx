@@ -1063,28 +1063,57 @@ function Catalog({ films, go, searchValue, en, userRole = '', onAdd, watchedIds 
 
 function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { film?: FilmType; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; requireAuth: (f: () => void) => void; share: (f: FilmType) => void; edit: (f: FilmType) => void; }) {
   const [comment, setComment] = useState('');
-  const [reply, setReply] = useState<number | null>(null);
+  const [reply, setReply] = useState<{ parentId: number; to: string; nested: boolean } | null>(null);
   const [hover, setHover] = useState(0);
+  const visitedRef = useRef<number>(0);
+
+  // ВАЖНО: все хуки — ДО любого return (Rules of Hooks)
+  const fid = film?.id ?? 0;
 
   useEffect(() => {
-    if (film) fetch('/api/visit?movieId=' + film.id).catch(() => {});
-  }, [film?.id]);
+    if (!fid) return;
+    if (visitedRef.current === fid) return;
+    visitedRef.current = fid;
+    // дедупликация: один визит на вкладку-сессию
+    try {
+      const key = 'mg_visit_' + fid;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch { /* приватный режим — просто считаем */ }
+    fetch('/api/visit?movieId=' + fid).catch(() => {});
+  }, [fid]);
 
-  if (!film) return <div className="empty-state"><h2>История не найдена</h2><button className="primary-btn" onClick={() => go('/catalog')}>К каталогу</button></div>;
+  const saved = useMemo(() => data.bookmarks.some(b => b.movieId === fid), [data.bookmarks, fid]);
+  const myRating = useMemo(() => data.ratings.find(r => r.movieId === fid)?.value || 0, [data.ratings, fid]);
+  const isWatched = useMemo(() => data.watches.some(w => w.movieId === fid), [data.watches, fid]);
 
-  const saved = useMemo(() => data.bookmarks.some(b => b.movieId === film.id), [data.bookmarks, film.id]);
-  const myRating = useMemo(() => data.ratings.find(r => r.movieId === film.id)?.value || 0, [data.ratings, film.id]);
-  const isWatched = useMemo(() => data.watches.some(w => w.movieId === film.id), [data.watches, film.id]);
-
-  const movieComments = useMemo(() => data.comments.filter(c => c.movieId === film.id), [data.comments, film.id]);
+  const movieComments = useMemo(() => data.comments.filter(c => c.movieId === fid), [data.comments, fid]);
   const topComments = useMemo(() => movieComments.filter(c => !c.parentId), [movieComments]);
 
+  const repliesByParent = useMemo(() => {
+    const map = new Map<number, Comment[]>();
+    movieComments.forEach(c => {
+      if (!c.parentId) return;
+      const arr = map.get(c.parentId) || [];
+      arr.push(c);
+      map.set(c.parentId, arr);
+    });
+    return map;
+  }, [movieComments]);
+
   const related = useMemo(() => {
-    const genres = new Set(film.genre.split(',').map(x => x.trim()).filter(Boolean));
+    if (!film) return [] as FilmType[];
+    const gset = new Set(film.genre.split(',').map(x => x.trim()).filter(Boolean));
     return data.films
-      .filter(f => f.id !== film.id && f.genre.split(',').some(g => genres.has(g.trim())))
+      .filter(f => f.id !== film.id && f.genre.split(',').some(g => gset.has(g.trim())))
       .slice(0, 5);
-  }, [data.films, film.id, film.genre]);
+  }, [data.films, film?.id, film?.genre]);
+
+  const startReply = (parentId: number, to: string, nested: boolean) => {
+    setReply({ parentId, to, nested });
+    document.querySelector('.comment-compose textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    (document.querySelector('.comment-compose textarea') as HTMLTextAreaElement | null)?.focus();
+  };
 
   const submit = async () => {
     if (!comment.trim()) return;
