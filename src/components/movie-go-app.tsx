@@ -1994,10 +1994,45 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
   );
 }
 
-function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; auth: () => void; go: (s: string) => void; openChat: (id: number) => void; }) {
+function Friends({
+  data,
+  action,
+  auth,
+  go,
+  openChat
+}: {
+  data: Data;
+  action: (
+    p: Record<string, unknown>,
+    s?: string
+  ) => Promise<boolean>;
+  auth: () => void;
+  go: (s: string) => void;
+  openChat: (id: number) => void;
+}) {
+  const [query, setQuery] = useState('');
+
+  if (!data.user) {
+    return (
+      <Gate
+        title="Кино лучше вместе"
+        description="Находи единомышленников, делись фильмами и собирай своё сообщество."
+        auth={auth}
+      />
+    );
+  }
+
   const meId = data.user.id;
-  const pending = data.friends.filter(f => f.toId === meId && f.status === 'pending');
-  const peers = data.people.filter(p => p.id !== meId && p.username.toLowerCase().includes(query.toLowerCase()));
+
+  const pending = data.friends.filter(
+    f => f.toId === meId && f.status === 'pending'
+  );
+
+  const peers = data.people.filter(
+    p =>
+      p.id !== meId &&
+      p.username.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <>
