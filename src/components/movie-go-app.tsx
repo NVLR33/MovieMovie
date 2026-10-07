@@ -198,7 +198,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [roulette, setRoulette] = useState(false);
   const [rouletteIndex, setRouletteIndex] = useState(0);
   const [rouletteDone, setRouletteDone] = useState(false);
-  const [rouletteCategory, setRouletteCategory] = useState('Все');
   const [spinning, setSpinning] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
@@ -332,7 +331,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
 
   return (
     <WatchedIdsContext.Provider value={watchedIds}>
-      <div className="app-shell">
       <div className="app-shell">
         <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
           <div className="side-brand" onClick={() => go('/')}>
@@ -550,14 +548,16 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
         {mobileNav && <div className="mobile-scrim" onClick={() => setMobileNav(false)} />}
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
-        {roulette && (
-          <RouletteModal
-            films={data.films}
-            category={rouletteCategory}
-            onClose={() => setRoulette(false)}
-            onOpenMovie={(id) => { setRoulette(false); go('/movie/' + id); }}
-          />
-        )}
+{roulette && (
+  <RouletteModal
+    films={data.films}
+    onClose={() => setRoulette(false)}
+    onOpenMovie={(id) => {
+      setRoulette(false);
+      go('/movie/' + id);
+    }}
+  />
+)}
 
         {shareFilm && (
           <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
@@ -593,7 +593,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   );
 }
 
-function RouletteModal
+function RouletteModal({
   films,
   category: initialCat = 'Все',
   onClose,
@@ -640,8 +640,10 @@ function RouletteModal
     setOffset(0);
   }, [cat, pool]);
 
-  const startSpin = () => {
-    if (spinning || pool.length === 0) return;
+const startSpin = () => {
+  if (spinning || pool.length === 0) return;
+
+  clearRouletteTimers();
 
     // Выбираем победителя
     const win = pool[Math.floor(Math.random() * pool.length)];
@@ -657,9 +659,13 @@ function RouletteModal
     // Запуск прокрутки к карточке TARGET_INDEX
     requestAnimationFrame(() => {
       setTimeout(() => {
-        const containerW = reelRef.current?.offsetWidth || 540;
-        const jitter = (Math.random() - 0.5) * 40; // живое микро-отклонение от центра
-        const targetX = TARGET_INDEX * (CARD_W + GAP) + (CARD_W / 2) - (containerW / 2) + jitter;
+        const jitter = (Math.random() - 0.5) * 14;
+    
+        const targetX =
+          TARGET_INDEX * (CARD_W + GAP) +
+          CARD_W / 2 +
+          jitter;
+    
         setOffset(targetX);
       }, 50);
     });
