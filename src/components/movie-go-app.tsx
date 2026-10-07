@@ -693,7 +693,17 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
 }
 
 // --- Helper Components ---
-function SectionTitle({ kicker, title, link, onClick }: { kicker?: string; title: string; link?: string; onClick?: () => void; }) {
+function SectionTitle({
+  kicker,
+  title,
+  link,
+  onClick
+}: {
+  kicker?: string;
+  title: string;
+  link?: string;
+  onClick?: () => void;
+}) {
   return (
     <div className="section-heading">
       <div>{kicker && <div className="eyebrow">{kicker}</div>}<h2>{title}</h2></div>
