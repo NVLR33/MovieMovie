@@ -3720,5 +3720,4 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
         }) : <div className="challenge-empty"><p>В {months[selectedMonth - 1].toLowerCase()} пока нет челленджей.</p></div>}
       </div>
     </>
-  );
-}
+
