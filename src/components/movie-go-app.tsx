@@ -317,7 +317,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const active = filmId ? 'movie' : viewUserId ? 'viewuser' : compareId ? 'compare' : roomId ? 'room' : path?.split('/')[1] || 'home';
   const openChat = (peerId: number) => { setChatPeerId(peerId); setChatOpen(true); };
 
- const nav = [
+  const nav = [
     { id: 'home', label: words.home, icon: Home, url: '/' },
     { id: 'catalog', label: words.catalog, icon: Compass, url: '/catalog' },
     { id: 'watchlist', label: words.watchlist, icon: Bookmark, url: '/watchlist' },
@@ -331,7 +331,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const startRoulette = () => setRoulette(true);
 
   return (
-    <WatchedIdsContext.Provider value={watchedIds}>
 
   const pool =
     rouletteCategory === 'Все'
