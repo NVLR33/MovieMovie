@@ -631,7 +631,17 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
               )}
             </div>
           </div>
-        )}
+      
+              {capsule && (
+                <div className="modal-backdrop" onClick={() => setCapsule(null)}>
+                  <div className="glass-modal" onClick={e => e.stopPropagation()}>
+                    <button className="modal-close" onClick={() => setCapsule(null)}><X size={20} /></button>
+                    <span className="eyebrow">КАПСУЛА ВРЕМЕНИ</span>
+                    <h2>Вспомни этот сеанс</h2>
+                    <p style={{ whiteSpace: 'pre-line' }}>{capsule}</p>
+                  </div>
+                </div>
+              )}
 
         {shareFilm && (
           <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
