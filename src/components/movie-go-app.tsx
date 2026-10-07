@@ -2085,7 +2085,10 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
                       onClick={() => {
                         if (choice !== null) return;
                         setChoice(option);
-                        if (option === questions[round].correct) setScore(score + 1);
+                        if (option === questions[round].correct) {
+                          scoreRef.current += 1;
+                          setScore(scoreRef.current);
+                        }
                       }}
                     >
                       <span>{String.fromCharCode(65 + i)}</span>{option}
