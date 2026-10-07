@@ -70,7 +70,14 @@ const image = (f: FilmType) => f.poster || '/posters/dune.jpg';
 const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(f.category) ? f.duration * (f.episodes || 1) : f.duration;
 const tone = (r: number) => r >= 8.5 ? 'gold' : r >= 7 ? 'teal' : r >= 5 ? 'blue' : 'red';
 const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
-function initials(s: string) { return s.slice(0, 2).toUpperCase(); }
+function shuffleArr<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 function titleFor(user: User | null, watches: number) {
   if (!user) return 'Гость';
   if (watches >= 30) return 'Легенда экрана';
