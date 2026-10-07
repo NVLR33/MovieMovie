@@ -302,6 +302,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     { id: 'achievements', label: words.achievements, icon: Trophy, url: '/achievements' },
     { id: 'challenges', label: en ? 'Challenges' : 'Челленджи', icon: Flame, url: '/challenges' },
     { id: 'games', label: words.games, icon: Gamepad2, url: '/games' }
+    { id: 'watchroom', label: en ? 'Watch room' : 'Кинозал', icon: Tv2, url: '/watchroom' },
   ];
 
   const startRoulette = () => {
