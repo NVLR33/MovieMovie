@@ -1483,15 +1483,32 @@ function Profile({
     mins: watched.filter(w => w.film?.category === c).reduce((n, w) => n + (w.film ? titleMinutes(w.film) : 0), 0)
   }));
 
-  const save = (payload: Record<string, unknown>) => action({ action: 'profile', ...payload }, 'Профиль обновлён');
-  const handleUpload = async (file?: File) => {
-    if (!file) return;
-    const fd = new FormData(); fd.append('file', file); fd.append('kind', 'avatar');
-    const r = await fetch('/api/upload', { method: 'POST', body: fd });
-    const v = await r.json();
-    if (r.ok) { notify('Аватар обновлён'); await fetch('/api/data').then(() => window.location.reload()); }
-    else notify(v.error || 'Не удалось загрузить');
-  };
+const handleUpload = async (file?: File) => {
+  if (!file) return;
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('kind', 'avatar');
+
+  try {
+    const r = await fetch('/api/upload', {
+      method: 'POST',
+      body: fd
+    });
+
+    const result = await r.json();
+
+    if (!r.ok) {
+      notify(result.error || 'Не удалось загрузить');
+      return;
+    }
+
+    notify('Аватар обновлён');
+    await refresh();
+  } catch {
+    notify('Ошибка загрузки аватара');
+  }
+};
 
   const getCatGroup = (c: string) => { if (c.includes('Аниме')) return 'anime'; if (c.includes('Мульт')) return 'cartoon'; if (c.includes('Сериал')) return 'tv'; return 'movie'; };
   const tabData = watched.filter(w => statTab === 'all' || getCatGroup(w.film?.category || '') === statTab);
