@@ -190,6 +190,9 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [rouletteIndex, setRouletteIndex] = useState(0);
   const [rouletteDone, setRouletteDone] = useState(false);
   const [rouletteCategory, setRouletteCategory] = useState('Все');
+  const [roulettePool, setRoulettePool] = useState<FilmType[]>([]);
+  const [rouletteWinner, setRouletteWinner] = useState<FilmType | null>(null);
+  const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
