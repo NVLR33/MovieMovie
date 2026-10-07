@@ -310,42 +310,74 @@ useEffect(() => {
     { id: 'games', label: words.games, icon: Gamepad2, url: '/games' },
     { id: 'watchroom', label: en ? 'Watch room' : 'Кинозал', icon: Tv2, url: '/watchroom' }
   ];
-
 const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 const spinningRef = useRef(false);
 
-  const stopRoulette = () => {
-    if (rouletteTimer.current) { clearTimeout(rouletteTimer.current); rouletteTimer.current = null; }
+const startRoulette = () => {
+  if (spinningRef.current) return;
+
+  const pool =
+    rouletteCategory === 'Все'
+      ? data.films
+      : data.films.filter(f => f.category === rouletteCategory);
+
+  if (pool.length < 2) {
+    notify('Нужно хотя бы два фильма для рулетки');
+    return;
+  }
+
+  spinningRef.current = true;
+  setSpinning(true);
+  setRoulette(true);
+  setRouletteDone(false);
+
+  let step = 0;
+  const totalSteps = 25;
+
+  const tick = () => {
+    setRouletteIndex(Math.floor(Math.random() * pool.length));
+    step += 1;
+
+    if (step >= totalSteps) {
+      spinningRef.current = false;
+      setSpinning(false);
+      setRouletteDone(true);
+      rouletteTimer.current = null;
+      return;
+    }
+
+    const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
+
+    rouletteTimer.current = setTimeout(tick, delay);
   };
 
-  const closeRoulette = () => { stopRoulette(); setRoulette(false); };
+  tick();
+};
 
-  const startRoulette = (cat?: string) => {
-    const useCat = cat ?? rouletteCategory;
-    const pool = useCat === 'Все' ? data.films : data.films.filter(f => f.category === useCat);
-    if (!pool.length) { notify('В этой категории пока нет материалов'); return; }
-    stopRoulette();
-    setRoulettePool(pool);
-    setRouletteWinner(null);
-    setRoulette(true);
-    setRouletteDone(false);
-    const totalSteps = 25;
-    let i = 0;
-    const tick = () => {
-      const idx = Math.floor(Math.random() * pool.length);
-      setRouletteIndex(idx);
-      i++;
-      if (i >= totalSteps) {
-        rouletteTimer.current = null;
-        setRouletteWinner(pool[idx]);
-        setRouletteDone(true);
-        return;
-      }
-      // реальное замедление барабана
-      rouletteTimer.current = setTimeout(tick, 50 + Math.round(Math.pow(i / totalSteps, 2.2) * 260));
-    };
-    tick();
+const stopRoulette = () => {
+  if (rouletteTimer.current) {
+    clearTimeout(rouletteTimer.current);
+    rouletteTimer.current = null;
+  }
+
+  spinningRef.current = false;
+  setSpinning(false);
+  setRoulette(false);
+};
+
+const pickCategory = (category: string) => {
+  if (spinningRef.current) return;
+  setRouletteCategory(category);
+  setRouletteDone(false);
+};
+
+useEffect(() => {
+  return () => {
+    if (rouletteTimer.current) {
+      clearTimeout(rouletteTimer.current);
+    }
   };
+}, []);
 
   // очистка таймера при размонтировании
   useEffect(() => () => stopRoulette(), []);
