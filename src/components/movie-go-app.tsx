@@ -1443,7 +1443,13 @@ function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react:
   );
 }
 
-function Profile({ data, go, action, notify, auth, refresh }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; notify: (s: string) => void; auth: () => void; refresh: () => Promise<void>; }) {
+function Profile({ data, go, action, notify, auth }: {
+  data: Data;
+  go: (s: string) => void;
+  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+  notify: (s: string) => void;
+  auth: () => void;
+}) {
   const u = data.user;
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(u?.bio || '');
