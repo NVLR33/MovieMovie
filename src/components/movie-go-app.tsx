@@ -2923,11 +2923,23 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
     setChat('');
   };
 
+  const ALLOWED_HOSTS = ['youtube.com', 'www.youtube.com', 'youtu.be', 'vk.com', 'vkvideo.ru', 'rutube.ru', 'ok.ru', 'dzen.ru', 'player.vimeo.com'];
+
   const applyVideo = () => {
-    if (!videoUrl) return;
-    let finalUrl = videoUrl;
-    if (videoUrl.includes('youtube.com/watch?v=')) finalUrl = videoUrl.replace('watch?v=', 'embed/');
-    else if (videoUrl.includes('youtu.be/')) finalUrl = videoUrl.replace('youtu.be/', 'youtube.com/embed/');
+    const raw = videoUrl.trim();
+    if (!raw) return;
+    let url: URL;
+    try { url = new URL(raw); } catch { setEmbedError('Это не похоже на ссылку'); return; }
+    if (url.protocol !== 'https:') { setEmbedError('Только https-ссылки'); return; }
+    const host = url.hostname.replace(/^www\./, '');
+    if (!ALLOWED_HOSTS.some(h => host === h || host.endsWith('.' + h))) {
+      setEmbedError('Домен не поддерживается. Разрешены: YouTube, VK, RuTube, OK, Дзен, Vimeo');
+      return;
+    }
+    let finalUrl = url.toString();
+    if (host.includes('youtube.com') && url.searchParams.get('v')) finalUrl = `https://www.youtube.com/embed/${url.searchParams.get('v')}`;
+    else if (host === 'youtu.be') finalUrl = `https://www.youtube.com/embed${url.pathname}`;
+    setEmbedError('');
     setActiveEmbed(finalUrl);
   };
 
