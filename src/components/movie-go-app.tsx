@@ -1261,14 +1261,14 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <div key={c.id}>
                 <CommentRow
                   c={c}
-                  reply={() => { setReply(c.id); document.querySelector('.comment-compose')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
+                  reply={() => requireAuth(() => startReply(c.id, c.author?.username || 'зритель', false))}
                   react={() => requireAuth(() => action({ action: 'react', commentId: c.id }))}
                 />
-                {movieComments.filter(r => r.parentId === c.id).map(r => (
+                {(repliesByParent.get(c.id) || []).map(r => (
                   <div className="comment-reply" key={r.id}>
                     <CommentRow
                       c={r}
-                      reply={() => { setReply(c.id); document.querySelector('.comment-compose')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
+                      reply={() => requireAuth(() => startReply(c.id, r.author?.username || 'зритель', true))}
                       react={() => requireAuth(() => action({ action: 'react', commentId: r.id }))}
                     />
                   </div>
