@@ -438,8 +438,9 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
               {search.length >= 2 && (
                 <div className="hot-search-drop" onClick={e => e.stopPropagation()}>
                   {(() => {
+                    const q = search.toLowerCase();
                     const results = data.films
-                      .filter(f => f.title.toLowerCase().includes(search.toLowerCase()))
+                      .filter(f => [f.title, f.originalTitle, f.genre, f.director, f.studio || ''].join(' ').toLowerCase().includes(q))
                       .slice(0, 5);
 
                     return results.length ? results.map(f => (
