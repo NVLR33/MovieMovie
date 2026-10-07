@@ -1996,7 +1996,22 @@ const gameModes = [
   { id: 'connections', icon: '🧩', name: 'Кино-Связи', description: 'Найди 4 группы по 4 фильма по скрытому признаку', color: 'green' }
 ];
 
-function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; user: User | null; auth: () => void; }) {
+function Games({
+  films,
+  action,
+  user,
+  auth,
+  notify
+}: {
+  films: FilmType[];
+  action: (
+    p: Record<string, unknown>,
+    s?: string
+  ) => Promise<boolean>;
+  user: User | null;
+  auth: () => void;
+  notify: (s: string) => void;
+}) {
   const [mode, setMode] = useState<typeof gameModes[number] | null>(null);
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
