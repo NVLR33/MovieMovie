@@ -1879,7 +1879,13 @@ function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p:
                         <button className="outline-btn small" onClick={() => openChat(p.id)}><MessageCircle size={14} /> Чат</button>
                       </>
                     )}
-                    {relation.status === 'pending' && <span className="friend-state">⏳ Заявка</span>}
+                    {outgoing && <span className="friend-state">⏳ Заявка отправлена</span>}
+                    {incoming && (
+                      <button className="primary-btn small" onClick={() => action({ action: 'friendAccept', id: relation!.id }, 'Теперь вы друзья!')}>
+                        <Check size={15} /> Принять заявку
+                      </button>
+                    )}
+                    {relation.status === 'declined' && <span className="friend-state">Отклонено</span>}
                   </div>
                 ) : (
                   <button className="outline-btn small" onClick={() => action({ action: 'friend', userId: p.id }, 'Заявка отправлена')}><UserPlus size={16} /> Добавить</button>
