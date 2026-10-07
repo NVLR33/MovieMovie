@@ -593,7 +593,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   );
 }
 
-function RouletteModal({
+function RouletteModal
   films,
   category: initialCat = 'Все',
   onClose,
