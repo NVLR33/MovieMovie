@@ -70,14 +70,11 @@ const image = (f: FilmType) => f.poster || '/posters/dune.jpg';
 const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(f.category) ? f.duration * (f.episodes || 1) : f.duration;
 const tone = (r: number) => r >= 8.5 ? 'gold' : r >= 7 ? 'teal' : r >= 5 ? 'blue' : 'red';
 const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
-function shuffleArr<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+
+function initials(s: string) {
+  return (s || '??').slice(0, 2).toUpperCase();
 }
+
 function titleFor(user: User | null, watches: number) {
   if (!user) return 'Гость';
   if (watches >= 30) return 'Легенда экрана';
@@ -98,11 +95,6 @@ function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: 
   );
 }
 
-/**
- * PosterThumb — универсальная миниатюра с галочкой "просмотрено"
- * Использовать везде, где раньше был <img ...poster.../>.
- * movieId опционален: если не передать — галочка не показывается.
- */
 function PosterThumb({
   movieId,
   src,
@@ -120,8 +112,6 @@ function PosterThumb({
 }) {
   const watchedIds = useWatchedIds();
   const watched = typeof movieId === 'number' && watchedIds.has(movieId);
-
-  // если src пустой — не ломаем верстку
   const finalSrc = src || '/posters/dune.jpg';
 
   return (
@@ -161,7 +151,6 @@ function PosterThumb({
   );
 }
 
-/* --- БРЕНД: НОВЫЙ ЛОГОТИП "moviemovie" (movie над movie) --- */
 function BrandWordmark({ size = 15, align = 'left' }: { size?: number; align?: 'left' | 'center'; }) {
   return (
     <span
