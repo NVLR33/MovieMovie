@@ -1189,7 +1189,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
             <div className="rating-selector-box">
               <span className="eyebrow">ТВОЙ ВЕРДИКТ</span>
               <h3>{myRating ? "Твоя оценка" : "Оцени историю"}</h3>
-              <div className="fancy-stars">
+              <div className="fancy-stars" onMouseLeave={() => setHover(0)}>
                 {Array.from({ length: 10 }).map((_, i) => {
                   const val = i + 1;
                   return (
