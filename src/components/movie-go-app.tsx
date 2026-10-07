@@ -573,7 +573,7 @@ useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.cu
                 <h2>Чего желает душа?</h2>
                 <div className="roulette-tabs">
                   {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
-                    <button key={cat} className={rouletteCategory === cat ? 'active' : ''} onClick={() => setRouletteCategory(cat)}>{cat}</button>
+                  <button key={cat} disabled={spinning} className={rouletteCategory === cat ? 'active' : ''} onClick={() => pickCategory(cat)}>{cat}</button>
                   ))}
                 </div>
               </div>
