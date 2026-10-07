@@ -2306,13 +2306,28 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
 function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId: number; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; openChat: (id: number) => void; auth: () => void; }) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const myWatchedIds = useWatchedIds(); // ХУК — строго до любых return
 
   useEffect(() => {
-    fetch('/api/profile?id=' + userId).then(r => r.json()).then(d => {
-      if (d.profile) setProfile(d);
-      else setProfile(null);
-    }).catch(() => setProfile(null)).finally(() => setLoading(false));
+    let alive = true;
+    setLoading(true);
+    fetch('/api/profile?id=' + userId)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('http')))
+      .then(d => { if (alive) setProfile(d?.profile ? d : null); })
+      .catch(() => { if (alive) setProfile(null); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [userId]);
+
+  const commonFilms = useMemo(
+    () => (profile?.recentWatches || []).filter(w => w.film && myWatchedIds.has(w.film.id)).length,
+    [profile, myWatchedIds]
+  );
+
+  const bestRated = useMemo(
+    () => [...(profile?.ratings || [])].sort((a, b) => b.value - a.value).slice(0, 5),
+    [profile]
+  );
 
   if (loading) return <div className="empty-state"><h3>Загрузка...</h3></div>;
   if (!profile) return <div className="empty-state"><h3>Пользователь не найден</h3><button className="primary-btn" onClick={() => go('/friends')}>Назад</button></div>;
