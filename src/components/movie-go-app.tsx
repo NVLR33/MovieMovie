@@ -326,6 +326,8 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   ];
 
 const startRoulette = () => setRoulette(true);
+    return (
+    <WatchedIdsContext.Provider value={watchedIds}>
 
 const stopRoulette = () => {
   if (rouletteTimer.current) {
