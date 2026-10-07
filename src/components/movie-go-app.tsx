@@ -2411,7 +2411,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
               {s.topGenres.map(g => (
                 <div className="top-genre-item" key={g.genre}>
                   <span>{g.genre}</span>
-                  <div className="bar-track"><i style={{ width: `${Math.max(5, g.count / Math.max(1, s.topGenres[0].count) * 100)}%` }} /></div>
+                  <div className="bar-track"><i style={{ width: `${Math.max(5, g.count / Math.max(1, s.topGenres[0]?.count || 1) * 100)}%` }} /></div>
                   <b>{Math.round(g.count / Math.max(1, s.totalWatches) * 100)}%</b>
                 </div>
               ))}
