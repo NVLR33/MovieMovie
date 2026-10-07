@@ -196,9 +196,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [roulette, setRoulette] = useState(false);
-  const [rouletteIndex, setRouletteIndex] = useState(0);
-  const [rouletteDone, setRouletteDone] = useState(false);
-  const [rouletteCategory, setRouletteCategory] = useState('Все');
   const [spinning, setSpinning] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
@@ -328,52 +325,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     { id: 'games', label: words.games, icon: Gamepad2, url: '/games' }
   ];
 
-const startRoulette = () => {
-  if (spinningRef.current) return;
-
-  const pool =
-    rouletteCategory === 'Все'
-      ? data.films
-      : data.films.filter(f => f.category === rouletteCategory);
-
-  if (pool.length < 2) {
-    notify('Нужно хотя бы два фильма для рулетки');
-    return;
-  }
-
-  if (rouletteTimer.current) {
-    clearTimeout(rouletteTimer.current);
-    rouletteTimer.current = null;
-  }
-
-  spinningRef.current = true;
-  setSpinning(true);
-  setRoulette(true);
-  setRouletteDone(false);
-
-  let step = 0;
-  const totalSteps = 25;
-
-  const tick = () => {
-    const nextIndex = Math.floor(Math.random() * pool.length);
-
-    setRouletteIndex(nextIndex);
-    step += 1;
-
-    if (step >= totalSteps) {
-      rouletteTimer.current = null;
-      spinningRef.current = false;
-      setSpinning(false);
-      setRouletteDone(true);
-      return;
-    }
-
-    const delay = 50 + Math.pow(step / totalSteps, 2) * 450;
-    rouletteTimer.current = setTimeout(tick, delay);
-  };
-
-  tick();
-};
+const startRoulette = () => setRoulette(true);
 
 const stopRoulette = () => {
   if (rouletteTimer.current) {
@@ -615,105 +567,11 @@ const pickCategory = (cat: string) => {
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
         {roulette && (
-          <div className="modal-backdrop" onClick={stopRoulette}>
-            <div className="roulette-modal glass-modal fancy-roulette" onClick={e => e.stopPropagation()}>
-              <button className="modal-close" onClick={stopRoulette}><X size={20} /></button>
-              <div className="roulette-head">
-                <span className="eyebrow"><Sparkles size={14} /> КИНО-СЛУЧАЙ</span>
-                <h2>Чего желает душа?</h2>
-                <div className="roulette-tabs">
-                  {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
-                    <button
-                      key={cat}
-                      disabled={spinning}
-                      className={rouletteCategory === cat ? 'active' : ''}
-                      onClick={() => pickCategory(cat)}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="roulette-container">
-                <div className={`roulette-strip ${!rouletteDone ? 'spinning' : ''}`}>
-                  {!rouletteDone ? (
-                    Array.from({ length: 10 }).map((_, idx) => {
-                      const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
-                      const src = pool.length ? pool : data.films;
-                      const f = src.length ? src[(rouletteIndex + idx) % src.length] : undefined;
-                      return (
-                        <div key={idx} className="strip-item">
-                          <PosterThumb movieId={f?.id} src={f?.poster} alt="" wrapStyle={{ width: '100%', height: '100%' }} />
-                        </div>
-                      );
-                    })
-                ) : (
-              (() => {
-                const pool =
-                  rouletteCategory === 'Все'
-                    ? data.films
-                    : data.films.filter(
-                        film => film.category === rouletteCategory
-                      );
-            
-                const winner =
-                  pool[rouletteIndex] || data.films[0];
-            
-                if (!winner) return null;
-            
-                return (
-                  <div className="strip-winner">
-                    <div className="winner-glow" />
-            
-                    <PosterThumb
-                      movieId={winner.id}
-                      src={image(winner)}
-                      alt={winner.title}
-                      wrapStyle={{
-                        width: '100%',
-                        height: '100%'
-                      }}
-                    />
-                  </div>
-                );
-              })()
-            )}
-                </div>
-                <div className="roulette-pointer"><ChevronDown size={24} /></div>
-              </div>
-
-              {rouletteDone && (
-                <div className="roulette-result-card">
-                  {(() => {
-                    const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
-                    const win = pool[rouletteIndex];
-                    return win ? (
-                      <>
-                        <span className="win-cat">{win.category} · {win.year}</span>
-                        <h3>{win.title}</h3>
-                        <p>{win.genre}</p>
-                        <div className="win-actions">
-                          <button className="primary-btn" onClick={() => { stopRoulette(); go('/movie/' + win.id); }}>
-                            Открыть карточку <ArrowRight size={17} />
-                          </button>
-                          <button className="outline-btn" onClick={startRoulette}>
-                            <RotateCcw size={16} /> Ещё раз
-                          </button>
-                        </div>
-                      </>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-
-              {!rouletteDone && (
-                <button className="primary-btn start-spin-btn" disabled={spinning} onClick={startRoulette}>
-                  {spinning ? 'Крутим барабан...' : 'Запустить барабан'} <RotateCcw size={17} />
-                </button>
-              )}
-            </div>
-          </div>
+          <RouletteModal
+            films={data.films}
+            onClose={() => setRoulette(false)}
+            onOpenMovie={id => { setRoulette(false); go('/movie/' + id); }}
+          />
         )}
 
         {shareFilm && (
@@ -3551,5 +3409,330 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
         }) : <div className="challenge-empty"><p>В {months[selectedMonth - 1].toLowerCase()} пока нет челленджей.</p></div>}
       </div>
     </>
+  );
+}
+
+// ==================== ROULETTE V2 ====================
+
+const ROULETTE_CARDS = 42;
+const ROULETTE_WIN_INDEX = 32;
+const ROULETTE_CARD_W = 112;
+const ROULETTE_GAP = 12;
+const ROULETTE_SPIN_MS = 4200;
+
+function RouletteModal({
+  films,
+  onClose,
+  onOpenMovie,
+}: {
+  films: FilmType[];
+  onClose: () => void;
+  onOpenMovie: (id: number) => void;
+}) {
+  const [cat, setCat] = useState('Все');
+  const [phase, setPhase] = useState<'idle' | 'spinning' | 'result'>('idle');
+  const [winner, setWinner] = useState<FilmType | null>(null);
+  const [strip, setStrip] = useState<FilmType[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [transitionOn, setTransitionOn] = useState(false);
+
+  const moveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pool = useMemo(() => {
+    const list = cat === 'Все' ? films : films.filter(f => f.category === cat);
+    const unique = new Map<number, FilmType>();
+    list.forEach(f => unique.set(f.id, f));
+    return [...unique.values()];
+  }, [films, cat]);
+
+  const clearTimers = () => {
+    if (moveTimer.current) { clearTimeout(moveTimer.current); moveTimer.current = null; }
+    if (doneTimer.current) { clearTimeout(doneTimer.current); doneTimer.current = null; }
+  };
+
+  const buildStrip = (win: FilmType | null) =>
+    Array.from({ length: ROULETTE_CARDS }, (_, i) =>
+      win && i === ROULETTE_WIN_INDEX
+        ? win
+        : pool[Math.floor(Math.random() * pool.length)]
+    );
+
+  // первичная лента + пересборка при смене категории
+  useEffect(() => {
+    setStrip(pool.length
+      ? Array.from({ length: ROULETTE_CARDS }, () => pool[Math.floor(Math.random() * pool.length)])
+      : []
+    );
+    setPhase('idle');
+    setWinner(null);
+    setOffset(0);
+    setTransitionOn(false);
+  }, [cat]);
+
+  // Escape + очистка таймеров при размонтировании
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && phase !== 'spinning') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      clearTimers();
+    };
+  }, [phase, onClose]);
+
+  const startSpin = () => {
+    if (phase === 'spinning' || !pool.length) return;
+    clearTimers();
+
+    const win = pool[Math.floor(Math.random() * pool.length)];
+
+    setWinner(win);
+    setStrip(buildStrip(win));
+    setPhase('spinning');
+    setTransitionOn(false);
+    setOffset(0);
+
+    // сначала кадр с offset=0 и без transition, затем плавный проезд
+    moveTimer.current = setTimeout(() => {
+      const jitter = (Math.random() - 0.5) * 24;
+      setTransitionOn(true);
+      setOffset(
+        ROULETTE_WIN_INDEX * (ROULETTE_CARD_W + ROULETTE_GAP) +
+        ROULETTE_CARD_W / 2 +
+        jitter
+      );
+    }, 80);
+
+    doneTimer.current = setTimeout(() => setPhase('result'), ROULETTE_SPIN_MS + 250);
+  };
+
+  const requestClose = () => {
+    if (phase === 'spinning') return;
+    clearTimers();
+    onClose();
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={requestClose} style={{ zIndex: 1000 }}>
+      <div
+        className="glass-modal"
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          width: 'min(640px, 94vw)',
+          padding: '26px 22px 24px',
+          borderRadius: 24,
+          overflow: 'hidden'
+        }}
+      >
+        <button
+          className="modal-close"
+          onClick={requestClose}
+          disabled={phase === 'spinning'}
+          style={{ position: 'absolute', top: 14, right: 14 }}
+        >
+          <X size={20} />
+        </button>
+
+        <div style={{ textAlign: 'center' }}>
+          <span className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={14} /> КИНО-СЛУЧАЙ
+          </span>
+          <h2 style={{ fontSize: 26, margin: '8px 0 14px', letterSpacing: '-0.02em' }}>
+            Чего желает душа?
+          </h2>
+
+          <div style={{ display: 'inline-flex', gap: 4, padding: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)' }}>
+            {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(c => (
+              <button
+                key={c}
+                disabled={phase === 'spinning'}
+                onClick={() => { if (phase !== 'spinning') setCat(c); }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 999,
+                  border: 'none',
+                  cursor: phase === 'spinning' ? 'not-allowed' : 'pointer',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  background: cat === c ? 'var(--accent, #a855f7)' : 'transparent',
+                  color: cat === c ? '#fff' : 'rgba(255,255,255,0.6)',
+                  transition: 'background .2s ease, color .2s ease'
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Барабан */}
+        <div
+          style={{
+            position: 'relative',
+            height: 188,
+            marginTop: 18,
+            borderRadius: 16,
+            background: 'rgba(4,6,12,0.72)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            overflow: 'hidden',
+            boxShadow: 'inset 0 0 34px rgba(0,0,0,0.75)'
+          }}
+        >
+          {/* верхний и нижний указатели */}
+          <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', zIndex: 8, width: 0, height: 0, borderLeft: '9px solid transparent', borderRight: '9px solid transparent', borderTop: '11px solid var(--accent, #a855f7)', filter: 'drop-shadow(0 0 8px rgba(168,85,247,.9))' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', zIndex: 8, width: 0, height: 0, borderLeft: '9px solid transparent', borderRight: '9px solid transparent', borderBottom: '11px solid var(--accent, #a855f7)', filter: 'drop-shadow(0 0 8px rgba(168,85,247,.9))' }} />
+
+          {/* центральная зона */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: '50%',
+              width: ROULETTE_CARD_W + 10,
+              transform: 'translateX(-50%)',
+              borderLeft: '1px dashed rgba(168,85,247,.3)',
+              borderRight: '1px dashed rgba(168,85,247,.3)',
+              background: 'radial-gradient(ellipse at center, rgba(168,85,247,.12), transparent 70%)',
+              pointerEvents: 'none',
+              zIndex: 4
+            }}
+          />
+
+          {/* лента карточек */}
+          {strip.length ? (
+            <div
+              style={{
+                display: 'flex',
+                gap: ROULETTE_GAP,
+                alignItems: 'center',
+                height: '100%',
+                paddingLeft: '50%',
+                transform: `translate3d(${-offset}px, 0, 0)`,
+                transition: transitionOn
+                  ? `transform ${ROULETTE_SPIN_MS}ms cubic-bezier(.12,.8,.25,1)`
+                  : 'none',
+                willChange: 'transform'
+              }}
+            >
+              {strip.map((f, i) => {
+                const isWin = phase === 'result' && i === ROULETTE_WIN_INDEX;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      position: 'relative',
+                      flex: 'none',
+                      width: ROULETTE_CARD_W,
+                      height: 164,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      background: '#151a28',
+                      border: isWin ? '2px solid var(--accent, #a855f7)' : '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: isWin ? '0 0 26px rgba(168,85,247,.55)' : 'none',
+                      transform: isWin ? 'scale(1.03)' : 'scale(1)',
+                      transition: 'border .3s ease, box-shadow .3s ease, transform .3s ease'
+                    }}
+                  >
+                    <img
+                      src={image(f)}
+                      alt={f.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        padding: 6,
+                        background: 'linear-gradient(0deg, rgba(0,0,0,.85), transparent 55%)'
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          color: '#fff',
+                          lineHeight: 1.15,
+                          textShadow: '0 1px 3px rgba(0,0,0,.8)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          width: '100%'
+                        }}
+                      >
+                        {f.title}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'rgba(255,255,255,.5)', fontSize: 13 }}>
+              <Film size={26} /> В категории «{cat}» пока нет материалов
+            </div>
+          )}
+
+          {/* виньетки по краям */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 6,
+              background: 'linear-gradient(90deg, rgba(6,8,14,.92), transparent 20%, transparent 80%, rgba(6,8,14,.92))'
+            }}
+          />
+        </div>
+
+        {/* Низ: запуск или результат */}
+        <div style={{ marginTop: 20, textAlign: 'center', minHeight: 96 }}>
+          {phase === 'result' && winner ? (
+            <>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)' }}>
+                {winner.category} · {winner.year}
+              </span>
+              <h3 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 2px' }}>{winner.title}</h3>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', margin: '0 0 14px' }}>
+                {winner.genre} · ★ {(winner.rating || 0).toFixed(1)}
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button className="primary-btn" onClick={() => onOpenMovie(winner.id)}>
+                  Открыть карточку <ArrowRight size={16} />
+                </button>
+                <button className="outline-btn" onClick={startSpin}>
+                  <RotateCcw size={15} /> Ещё раз
+                </button>
+              </div>
+            </>
+          ) : phase === 'spinning' ? (
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)' }}>
+              Выбираем твою следующую историю...
+            </p>
+          ) : (
+            <>
+              <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,.5)', margin: '0 0 12px' }}>
+                {pool.length
+                  ? `${pool.length} материалов в категории «${cat}»`
+                  : 'Добавь материалы, чтобы крутить барабан'}
+              </p>
+              <button
+                className="primary-btn"
+                onClick={startSpin}
+                disabled={!pool.length}
+                style={{ padding: '12px 30px', boxShadow: '0 8px 24px rgba(168,85,247,.35)' }}
+              >
+                Запустить барабан <Sparkles size={16} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
