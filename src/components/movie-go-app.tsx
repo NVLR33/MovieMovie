@@ -794,6 +794,53 @@ function Gate({ title, description, auth }: { title: string; description: string
   );
 }
 
+function CollapsibleText({
+  text,
+  className,
+  lines = 4,
+  moreLabel = 'Развернуть',
+  lessLabel = 'Свернуть',
+}: {
+  text: string;
+  className?: string;
+  lines?: number;
+  moreLabel?: string;
+  lessLabel?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const canCollapse = (text || '').trim().length > 260;
+
+  return (
+    <div className={className} style={{ position: 'relative' }}>
+      <div
+        style={
+          expanded || !canCollapse
+            ? undefined
+            : ({
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: lines,
+                overflow: 'hidden',
+              } as React.CSSProperties)
+        }
+      >
+        {text}
+      </div>
+
+      {canCollapse && (
+        <button
+          type="button"
+          className="text-link"
+          style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}
+          onClick={() => setExpanded(v => !v)}
+        >
+          {expanded ? lessLabel : moreLabel} <ChevronRight size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // --- Pages ---
 
 function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; }) {
@@ -1154,7 +1201,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
           </div>
 
           <CollapsibleText
-            key={film.id}                 // чтобы при переходе на другой фильм сворачивалось обратно
+            key={film.id}
             className="detail-description"
             text={film.description}
           />
