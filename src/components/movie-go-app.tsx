@@ -658,6 +658,74 @@ function SectionTitle({ kicker, title, link, onClick }: { kicker?: string; title
   );
 }
 
+function heroTitleStyle(title: string): React.CSSProperties {
+  const len = (title || '').trim().length;
+
+  // базовые улучшения переноса
+  const base: React.CSSProperties = {
+    textWrap: 'balance' as any,
+    overflowWrap: 'anywhere',
+    hyphens: 'auto',
+  };
+
+  function CollapsibleText({
+  text,
+  className,
+  lines = 4,
+  moreLabel = 'Развернуть',
+  lessLabel = 'Свернуть',
+}: {
+  text: string;
+  className?: string;
+  lines?: number;
+  moreLabel?: string;
+  lessLabel?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // показываем кнопку только если текст реально длинный
+  const canCollapse = (text || '').trim().length > 260;
+
+  return (
+    <div className={className} style={{ position: 'relative' }}>
+      <div
+        style={
+          expanded || !canCollapse
+            ? undefined
+            : {
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: lines,
+                overflow: 'hidden',
+              }
+        }
+      >
+        {text}
+      </div>
+
+      {canCollapse && (
+        <button
+          type="button"
+          className="text-link"
+          style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}
+          onClick={() => setExpanded(v => !v)}
+        >
+          {expanded ? lessLabel : moreLabel} <ChevronRight size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+  // чем длиннее — тем меньше размер
+  if (len > 110) return { ...base, fontSize: 'clamp(20px, 2.6vw, 32px)', lineHeight: 1.06 };
+  if (len > 80)  return { ...base, fontSize: 'clamp(24px, 3.0vw, 38px)', lineHeight: 1.07 };
+  if (len > 55)  return { ...base, fontSize: 'clamp(28px, 3.4vw, 44px)', lineHeight: 1.08 };
+  if (len > 40)  return { ...base, fontSize: 'clamp(32px, 3.8vw, 50px)', lineHeight: 1.08 };
+
+  return base;
+}
+
 function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: string) => void; rank?: number; watched?: boolean; }) {
   const primaryGenre = film.genre.split(',')[0]?.trim();
 
@@ -1076,7 +1144,7 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
 
         <div className="detail-intro">
           <div className="detail-badges"><span className="eyebrow">{film.category.toUpperCase()}</span><span>·</span><span>{film.year}</span><span>·</span><span>{film.country}</span></div>
-          <h1>{film.title}</h1>
+          <h1 style={heroTitleStyle(film.title)}>{film.title}</h1>
           <p className="original-title">{film.originalTitle}</p>
 
           <div className="detail-rating">
@@ -1085,7 +1153,11 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
             <span className="detail-views"><Eye size={17} />{fmt(film.views || 0)} просмотров</span>
           </div>
 
-          <p className="detail-description">{film.description}</p>
+          <CollapsibleText
+            key={film.id}                 // чтобы при переходе на другой фильм сворачивалось обратно
+            className="detail-description"
+            text={film.description}
+          />
 
           <div className="genre-list">
             {film.genre.split(',').map(g => <button key={g} onClick={() => go('/catalog?search=' + encodeURIComponent(g.trim()))}>{g.trim()}</button>)}
