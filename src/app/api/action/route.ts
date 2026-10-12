@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     let result: unknown = { ok: true };
 
     // действия, которым нужен валидный фильм
-    const filmActions = ['watch', 'unwatch', 'rate', 'bookmark', 'comment'];
+    const filmActions = ['watch', 'unwatch', 'rate', 'bookmark', 'favorite', 'unfavorite', 'comment'];
     if (filmActions.includes(action)) {
       const [film] = await db
         .select({ id: movies.id })
