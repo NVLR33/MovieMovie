@@ -1791,3 +1791,402 @@ select:focus {
     transform: none;
   }
 }
+
+
+
+/* ==================================================
+   MOVIEMOVIE — CINEMATIC DETAIL FX
+   Premium movie pages
+================================================== */
+
+/* =========================================
+   ГЛАВНЫЙ БЛОК МАТЕРИАЛА
+========================================= */
+
+.detail-hero {
+  position: relative;
+  isolation: isolate;
+
+  transition:
+    box-shadow 0.5s ease,
+    border-color 0.4s ease;
+
+  animation: detail-hero-enter 0.75s
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes detail-hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Дополнительное атмосферное свечение */
+
+.detail-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+
+  border-radius: inherit;
+
+  background:
+    radial-gradient(
+      ellipse 55% 70% at 80% 20%,
+      color-mix(
+        in srgb,
+        var(--rating-color) 8%,
+        transparent
+      ),
+      transparent 75%
+    );
+
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Контент поверх декоративного слоя */
+
+.detail-poster,
+.detail-intro {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================
+   ПОСТЕР МАТЕРИАЛА
+========================================= */
+
+.detail-poster {
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.5s ease;
+
+  animation: detail-poster-enter 0.75s
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes detail-poster-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-22px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.detail-poster:hover {
+  transform: translateY(-5px) scale(1.025);
+
+  box-shadow:
+    0 25px 55px rgba(0, 0, 0, 0.55),
+    0 0 30px color-mix(
+      in srgb,
+      var(--rating-color) 25%,
+      transparent
+    );
+}
+
+/* Световой блик на постере */
+
+.detail-poster::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(
+    115deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.13) 45%,
+    transparent 65%
+  );
+
+  transform: translateX(-150%);
+  transition: transform 0.85s ease;
+
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.detail-poster:hover::after {
+  transform: translateX(150%);
+}
+
+/* =========================================
+   ИНФОРМАЦИЯ О МАТЕРИАЛЕ
+========================================= */
+
+.detail-intro {
+  animation: detail-info-enter 0.7s
+    cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+@keyframes detail-info-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Название */
+
+.detail-intro h1 {
+  text-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* =========================================
+   РЕЙТИНГ
+========================================= */
+
+.big-rating {
+  transition:
+    transform 0.3s ease,
+    filter 0.3s ease;
+
+  animation: rating-appear 0.7s
+    cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+
+@keyframes rating-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.big-rating:hover {
+  transform: scale(1.07);
+
+  filter: drop-shadow(
+    0 0 12px
+    color-mix(
+      in srgb,
+      var(--rating-color) 35%,
+      transparent
+    )
+  );
+}
+
+/* Просмотры и избранное */
+
+.detail-views {
+  transition: color 0.25s ease;
+}
+
+.detail-views:hover {
+  color: var(--text);
+}
+
+/* =========================================
+   ЖАНРЫ И ТЕГИ
+========================================= */
+
+.genre-list button {
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease;
+}
+
+.genre-list button:hover {
+  transform: translateY(-2px);
+
+  background: color-mix(
+    in srgb,
+    var(--rating-color) 12%,
+    transparent
+  );
+}
+
+/* =========================================
+   КНОПКИ МАТЕРИАЛА
+========================================= */
+
+.detail-actions button {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease;
+}
+
+.detail-actions button:hover {
+  transform: translateY(-3px);
+}
+
+.detail-actions button:active {
+  transform: scale(0.96);
+}
+
+/* Подсветка кнопки просмотра */
+
+.detail-actions .primary-btn:hover {
+  box-shadow:
+    0 8px 28px var(--accent-glow);
+}
+
+/* =========================================
+   ПАНЕЛЬ ДЕТАЛЕЙ ИСТОРИИ
+========================================= */
+
+.info-panel-fancy {
+  position: relative;
+
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.info-panel-fancy:hover {
+  border-color: var(--border-hi);
+
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.16);
+}
+
+/* Отдельные информационные блоки */
+
+.info-item {
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.info-item:hover {
+  transform: translateX(4px);
+
+  border-color: color-mix(
+    in srgb,
+    var(--accent) 35%,
+    transparent
+  );
+}
+
+/* Иконки информационных блоков */
+
+.info-icon {
+  transition:
+    transform 0.35s ease,
+    background 0.35s ease;
+}
+
+.info-item:hover .info-icon {
+  transform: scale(1.08);
+
+  background: color-mix(
+    in srgb,
+    var(--accent) 20%,
+    transparent
+  );
+}
+
+/* =========================================
+   ПАНЕЛЬ ОЦЕНОК
+========================================= */
+
+.rating-panel-advanced {
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.rating-panel-advanced:hover {
+  border-color: var(--border-hi);
+
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Анимация звёзд */
+
+.star-wrapper {
+  transition: transform 0.2s ease;
+}
+
+.star-wrapper:hover {
+  transform: scale(1.15);
+}
+
+/* =========================================
+   КОММЕНТАРИИ
+========================================= */
+
+.comment-row {
+  transition:
+    background 0.25s ease,
+    padding 0.25s ease;
+}
+
+.comment-row:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.comment-buttons button {
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.comment-buttons button:hover {
+  transform: translateY(-2px);
+}
+
+/* =========================================
+   МОБИЛЬНАЯ АДАПТАЦИЯ
+========================================= */
+
+@media (max-width: 760px) {
+  .detail-poster:hover {
+    transform: none;
+  }
+
+  .info-item:hover {
+    transform: none;
+  }
+
+  .detail-actions button:hover {
+    transform: none;
+  }
+}
+
+/* =========================================
+   REDUCED MOTION
+========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-hero,
+  .detail-poster,
+  .detail-intro,
+  .big-rating {
+    animation: none !important;
+  }
+
+  .detail-poster:hover,
+  .detail-actions button:hover,
+  .info-item:hover,
+  .star-wrapper:hover {
+    transform: none !important;
+  }
+}
