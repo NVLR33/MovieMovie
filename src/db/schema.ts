@@ -45,3 +45,43 @@ export const favorites = pgTable(
     uniqueIndex('mg_favorite_unique').on(t.userId, t.movieId),
   ]
 );
+
+// [DB:MOVIE_SUGGESTIONS] User-submitted movie proposals
+export const movieSuggestions = pgTable(
+  'mg_movie_suggestions',
+  {
+    id: serial('id').primaryKey(),
+
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+
+    title: text('title').notNull(),
+
+    year: integer('year').notNull(),
+
+    genre: text('genre').notNull(),
+
+    category: text('category').notNull(),
+
+    comment: text('comment'),
+
+    status: text('status')
+      .notNull()
+      .default('pending'),
+
+    reviewedBy: integer('reviewed_by')
+      .references(() => users.id),
+
+    reviewReason: text('review_reason'),
+
+    movieId: integer('movie_id')
+      .references(() => movies.id),
+
+    createdAt: timestamp('created_at')
+      .defaultNow()
+      .notNull(),
+
+    reviewedAt: timestamp('reviewed_at'),
+  }
+);
