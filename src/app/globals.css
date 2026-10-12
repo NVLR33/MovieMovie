@@ -848,8 +848,9 @@ p{margin:0}
 
 .card-favorite-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
+   bottom: 12px;
+   right: 12px;
+   top: auto;
 
   width: 30px;
   height: 30px;
@@ -886,4 +887,99 @@ p{margin:0}
 
 .card-favorite-btn.is-favorite:hover {
   background: #be123c;
+}
+
+
+/* ❤️ Сердечко на карточке */
+.card-favorite-btn {
+  position: absolute;
+  top: auto;
+  bottom: 12px;
+  right: 12px;
+
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  background: rgba(10, 12, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  color: #fff;
+  backdrop-filter: blur(12px);
+
+  cursor: pointer;
+  z-index: 10;
+
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.card-favorite-btn:hover {
+  transform: scale(1.12);
+  background: rgba(225, 29, 72, 0.65);
+}
+
+.card-favorite-btn.is-favorite {
+  background: #e11d48;
+  border-color: #fb7185;
+  color: white;
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.4);
+}
+
+/* ❤️ Кнопка на странице материала */
+.detail-favorite-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  transition: all 0.2s ease;
+}
+
+.detail-favorite-btn.is-favorite {
+  color: #fb7185;
+  border-color: rgba(251, 113, 133, 0.5);
+  background: rgba(225, 29, 72, 0.12);
+}
+
+.detail-favorite-btn.is-favorite:hover {
+  background: rgba(225, 29, 72, 0.2);
+}
+
+
+/* =========================================
+   РАСПОЛОЖЕНИЕ ЗНАЧКОВ НА КАРТОЧКАХ
+========================================= */
+
+/* ✅ Просмотрено — слева сверху */
+.film-card .card-watched-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: auto;
+  bottom: auto;
+  z-index: 5;
+}
+
+/* ❤️ Любимое — справа сверху */
+.film-card .card-favorite-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: auto;
+  left: auto;
+  z-index: 6;
+}
+
+/* ⭐ Рейтинг — справа снизу */
+.film-card .card-score {
+  position: absolute;
+  top: auto;
+  right: 10px;
+  bottom: 10px;
+  left: auto;
+  z-index: 5;
 }
