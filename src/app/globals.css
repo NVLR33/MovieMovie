@@ -2792,3 +2792,65 @@ select:focus {
     transition: none !important;
   }
 }
+
+/* ==========================================
+   MOVIEMOVIE — PAGE TRANSITIONS
+========================================== */
+
+/* Плавное появление страниц */
+
+.content {
+  animation: mm-page-enter 0.35s ease-out both;
+}
+
+@keyframes mm-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Плавная загрузка содержимого */
+
+.content > * {
+  transition: opacity 0.25s ease;
+}
+
+/* Убираем резкие скачки изображения */
+
+.film-card img,
+.detail-poster img,
+.hero {
+  backface-visibility: hidden;
+}
+
+/* Дополнительная плавность */
+
+.main-wrap {
+  transition: background-color 0.3s ease;
+}
+
+/* Мобильная адаптация */
+
+@media (max-width: 760px) {
+  .content {
+    animation-duration: 0.25s;
+  }
+}
+
+/* Уменьшение анимаций */
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    animation: none !important;
+  }
+
+  .content > * {
+    transition: none !important;
+  }
+}
