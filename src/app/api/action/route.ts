@@ -89,13 +89,32 @@ if (action === 'watch') {
     watched: true,
     removedFromWatchlist: true
   };
-    } else if (action === 'unwatch') {
-      // снять отметку "просмотрено" (тоже идемпотентно — если записи нет, просто ок)
-      await db
-        .delete(watches)
-        .where(and(eq(watches.userId, user.id), eq(watches.movieId, movieId)));
+} else if (action === 'unwatch') {
+  // Снимаем отметку просмотра
+  await db
+    .delete(watches)
+    .where(
+      and(
+        eq(watches.userId, user.id),
+        eq(watches.movieId, movieId)
+      )
+    );
 
-      result = { ok: true, watched: false };
+  // На всякий случай удаляем материал из «Буду смотреть»,
+  // чтобы он не возвращался туда автоматически
+  await db
+    .delete(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.userId, user.id),
+        eq(bookmarks.movieId, movieId)
+      )
+    );
+
+  result = {
+    ok: true,
+    watched: false
+  };
     } else if (action === 'rate') {
       const value = Number(body.value);
       if (!Number.isFinite(value) || value < 0.5 || value > 10 || (value * 2) % 1 !== 0) {
