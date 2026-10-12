@@ -138,7 +138,18 @@ const WatchedIdsContext = createContext<Set<number>>(new Set<number>());
 const useWatchedIds = () => useContext(WatchedIdsContext);
 
 // --- FavoriteIds global context ---
-const FavoriteIdsContext = createContext<Set<number>>(new Set<number>());
+type FavoriteContextValue = {
+  ids: Set<number>;
+  toggle: (movieId: number) => void;
+  isAuthenticated: boolean;
+};
+
+const FavoriteIdsContext = createContext<FavoriteContextValue>({
+  ids: new Set<number>(),
+  toggle: () => {},
+  isAuthenticated: false,
+});
+
 const useFavoriteIds = () => useContext(FavoriteIdsContext);
 
 function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: string | null; size?: number; frame?: string | null; }) {
@@ -330,6 +341,24 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   };
 
   const requireAuth = (fn: () => void) => { if (!data.user) setAuthOpen(true); else fn(); };
+
+  const toggleFavorite = (movieId: number) => {
+    if (!data.user) {
+      setAuthOpen(true);
+      return;
+    }
+  
+    const isFavorite = favoriteIds.has(movieId);
+  
+    action(
+      {
+        action: isFavorite ? 'unfavorite' : 'favorite',
+        movieId,
+      },
+      isFavorite ? 'Удалено из любимого' : 'Добавлено в любимое'
+    );
+  };
+  
   const changeTheme = (t: string) => { setTheme(t); if (data.user) action({ action: 'profile', theme: t }); };
   const changeLang = () => { const next = lang === 'ru' ? 'en' : 'ru'; setLang(next); if (data.user) action({ action: 'profile', language: next }); };
 
@@ -387,7 +416,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
 
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
-    <FavoriteIdsContext.Provider value={favoriteIds}>
+    <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
       <div className="app-shell">
         <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
           <div className="side-brand" onClick={() => go('/')}>
@@ -798,6 +827,9 @@ function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: strin
   const watchedIds = useWatchedIds();
   const isWatched = watched ?? watchedIds.has(film.id);
 
+  const { ids: favoriteIds, toggle: toggleFavorite } = useFavoriteIds();
+  const isFavorite = favoriteIds.has(film.id);
+
   return (
     <div
       className={`film-card tone-${tone(film.rating)}`}
@@ -813,6 +845,21 @@ function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: strin
         <span className="card-score"><Star size={12} fill="currentColor" />{film.rating.toFixed(1)}</span>
         <span className="card-play"><Play size={19} fill="currentColor" /></span>
         {isWatched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
+        <button
+          type="button"
+          className={`card-favorite-btn ${isFavorite ? 'is-favorite' : ''}`}
+          title={isFavorite ? 'Убрать из любимого' : 'Добавить в любимое'}
+          aria-label={isFavorite ? 'Убрать из любимого' : 'Добавить в любимое'}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(film.id);
+          }}
+        >
+          <Heart
+            size={16}
+            fill={isFavorite ? 'currentColor' : 'none'}
+          />
+        </button>
       </div>
       <div className="card-info">
         <h3>{film.title}</h3>
