@@ -73,7 +73,7 @@ export async function GET(){
   try {
     const films=await getOverview(); const me=await getUser();
     const [people,allWatches,allRatings,allComments,allBookmarks,allFavorites,allFriends,allNotifications,allScores,allLists,allCollabItems,activeClubs,allChallenges,allChallengeProgress]=await Promise.all([
-      db.select().from(users),db.select().from(watches).orderBy(desc(watches.watchedAt)),db.select().from(ratings),db.select().from(comments).orderBy(desc(comments.createdAt)),db.select().from(bookmarks),db.select().from(friendships),db.select().from(notifications).orderBy(desc(notifications.createdAt)),db.select().from(gameScores),
+      db.select().from(users),db.select().from(watches).orderBy(desc(watches.watchedAt)),db.select().from(ratings),db.select().from(comments).orderBy(desc(comments.createdAt)),db.select().from(bookmarks),db.select().from(favorites),db.select().from(friendships),db.select().from(notifications).orderBy(desc(notifications.createdAt)),db.select().from(gameScores),
       db.select().from(collabLists).orderBy(desc(collabLists.createdAt)),
       db.select().from(collabItems),
       db.select().from(movieClub).where(eq(movieClub.active, true)),
@@ -138,6 +138,19 @@ export async function GET(){
     for (const b of allBookmarks) {
       favoriteCounts[b.movieId] = (favoriteCounts[b.movieId] || 0) + 1;
     }
+
+    const myFavorites = me
+  ? allFavorites.filter(f => f.userId === me.id)
+  : [];
+
+const favoriteIds = myFavorites.map(f => f.movieId);
+
+const favoriteCounts: Record<number, number> = {};
+
+for (const favorite of allFavorites) {
+  favoriteCounts[favorite.movieId] =
+    (favoriteCounts[favorite.movieId] || 0) + 1;
+}
     
     return NextResponse.json({films,user:publicUser(me),people:Object.values(names),watches:me?allWatches.filter(w=>w.userId===me.id):[],ratings:me?allRatings.filter(r=>r.userId===me.id):[],comments:allComments.map(c=>({...c,author:names[c.userId]})),bookmarks: myBookmarks,favoriteIds,favoriteCounts,friends:me?allFriends.filter(f=>f.fromId===me.id||f.toId===me.id):[],notifications:me?allNotifications.filter(n=>n.userId===me.id):[],scores:me?allScores.filter(s=>s.userId===me.id):[],leaderboard:people.map(p=>({id:p.id,username:p.username,avatar:p.avatar,role:p.role,xp:p.xp,watches:allWatches.filter(w=>w.userId===p.id).length,minutes:allWatches.filter(w=>w.userId===p.id).reduce((n,w)=>n+(films.find(f=>f.id===w.movieId)?getTitleMinutes(films.find(f=>f.id===w.movieId)!):0),0),streak:consecutiveDays(allWatches.filter(w=>w.userId===p.id).map(w=>w.watchedAt)),ratings:allRatings.filter(r=>r.userId===p.id).length,gameScore:allScores.filter(s=>s.userId===p.id).reduce((a,s)=>a+s.score,0)})),friendsActivity,unreadMessages,lists:allLists.map(l=>({...l,items:allCollabItems.filter(i=>i.listId===l.id).map(i=>({...i,film:films.find(f=>f.id===i.movieId)}))})),club:activeClubs.length?activeClubs[0]:null,onThisDay,cineDay,monthlySummary,challenges:myChallenges,season});
   }catch(e){console.error(e);return NextResponse.json({error:'Не удалось загрузить данные'},{status:500});}
