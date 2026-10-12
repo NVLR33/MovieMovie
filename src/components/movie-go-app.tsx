@@ -2669,6 +2669,32 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
     else notify(d.error || 'Ошибка загрузки');
   };
 
+  const uploadBackdrop = async (file?: File) => {
+  if (!file) return;
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('kind', 'backdrop');
+
+  try {
+    const r = await fetch('/api/upload', {
+      method: 'POST',
+      body: fd
+    });
+
+    const d = await r.json();
+
+    if (r.ok && d.url) {
+      field('backdrop', d.url);
+      notify('Фоновое изображение загружено');
+    } else {
+      notify(d.error || 'Не удалось загрузить фон');
+    }
+  } catch {
+    notify('Ошибка загрузки фонового изображения');
+  }
+};
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -2713,6 +2739,29 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
             <div className="upload-input">
               <input required value={form.poster} onChange={e => field('poster', e.target.value)} placeholder="https://... или загрузить →" />
               <label className="upload-button"><Upload size={17} /><input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => upload(e.target.files?.[0])} /></label>
+            </div>
+          </label>
+          <label>
+            Фоновое изображение
+            <span className="label-help"> URL или загрузи файл</span>
+          
+            <div className="upload-input">
+              <input
+                type="text"
+                value={form.backdrop}
+                onChange={e => field('backdrop', e.target.value)}
+                placeholder="https://... или загрузить фон →"
+              />
+          
+              <label className="upload-button" title="Загрузить фон">
+                <Upload size={17} />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  onChange={e => uploadBackdrop(e.target.files?.[0])}
+                />
+              </label>
             </div>
           </label>
           <button className="primary-btn auth-submit" disabled={busy}>{busy ? 'Сохранение...' : 'Сохранить материал'} <Check size={17} /></button>
