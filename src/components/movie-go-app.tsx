@@ -607,6 +607,7 @@ return (
               : active === 'movie' ? <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} edit={setEditFilm} />
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
+              : active === 'favorites' ? <FavoritesPage data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'leaderboard' ? <Leaderboard data={data} go={go} />
               : active === 'achievements' ? <Achievements data={data} auth={() => setAuthOpen(true)} go={go} />
               : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
@@ -1854,6 +1855,82 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
     </>
   );
 }
+
+// --- Favorites Page ❤️ ---
+function FavoritesPage({
+  data,
+  go,
+  auth,
+}: {
+  data: Data;
+  go: (s: string) => void;
+  auth: () => void;
+}) {
+  if (!data.user) {
+    return (
+      <Gate
+        title="Твои любимые истории"
+        description="Войди в аккаунт, чтобы сохранять любимые фильмы, сериалы и аниме."
+        auth={auth}
+      />
+    );
+  }
+
+  const favoriteIds = new Set(data.favoriteIds || []);
+
+  const favoriteFilms = data.films.filter(f =>
+    favoriteIds.has(f.id)
+  );
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">
+            ТВОЯ ЛИЧНАЯ КОЛЛЕКЦИЯ
+          </span>
+
+          <h1>
+            Моё <em>любимое.</em>
+          </h1>
+
+          <p>
+            Истории, которые заняли особое место в твоём сердце.
+          </p>
+        </div>
+
+        <div className="heading-count">
+          <Heart size={19} fill="currentColor" />
+          {favoriteFilms.length} любимых
+        </div>
+      </div>
+
+      {favoriteFilms.length > 0 ? (
+        <FilmGrid films={favoriteFilms} go={go} />
+      ) : (
+        <div className="empty-state">
+          <Heart size={40} />
+
+          <h3>Здесь пока нет любимых историй</h3>
+
+          <p>
+            Нажми на сердечко на любом материале,
+            чтобы добавить его сюда.
+          </p>
+
+          <button
+            className="primary-btn"
+            onClick={() => go('/catalog')}
+          >
+            Найти любимое
+            <ArrowRight size={17} />
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 
 function Watchlist({ data, go, auth }: { data: Data; go: (s: string) => void; auth: () => void; }) {
   if (!data.user) return <Gate title="Сохраняй то, что вдохновляет" description="Все истории, которые ты хочешь увидеть, в одном месте." auth={auth} />;
