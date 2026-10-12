@@ -13,8 +13,49 @@ export const watches = pgTable('mg_watches', { id: serial('id').primaryKey(), us
 // [DB:RATINGS] Half-star ratings are unique per user and title.
 export const ratings = pgTable('mg_ratings', { id: serial('id').primaryKey(), userId: integer('user_id').notNull().references(() => users.id), movieId: integer('movie_id').notNull().references(() => movies.id), value: real('value').notNull() }, t => [uniqueIndex('mg_rating_unique').on(t.userId, t.movieId)]);
 // [DB:COMMENTS] Threaded discussions and reactions.
-export const comments = pgTable('mg_comments', { id: serial('id').primaryKey(), userId: integer('user_id').notNull().references(() => users.id), movieId: integer('movie_id').notNull().references(() => movies.id), parentId: integer('parent_id'), body: text('body').notNull(), likes: integer('likes').default(0), createdAt: timestamp('created_at').defaultNow().notNull() });
-export const reactions = pgTable('mg_reactions', { id: serial('id').primaryKey(), userId: integer('user_id').notNull().references(() => users.id), commentId: integer('comment_id').notNull().references(() => comments.id) }, t => [uniqueIndex('mg_reaction_unique').on(t.userId, t.commentId)]);
+// [DB:COMMENTS] Threaded discussions and reactions.
+export const comments = pgTable('mg_comments', {
+  id: serial('id').primaryKey(),
+
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+
+  movieId: integer('movie_id')
+    .notNull()
+    .references(() => movies.id),
+
+  parentId: integer('parent_id'),
+
+  body: text('body').notNull(),
+
+  likes: integer('likes').default(0),
+
+  createdAt: timestamp('created_at')
+    .defaultNow()
+    .notNull(),
+
+  // Дата последнего редактирования
+  editedAt: timestamp('edited_at'),
+});
+
+export const reactions = pgTable(
+  'mg_reactions',
+  {
+    id: serial('id').primaryKey(),
+
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+
+    commentId: integer('comment_id')
+      .notNull()
+      .references(() => comments.id),
+  },
+  t => [
+    uniqueIndex('mg_reaction_unique').on(t.userId, t.commentId)
+  ]
+);
 // [DB:SOCIAL] Bookmarks, friendships, and notification inbox.
 export const bookmarks = pgTable('mg_bookmarks', { id: serial('id').primaryKey(), userId: integer('user_id').notNull().references(() => users.id), movieId: integer('movie_id').notNull().references(() => movies.id) }, t => [uniqueIndex('mg_bookmark_unique').on(t.userId, t.movieId)]);
 export const friendships = pgTable('mg_friendships', { id: serial('id').primaryKey(), fromId: integer('from_id').notNull().references(() => users.id), toId: integer('to_id').notNull().references(() => users.id), status: text('status').notNull().default('pending'), createdAt: timestamp('created_at').defaultNow().notNull() });
