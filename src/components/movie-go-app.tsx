@@ -44,6 +44,28 @@ type Comment = {
 };
 type Person = { id: number; username: string; avatar: string | null; role: string; xp: number | null; };
 type Friend = { id: number; fromId: number; toId: number; status: string; };
+// [TYPE:MOVIE_SUGGESTION] Предложения пользователей
+type MovieSuggestion = {
+  id: number;
+  userId: number;
+  title: string;
+  year: number;
+  genre: string;
+  category: string;
+  comment: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewReason: string | null;
+  movieId: number | null;
+
+  author: {
+    id: number;
+    username: string;
+    avatar: string | null;
+    role: string;
+  } | null;
+};
 type Notice = { id: number; message: string; link: string | null; read: boolean; createdAt: string; };
 type Leader = Person & { watches: number; minutes: number; streak: number; ratings: number; gameScore: number; };
 type FriendActivity = { id: number; username: string; avatar: string | null; watches: number; minutes: number; lastWatch: string | null; commonFilms: number; };
