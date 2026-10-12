@@ -31,3 +31,26 @@ export const movieClub = pgTable('mg_movie_club', { id: serial('id').primaryKey(
 // [DB:CHALLENGES] Monthly challenges with XP rewards
 export const challenges = pgTable('mg_challenges', { id: serial('id').primaryKey(), title: text('title').notNull(), description: text('description').notNull(), month: integer('month').notNull(), filterGenre: text('filter_genre'), filterCategory: text('filter_category'), target: integer('target').notNull().default(3), xpReward: integer('xp_reward').notNull().default(300), icon: text('icon').default('🎬') });
 export const challengeProgress = pgTable('mg_challenge_progress', { id: serial('id').primaryKey(), userId: integer('user_id').notNull().references(() => users.id), challengeId: integer('challenge_id').notNull().references(() => challenges.id), progress: integer('progress').default(0), completed: boolean('completed').default(false) });
+
+// [DB:FAVORITES] Personal favorite titles with unique user/movie pairs.
+export const favorites = pgTable(
+  'mg_favorites',
+  {
+    id: serial('id').primaryKey(),
+
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+
+    movieId: integer('movie_id')
+      .notNull()
+      .references(() => movies.id),
+
+    createdAt: timestamp('created_at')
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex('mg_favorite_unique').on(t.userId, t.movieId),
+  ]
+);
