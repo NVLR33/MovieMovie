@@ -37,18 +37,9 @@ export const favorites = pgTable(
   'mg_favorites',
   {
     id: serial('id').primaryKey(),
-
-    userId: integer('user_id')
-      .notNull()
-      .references(() => users.id),
-
-    movieId: integer('movie_id')
-      .notNull()
-      .references(() => movies.id),
-
-    createdAt: timestamp('created_at')
-      .defaultNow()
-      .notNull(),
+    userId: integer('user_id').notNull().references(() => users.id),
+    movieId: integer('movie_id').notNull().references(() => movies.id),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (t) => [
     uniqueIndex('mg_favorite_unique').on(t.userId, t.movieId),
