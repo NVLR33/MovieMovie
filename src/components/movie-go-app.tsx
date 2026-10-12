@@ -50,7 +50,7 @@ type ProfileData = {
 };
 type Data = {
   films: FilmType[]; user: User | null; people: Person[]; watches: Watch[]; ratings: Rating[]; comments: Comment[];
-  bookmarks: { movieId: number; }[]; friends: Friend[]; notifications: Notice[]; scores: { game: string; score: number; }[];
+  bookmarks: { movieId: number; }[]; favorites: { movieId: number; }[]; favoriteIds: number[]; favoriteCounts: Record<number, number>;
   leaderboard: Leader[]; friendsActivity: FriendActivity[]; unreadMessages: number; lists: any[]; club: any;
   onThisDay: { text: string; icon: string; }[]; cineDay: { label: string; filter?: string; icon: string; };
   monthlySummary: { watches: number; minutes: number; topGenre: string; avgRating: string; achievements: number; } | null;
@@ -62,9 +62,32 @@ const categories = ['Все', 'Фильм', 'Сериал', 'Мультфиль�
 const genres = ['Все жанры', 'Фантастика', 'Драма', 'Приключения', 'Анимация', 'Боевик', 'Комедия', 'Аниме', 'Детектив', 'Фэнтези', 'Биография'];
 const themes = ['dark', 'light', 'pink', 'purple', 'yellow'];
 const blank: Data = {
-  films: [], user: null, people: [], watches: [], ratings: [], comments: [], bookmarks: [], friends: [], notifications: [],
-  scores: [], leaderboard: [], friendsActivity: [], unreadMessages: 0, lists: [], club: null, onThisDay: [],
-  cineDay: { label: '', icon: '🎬' }, monthlySummary: null, challenges: [], season: null
+  films: [],
+  user: null,
+  people: [],
+  watches: [],
+  ratings: [],
+  comments: [],
+  bookmarks: [],
+
+  // ❤️ Избранное
+  favorites: [],
+  favoriteIds: [],
+  favoriteCounts: {},
+
+  friends: [],
+  notifications: [],
+  scores: [],
+  leaderboard: [],
+  friendsActivity: [],
+  unreadMessages: 0,
+  lists: [],
+  club: null,
+  onThisDay: [],
+  cineDay: { label: '', icon: '🎬' },
+  monthlySummary: null,
+  challenges: [],
+  season: null
 };
 const image = (f: FilmType) => f.poster || '/posters/dune.jpg';
 const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(f.category) ? f.duration * (f.episodes || 1) : f.duration;
@@ -79,9 +102,9 @@ function titleFor(user: User | null, watches: number) {
   return 'Начинающий зритель';
 }
 
-// --- WatchedIds global context (single source of truth for badges) ---
-const WatchedIdsContext = createContext<Set<number>>(new Set());
-const useWatchedIds = () => useContext(WatchedIdsContext);
+// --- FavoriteIds global context ---
+const FavoriteIdsContext = createContext<Set<number>>(new Set());
+const useFavoriteIds = () => useContext(FavoriteIdsContext);
 
 function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: string | null; size?: number; frame?: string | null; }) {
   return (
@@ -204,6 +227,11 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   // оптимизация: один стабильный Set для watched
   const watchedIds = useMemo(() => new Set<number>(data.watches.map(w => w.movieId)), [data.watches]);
 
+  const favoriteIds = useMemo(
+  () => new Set<number>(data.favoriteIds || []),
+  [data.favoriteIds]
+  );
+
   const notify = (s: string) => { setToast(s); setTimeout(() => setToast(''), 3700); };
 
   const refresh = async () => {
@@ -322,8 +350,9 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     }, 60 + (i * 12));
   };
 
-  return (
-    <WatchedIdsContext.Provider value={watchedIds}>
+return (
+  <WatchedIdsContext.Provider value={watchedIds}>
+    <FavoriteIdsContext.Provider value={favoriteIds}>
       <div className="app-shell">
         <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
           <div className="side-brand" onClick={() => go('/')}>
@@ -644,6 +673,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
         {toast && <div className="toast"><Sparkles size={16} />{toast}<button onClick={() => setToast('')}><X size={14} /></button></div>}
         {loading && <div className="loading-line" />}
       </div>
+    </FavoriteIdsContext.Provider>
     </WatchedIdsContext.Provider>
   );
 }
