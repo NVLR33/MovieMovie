@@ -3096,3 +3096,117 @@ select:focus {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   }
 }
+
+
+/* ==========================================
+   MOVIEMOVIE — MOVIE SUGGESTIONS ADMIN
+========================================== */
+
+.suggestions-list {
+  display: grid;
+  gap: 14px;
+}
+
+.suggestion-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+
+.suggestion-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.suggestion-card h3 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+.suggestion-card p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.suggestion-status {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.suggestion-status.pending {
+  background: rgba(240, 198, 116, 0.12);
+  color: var(--gold);
+}
+
+.suggestion-status.approved {
+  background: rgba(110, 231, 183, 0.12);
+  color: var(--green);
+}
+
+.suggestion-status.rejected {
+  background: rgba(251, 113, 133, 0.12);
+  color: var(--red);
+}
+
+.suggestion-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.suggestion-author small {
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.suggestion-comment {
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.suggestion-tab-count {
+  margin-left: 8px;
+  background: var(--accent);
+  color: #0e0a1c;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.suggestion-reason {
+  margin-top: 12px;
+  color: var(--red) !important;
+}
+
+@media (max-width: 520px) {
+  .suggestion-card {
+    padding: 16px;
+  }
+
+  .suggestion-card-top {
+    flex-direction: column;
+  }
+
+  .suggestion-actions {
+    flex-wrap: wrap;
+  }
+}
