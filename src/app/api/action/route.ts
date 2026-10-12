@@ -45,24 +45,50 @@ export async function POST(req: NextRequest) {
 
       if (!film) throw Error('Материал не найден');
     }
+if (action === 'watch') {
+  // Проверяем, не был ли материал уже просмотрен
+  const [existing] = await db
+    .select({ id: watches.id })
+    .from(watches)
+    .where(
+      and(
+        eq(watches.userId, user.id),
+        eq(watches.movieId, movieId)
+      )
+    )
+    .limit(1);
 
-    if (action === 'watch') {
-      // делаем watch идемпотентным: если уже есть — ничего не вставляем и XP не начисляем
-      const [existing] = await db
-        .select({ id: watches.id })
-        .from(watches)
-        .where(and(eq(watches.userId, user.id), eq(watches.movieId, movieId)))
-        .limit(1);
+  if (!existing) {
+    // Добавляем просмотр
+    await db.insert(watches).values({
+      userId: user.id,
+      movieId
+    });
 
-      if (!existing) {
-        await db.insert(watches).values({ userId: user.id, movieId });
-        await db
-          .update(users)
-          .set({ xp: sql`coalesce(${users.xp}, 0) + 35` })
-          .where(eq(users.id, user.id));
-      }
+    // Начисляем XP только за первый просмотр
+    await db
+      .update(users)
+      .set({
+        xp: sql`coalesce(${users.xp}, 0) + 35`
+      })
+      .where(eq(users.id, user.id));
+  }
 
-      result = { ok: true, watched: true };
+  // 🔖 Удаляем материал из «Буду смотреть»
+  await db
+    .delete(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.userId, user.id),
+        eq(bookmarks.movieId, movieId)
+      )
+    );
+
+  result = {
+    ok: true,
+    watched: true,
+    removedFromWatchlist: true
+  };
     } else if (action === 'unwatch') {
       // снять отметку "просмотрено" (тоже идемпотентно — если записи нет, просто ок)
       await db
