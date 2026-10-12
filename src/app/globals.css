@@ -1,10 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 /* ══════════════════════════════════════════════════════════════
    [STYLE:TOKENS] Refreshed 2026 palette — deeper glass, warmer accent
    ══════════════════════════════════════════════════════════════ */
-:root{--bg:#06080e;--sidebar:#0a0d14;--surface:rgba(16,19,28,.82);--surface2:rgba(22,26,38,.75);--surface3:rgba(32,37,52,.65);--border:rgba(255,255,255,.07);--border-hi:rgba(255,255,255,.13);--text:#f0eff4;--muted:#8b8fa3;--subtle:#565b6e;--accent:#a78bfa;--accent2:#d4c4ff;--accent-glow:rgba(167,139,250,.18);--gold:#f0c674;--green:#6ee7b7;--red:#fb7185;--shadow:rgba(0,0,0,.45);--glass:rgba(255,255,255,.04);--radius:14px;--radius-lg:20px;--radius-sm:10px;--font:'Inter',system-ui,-apple-system,sans-serif}
-:root[data-theme="light"]{--bg:#f5f3f9;--sidebar:#eceaf2;--surface:rgba(255,255,255,.85);--surface2:rgba(245,243,250,.8);--surface3:rgba(234,231,240,.7);--border:rgba(30,24,55,.08);--border-hi:rgba(30,24,55,.14);--text:#1a182a;--muted:#6e6a7d;--subtle:#9e99ae;--accent:#7c5cbf;--accent2:#7c5cbf;--accent-glow:rgba(124,92,191,.12);--shadow:rgba(40,22,80,.1);--glass:rgba(0,0,0,.02)}
+:root {
+  --bg: #06080e;
+  --sidebar: #0a0d14;
+  --surface: rgba(16,19,28,.82);
+  --surface2: rgba(22,26,38,.75);
+  --surface3: rgba(32,37,52,.65);
+
+  --border: rgba(255,255,255,.07);
+  --border-hi: rgba(255,255,255,.13);
+
+  --text: #f0eff4;
+  --muted: #8b8fa3;
+  --subtle: #565b6e;
+
+  --accent: #a78bfa;
+  --accent2: #d4c4ff;
+  --accent-glow: rgba(167,139,250,.18);
+
+  --gold: #f0c674;
+  --green: #6ee7b7;
+  --red: #fb7185;
+
+  --shadow: rgba(0,0,0,.45);
+  --glass: rgba(255,255,255,.04);
+
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-sm: 10px;
+
+  /* Новая типографика */
+  --font: 'Onest', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Manrope', 'Onest', system-ui, sans-serif;
+}:root[data-theme="light"]{--bg:#f5f3f9;--sidebar:#eceaf2;--surface:rgba(255,255,255,.85);--surface2:rgba(245,243,250,.8);--surface3:rgba(234,231,240,.7);--border:rgba(30,24,55,.08);--border-hi:rgba(30,24,55,.14);--text:#1a182a;--muted:#6e6a7d;--subtle:#9e99ae;--accent:#7c5cbf;--accent2:#7c5cbf;--accent-glow:rgba(124,92,191,.12);--shadow:rgba(40,22,80,.1);--glass:rgba(0,0,0,.02)}
 :root[data-theme="pink"]{--bg:#14091a;--sidebar:#190e20;--surface:rgba(38,22,46,.8);--surface2:rgba(48,28,56,.7);--surface3:rgba(65,38,72,.6);--border:rgba(255,190,230,.09);--border-hi:rgba(255,190,230,.16);--text:#fff3fa;--muted:#c4a0b5;--subtle:#8e6e84;--accent:#f472b6;--accent2:#fda4cf;--accent-glow:rgba(244,114,182,.18)}
 :root[data-theme="purple"]{--bg:#0c091a;--sidebar:#110d22;--surface:rgba(28,22,50,.8);--surface2:rgba(40,32,62,.7);--surface3:rgba(54,42,72,.6);--border:rgba(200,175,255,.09);--border-hi:rgba(200,175,255,.16);--text:#f6f0ff;--muted:#b0a4c4;--subtle:#7a6e94;--accent:#c084fc;--accent2:#e0d0ff;--accent-glow:rgba(192,132,252,.2)}
 :root[data-theme="yellow"]{--bg:#12100a;--sidebar:#18150d;--surface:rgba(38,34,20,.8);--surface2:rgba(50,44,26,.7);--surface3:rgba(66,58,34,.6);--border:rgba(255,225,155,.09);--border-hi:rgba(255,225,155,.16);--text:#fff8e6;--muted:#c4b98e;--subtle:#8e855f;--accent:#fbbf24;--accent2:#fde68a;--accent-glow:rgba(251,191,36,.18)}
@@ -1263,3 +1294,132 @@ p{margin:0}
   color: var(--red) !important;
 }
 
+/* =========================================
+   MOVIEMOVIE — TYPOGRAPHY 2026
+   Manrope + Onest
+========================================= */
+
+/* Основной текст */
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+}
+
+/* Заголовки */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+/* Крупные заголовки */
+h1 {
+  font-weight: 800;
+  letter-spacing: -0.055em;
+}
+
+/* Заголовки разделов */
+h2 {
+  letter-spacing: -0.045em;
+}
+
+/* Заголовки карточек */
+.film-card h3,
+.game-card h3,
+.community-card h3,
+.achievement-card h3 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+/* Меню */
+.nav-item {
+  font-family: var(--font);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+/* Кнопки */
+button,
+.primary-btn,
+.outline-btn {
+  font-family: var(--font);
+  letter-spacing: -0.015em;
+}
+
+/* Формы */
+input,
+textarea,
+select {
+  font-family: var(--font);
+  letter-spacing: -0.01em;
+}
+
+/* Описания */
+p {
+  font-family: var(--font);
+  line-height: 1.6;
+}
+
+/* Метаданные */
+small,
+.eyebrow,
+.nav-group-label {
+  font-family: var(--font);
+}
+
+/* Декоративные подписи */
+.eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+/* Крупные цифры */
+.quick-stat b,
+.profile-stats-grid b,
+.big-rating,
+.rating-current-value,
+.heading-count {
+  font-family: var(--font-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Названия материалов */
+.detail-intro h1 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+}
+
+/* Текст комментариев */
+.comment-content p {
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* Поля ввода */
+input::placeholder,
+textarea::placeholder {
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+/* Читаемость текста */
+.detail-description,
+.hero p,
+.community-card p {
+  line-height: 1.7;
+}
