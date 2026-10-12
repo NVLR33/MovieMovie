@@ -1460,3 +1460,48 @@ h4,
 .film-card h3 {
   font-family: var(--font-card);
 }
+
+
+/* =========================================
+   MOVIEMOVIE — FONT FIX
+   Подключение шрифтов Next.js
+========================================= */
+
+body {
+  --font: var(--font-golos);
+  --font-heading: var(--font-unbounded);
+  --font-card: var(--font-rubik);
+
+  font-family: var(--font) !important;
+}
+
+h1,
+h2,
+.hero h2,
+.page-heading h1,
+.section-heading h2,
+.detail-intro h1 {
+  font-family: var(--font-heading) !important;
+}
+
+h3,
+h4,
+h5,
+h6,
+.film-card h3 {
+  font-family: var(--font-card) !important;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: var(--font) !important;
+}
+
+.big-rating,
+.rating-current-value,
+.quick-stat b,
+.profile-stats-grid b {
+  font-family: var(--font-card) !important;
+}
