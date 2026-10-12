@@ -1223,3 +1223,43 @@ p{margin:0}
 .info-inline-separator {
   color: var(--muted);
 }
+
+
+/* =========================================
+   COMMENT EDIT / DELETE
+========================================= */
+
+.comment-edit-box {
+  margin-top: 10px;
+}
+
+.comment-edit-box textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+
+  background: var(--surface2);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+
+  resize: vertical;
+}
+
+.comment-edit-box textarea:focus {
+  border-color: var(--accent);
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.comment-delete-btn:hover {
+  color: var(--red) !important;
+}
+
