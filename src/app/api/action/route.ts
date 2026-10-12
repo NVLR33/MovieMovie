@@ -226,6 +226,127 @@ if (watchedAlready) {
         .update(users)
         .set({ xp: sql`coalesce(${users.xp}, 0) + 15` })
         .where(eq(users.id, user.id));
+
+    } else if (action === 'commentEdit') {
+      // [ACTION:COMMENT_EDIT]
+      // Пользователь может редактировать только свои комментарии
+
+      const commentId = Number(body.commentId);
+      const text = String(body.text || '').trim().slice(0, 2000);
+
+      if (!Number.isInteger(commentId) || commentId <= 0) {
+        throw Error('Некорректный комментарий');
+      }
+
+      if (text.length < 2) {
+        throw Error('Комментарий должен содержать минимум 2 символа');
+      }
+
+      const [existing] = await db
+        .select()
+        .from(comments)
+        .where(eq(comments.id, commentId))
+        .limit(1);
+
+      if (!existing) {
+        throw Error('Комментарий не найден');
+      }
+
+      if (existing.userId !== user.id) {
+        return NextResponse.json(
+          { error: 'Можно редактировать только свои комментарии' },
+          { status: 403 }
+        );
+      }
+
+      await db
+        .update(comments)
+        .set({
+          body: text,
+          editedAt: new Date()
+        })
+        .where(eq(comments.id, commentId));
+
+      result = {
+        ok: true,
+        edited: true
+      };
+
+    } else if (action === 'commentDelete') {
+      // [ACTION:COMMENT_DELETE]
+      // Автор удаляет своё, модератор — любое
+
+      const commentId = Number(body.commentId);
+      const reason = String(body.reason || '').trim().slice(0, 500);
+
+      if (!Number.isInteger(commentId) || commentId <= 0) {
+        throw Error('Некорректный комментарий');
+      }
+
+      const [existing] = await db
+        .select()
+        .from(comments)
+        .where(eq(comments.id, commentId))
+        .limit(1);
+
+      if (!existing) {
+        throw Error('Комментарий не найден');
+      }
+
+      const isOwner = existing.userId === user.id;
+      const isModerator = ['admin', 'moderator'].includes(user.role);
+
+      if (!isOwner && !isModerator) {
+        return NextResponse.json(
+          { error: 'Недостаточно прав для удаления комментария' },
+          { status: 403 }
+        );
+      }
+
+      // Находим ответы на комментарий
+      const replies = await db
+        .select({ id: comments.id })
+        .from(comments)
+        .where(eq(comments.parentId, commentId));
+
+      // Удаляем реакции с ответов
+      for (const reply of replies) {
+        await db
+          .delete(reactions)
+          .where(eq(reactions.commentId, reply.id));
+      }
+
+      // Удаляем ответы
+      await db
+        .delete(comments)
+        .where(eq(comments.parentId, commentId));
+
+      // Удаляем реакции основного комментария
+      await db
+        .delete(reactions)
+        .where(eq(reactions.commentId, commentId));
+
+      // Удаляем сам комментарий
+      await db
+        .delete(comments)
+        .where(eq(comments.id, commentId));
+
+      // Уведомляем автора, если комментарий удалил модератор
+      if (!isOwner && isModerator) {
+        await db.insert(notifications).values({
+          userId: existing.userId,
+          actorId: user.id,
+          message: `🛡️ Ваш комментарий удалён модератором${reason ? ': ' + reason : ''}`,
+          link: `/movie/${existing.movieId}`
+        });
+      }
+
+      result = {
+        ok: true,
+        deleted: true
+      };
+  
+  
     } else if (action === 'react') {
       const commentId = Number(body.commentId);
       const [comment] = await db.select().from(comments).where(eq(comments.id, commentId));
