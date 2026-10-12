@@ -11,6 +11,7 @@ import {
   comments,
   reactions,
   bookmarks,
+  favorites,
   friendships,
   notifications,
   gameScores
