@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, ne } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
 import { collabLists, collabItems } from '@/db/schema';
@@ -14,6 +14,7 @@ import {
   favorites,
   friendships,
   notifications,
+  movieSuggestions,
   gameScores
 } from '@/db/schema';
 
@@ -395,6 +396,173 @@ export async function POST(req: NextRequest) {
         message: `${user.username} рекомендует вам «${film.title}»`,
         link: `/movie/${movieId}`
       });
+
+          } else if (action === 'suggestMovie') {
+      // [ACTION:SUGGEST_MOVIE] User-submitted movie suggestion
+
+      const title = String(body.title || '').trim().slice(0, 150);
+      const year = Number(body.year);
+      const genre = String(body.genre || '').trim().slice(0, 200);
+      const category = String(body.category || '').trim().slice(0, 50);
+      const comment = String(body.comment || '').trim().slice(0, 1000);
+
+      const allowedCategories = [
+        'Фильм',
+        'Сериал',
+        'Мультфильм',
+        'Мультсериал',
+        'Аниме-сериал',
+        'Аниме-фильм'
+      ];
+
+      if (title.length < 2) {
+        throw Error('Название должно содержать минимум 2 символа');
+      }
+
+      if (!Number.isInteger(year) || year < 1888 || year > 2100) {
+        throw Error('Некорректный год выпуска');
+      }
+
+      if (!genre) {
+        throw Error('Укажите жанр');
+      }
+
+      if (!allowedCategories.includes(category)) {
+        throw Error('Выберите категорию');
+      }
+
+      // Максимум 5 активных предложений от пользователя
+      const pending = await db
+        .select({ id: movieSuggestions.id })
+        .from(movieSuggestions)
+        .where(
+          and(
+            eq(movieSuggestions.userId, user.id),
+            eq(movieSuggestions.status, 'pending')
+          )
+        );
+
+      if (pending.length >= 5) {
+        throw Error('У вас уже 5 предложений на рассмотрении');
+      }
+
+      // Проверяем, нет ли материала с таким названием и годом
+      const [existingMovie] = await db
+        .select({ id: movies.id })
+        .from(movies)
+        .where(
+          and(
+            eq(movies.title, title),
+            eq(movies.year, year)
+          )
+        )
+        .limit(1);
+
+      if (existingMovie) {
+        throw Error('Такой материал уже есть в каталоге');
+      }
+
+      // Проверяем повторные предложения
+      const [existingSuggestion] = await db
+        .select({ id: movieSuggestions.id })
+        .from(movieSuggestions)
+        .where(
+          and(
+            eq(movieSuggestions.title, title),
+            eq(movieSuggestions.year, year),
+            ne(movieSuggestions.status, 'rejected')
+          )
+        )
+        .limit(1);
+
+      if (existingSuggestion) {
+        throw Error('Этот материал уже предложен другим пользователем');
+      }
+
+      // Сохраняем предложение
+      const [suggestion] = await db
+        .insert(movieSuggestions)
+        .values({
+          userId: user.id,
+          title,
+          year,
+          genre,
+          category,
+          comment: comment || null,
+          status: 'pending'
+        })
+        .returning({ id: movieSuggestions.id });
+
+      // Уведомляем администраторов и модераторов
+      const moderators = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(
+          sql`${users.role} IN ('admin', 'moderator')`
+        );
+
+      if (moderators.length) {
+        await db.insert(notifications).values(
+          moderators.map(mod => ({
+            userId: mod.id,
+            actorId: user.id,
+            message: `🎬 ${user.username} предложил(а) добавить «${title}»`,
+            link: '/admin?tab=suggestions'
+          }))
+        );
+      }
+
+      result = {
+        ok: true,
+        suggestionId: suggestion.id
+      };
+
+          } else if (action === 'rejectSuggestion') {
+      // [ACTION:REJECT_SUGGESTION]
+
+      if (!['admin', 'moderator'].includes(user.role)) {
+        return NextResponse.json(
+          { error: 'Недостаточно прав' },
+          { status: 403 }
+        );
+      }
+
+      const suggestionId = Number(body.id);
+      const reason = String(body.reason || '').trim().slice(0, 500);
+
+      const [suggestion] = await db
+        .select()
+        .from(movieSuggestions)
+        .where(eq(movieSuggestions.id, suggestionId))
+        .limit(1);
+
+      if (!suggestion) {
+        throw Error('Предложение не найдено');
+      }
+
+      if (suggestion.status !== 'pending') {
+        throw Error('Это предложение уже рассмотрено');
+      }
+
+      await db
+        .update(movieSuggestions)
+        .set({
+          status: 'rejected',
+          reviewedBy: user.id,
+          reviewedAt: new Date(),
+          reviewReason: reason || null
+        })
+        .where(eq(movieSuggestions.id, suggestionId));
+
+      await db.insert(notifications).values({
+        userId: suggestion.userId,
+        actorId: user.id,
+        message: `❌ Ваше предложение «${suggestion.title}» отклонено${reason ? ': ' + reason : ''}`,
+        link: '/catalog'
+      });
+
+      result = { ok: true, rejected: true };
+      
     } else if (action === 'movieSave') {
       if (!['admin', 'moderator'].includes(user.role)) {
         return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
