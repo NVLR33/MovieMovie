@@ -668,8 +668,29 @@ if (watchedAlready) {
         country: String(body.country || '')
       };
 
-      if (body.id) await db.update(movies).set(input).where(eq(movies.id, Number(body.id)));
-      else await db.insert(movies).values(input);
+if (body.id) {
+  await db
+    .update(movies)
+    .set(input)
+    .where(eq(movies.id, Number(body.id)));
+
+  result = {
+    ok: true,
+    movieId: Number(body.id),
+    created: false
+  };
+} else {
+  const [createdMovie] = await db
+    .insert(movies)
+    .values(input)
+    .returning({ id: movies.id });
+
+  result = {
+    ok: true,
+    movieId: createdMovie.id,
+    created: true
+  };
+}
     } else if (action === 'questComplete') {
       const questId = String(body.questId);
       const xpReward = Number(body.xp);
