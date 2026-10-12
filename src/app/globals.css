@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&family=Rubik:wght@400;500;600;700;800;900&family=Unbounded:wght@400;500;600;700;800;900&display=swap');
+
 @import "tailwindcss";
 /* ══════════════════════════════════════════════════════════════
    [STYLE:TOKENS] Refreshed 2026 palette — deeper glass, warmer accent
@@ -1434,4 +1435,30 @@ select {
   .section-heading h2 {
     font-size: 19px;
   }
+}
+
+
+/* MOVIEMOVIE — FONT SYSTEM */
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font);
+}
+
+h1,
+h2,
+.hero h2,
+.page-heading h1,
+.section-heading h2,
+.detail-intro h1 {
+  font-family: var(--font-heading);
+}
+
+h3,
+h4,
+.film-card h3 {
+  font-family: var(--font-card);
 }
