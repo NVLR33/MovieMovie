@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&family=Rubik:wght@400;500;600;700;800;900&family=Unbounded:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 /* ══════════════════════════════════════════════════════════════
    [STYLE:TOKENS] Refreshed 2026 palette — deeper glass, warmer accent
@@ -33,8 +33,9 @@
   --radius-sm: 10px;
 
   /* Новая типографика */
-  --font: 'Onest', system-ui, -apple-system, sans-serif;
-  --font-heading: 'Manrope', 'Onest', system-ui, sans-serif;
+--font: 'Golos Text', system-ui, -apple-system, sans-serif;
+--font-heading: 'Unbounded', 'Rubik', sans-serif;
+--font-card: 'Rubik', 'Golos Text', sans-serif;
 }:root[data-theme="light"]{--bg:#f5f3f9;--sidebar:#eceaf2;--surface:rgba(255,255,255,.85);--surface2:rgba(245,243,250,.8);--surface3:rgba(234,231,240,.7);--border:rgba(30,24,55,.08);--border-hi:rgba(30,24,55,.14);--text:#1a182a;--muted:#6e6a7d;--subtle:#9e99ae;--accent:#7c5cbf;--accent2:#7c5cbf;--accent-glow:rgba(124,92,191,.12);--shadow:rgba(40,22,80,.1);--glass:rgba(0,0,0,.02)}
 :root[data-theme="pink"]{--bg:#14091a;--sidebar:#190e20;--surface:rgba(38,22,46,.8);--surface2:rgba(48,28,56,.7);--surface3:rgba(65,38,72,.6);--border:rgba(255,190,230,.09);--border-hi:rgba(255,190,230,.16);--text:#fff3fa;--muted:#c4a0b5;--subtle:#8e6e84;--accent:#f472b6;--accent2:#fda4cf;--accent-glow:rgba(244,114,182,.18)}
 :root[data-theme="purple"]{--bg:#0c091a;--sidebar:#110d22;--surface:rgba(28,22,50,.8);--surface2:rgba(40,32,62,.7);--surface3:rgba(54,42,72,.6);--border:rgba(200,175,255,.09);--border-hi:rgba(200,175,255,.16);--text:#f6f0ff;--muted:#b0a4c4;--subtle:#7a6e94;--accent:#c084fc;--accent2:#e0d0ff;--accent-glow:rgba(192,132,252,.2)}
@@ -1295,58 +1296,83 @@ p{margin:0}
 }
 
 /* =========================================
-   MOVIEMOVIE — TYPOGRAPHY 2026
-   Manrope + Onest
+   MOVIEMOVIE — CINEMATIC TYPOGRAPHY
+   Unbounded + Golos Text + Rubik
 ========================================= */
 
 /* Основной текст */
 body {
   font-family: var(--font);
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.6;
   letter-spacing: -0.01em;
 }
 
-/* Заголовки */
+/* Основные заголовки */
 h1,
-h2,
+h2 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* Заголовки среднего размера */
 h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 1.12;
-  text-wrap: balance;
-}
-
-/* Крупные заголовки */
-h1 {
-  font-weight: 800;
-  letter-spacing: -0.055em;
-}
-
-/* Заголовки разделов */
-h2 {
-  letter-spacing: -0.045em;
-}
-
-/* Заголовки карточек */
-.film-card h3,
-.game-card h3,
-.community-card h3,
-.achievement-card h3 {
-  font-family: var(--font-heading);
-  font-weight: 800;
+  font-family: var(--font-card);
+  font-weight: 700;
   letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+/* Заголовки страниц */
+.page-heading h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(25px, 2.8vw, 40px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Название на странице материала */
+.detail-intro h1 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1.18;
+}
+
+/* Главный баннер */
+.hero h2 {
+  font-family: var(--font-heading);
+  font-size: clamp(28px, 3.5vw, 48px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+/* Названия разделов */
+.section-heading h2 {
+  font-family: var(--font-heading);
+  font-size: clamp(18px, 2vw, 25px);
+  font-weight: 700;
+}
+
+/* Карточки фильмов */
+.film-card h3 {
+  font-family: var(--font-card);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 /* Меню */
 .nav-item {
   font-family: var(--font);
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 /* Кнопки */
@@ -1354,72 +1380,58 @@ button,
 .primary-btn,
 .outline-btn {
   font-family: var(--font);
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-/* Формы */
+/* Поля ввода */
 input,
 textarea,
 select {
   font-family: var(--font);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
-/* Описания */
-p {
-  font-family: var(--font);
-  line-height: 1.6;
-}
-
-/* Метаданные */
-small,
-.eyebrow,
-.nav-group-label {
-  font-family: var(--font);
-}
-
-/* Декоративные подписи */
+/* Подписи */
 .eyebrow {
-  font-size: 10px;
+  font-family: var(--font-card);
   font-weight: 800;
-  letter-spacing: 2px;
+  font-size: 10px;
+  letter-spacing: 1.6px;
 }
 
-/* Крупные цифры */
-.quick-stat b,
-.profile-stats-grid b,
+/* Рейтинг и статистика */
 .big-rating,
 .rating-current-value,
-.heading-count {
-  font-family: var(--font-heading);
+.quick-stat b,
+.profile-stats-grid b {
+  font-family: var(--font-card);
   font-variant-numeric: tabular-nums;
 }
 
-/* Названия материалов */
-.detail-intro h1 {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  letter-spacing: -0.055em;
-  overflow-wrap: anywhere;
-}
-
-/* Текст комментариев */
-.comment-content p {
-  font-family: var(--font);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-/* Поля ввода */
-input::placeholder,
-textarea::placeholder {
-  font-weight: 400;
-  opacity: 0.75;
-}
-
-/* Читаемость текста */
+/* Описания */
 .detail-description,
 .hero p,
-.community-card p {
-  line-height: 1.7;
+.comment-content p {
+  font-family: var(--font);
+  line-height: 1.75;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 520px) {
+  .page-heading h1 {
+    font-size: 25px;
+  }
+
+  .detail-intro h1 {
+    font-size: 26px;
+  }
+
+  .hero h2 {
+    font-size: 30px;
+  }
+
+  .section-heading h2 {
+    font-size: 19px;
+  }
 }
