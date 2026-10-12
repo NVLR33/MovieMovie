@@ -1183,7 +1183,10 @@ p{margin:0}
 }
 
 
-/* [STYLE:INFO_INLINE_LINKS] Кликабельные слова вместо тегов */
+/* =========================================
+   INFO INLINE LINKS
+   Кликабельные слова вместо кнопок
+========================================= */
 
 .info-inline-links {
   display: inline;
@@ -1194,10 +1197,9 @@ p{margin:0}
   display: inline;
   padding: 0;
   margin: 0;
-
-  background: none;
   border: none;
   border-radius: 0;
+  background: transparent;
 
   color: var(--text);
   font-size: 13px;
@@ -1214,7 +1216,6 @@ p{margin:0}
 }
 
 .info-inline-link:focus-visible {
-  color: var(--accent);
   outline: 1px solid var(--accent);
   outline-offset: 3px;
 }
