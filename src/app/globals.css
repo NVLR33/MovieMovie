@@ -2650,3 +2650,145 @@ select:focus {
     transition: none !important;
   }
 }
+
+/* ==========================================
+   MOVIEMOVIE — MICRO INTERACTIONS
+========================================== */
+
+/* Уведомления */
+
+.toast {
+  animation: mm-toast-enter 0.35s ease-out both;
+}
+
+@keyframes mm-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Выпадающие результаты поиска */
+
+.hot-search-drop {
+  transform-origin: top center;
+  animation: mm-search-enter 0.2s ease-out both;
+}
+
+@keyframes mm-search-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Элементы поиска */
+
+.hot-search-item {
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.hot-search-item:hover {
+  background: var(--accent-glow);
+  transform: translateX(3px);
+}
+
+/* Фильтры */
+
+.filter-bar select {
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.filter-bar select:hover {
+  border-color: var(--accent);
+}
+
+/* Вкладки */
+
+.category-tabs button,
+.leader-filters button,
+.stats-tabs button {
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.category-tabs button:hover,
+.leader-filters button:hover,
+.stats-tabs button:hover {
+  transform: translateY(-2px);
+}
+
+/* Активные вкладки */
+
+.category-tabs button.selected,
+.leader-filters button.selected,
+.stats-tabs button.active {
+  box-shadow: 0 3px 12px var(--accent-glow);
+}
+
+/* Поля комментариев */
+
+.comment-compose textarea {
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.comment-compose textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Пустые состояния */
+
+.empty-state {
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease;
+}
+
+.empty-state:hover {
+  border-color: var(--border-hi);
+}
+
+/* Адаптация */
+
+@media (hover: none) {
+  .hot-search-item:hover,
+  .category-tabs button:hover,
+  .leader-filters button:hover,
+  .stats-tabs button:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .hot-search-drop {
+    animation: none !important;
+  }
+
+  .hot-search-item,
+  .category-tabs button,
+  .leader-filters button,
+  .stats-tabs button {
+    transition: none !important;
+  }
+}
