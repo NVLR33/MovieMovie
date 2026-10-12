@@ -1538,15 +1538,23 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
           </div>
 
           <div className="detail-actions">
-            <button
-              className={isWatched ? 'outline-btn watched-done' : 'primary-btn'}
-              onClick={() => requireAuth(() => action(
-                { action: isWatched ? 'unwatch' : 'watch', movieId: film.id },
-                isWatched ? 'Просмотр убран' : 'Просмотр добавлен'
-              ))}
-            >
-              <CheckCircle2 size={17} /> {isWatched ? 'Просмотрено' : 'Отметить просмотренным'}
-            </button>
+<button
+  className={isWatched ? 'outline-btn watched-done' : 'primary-btn'}
+  onClick={() =>
+    requireAuth(() =>
+      action(
+        {
+          action: isWatched ? 'unwatch' : 'watch',
+          movieId: film.id
+        },
+        isWatched ? 'Просмотр убран' : 'Просмотр добавлен'
+      )
+    )
+  }
+>
+  <CheckCircle2 size={17} />
+  {isWatched ? 'Просмотрено' : 'Отметить просмотренным'}
+</button>
 
             <button
               className="outline-btn"
