@@ -1505,3 +1505,289 @@ select {
 .profile-stats-grid b {
   font-family: var(--font-card) !important;
 }
+
+
+/* ==================================================
+   MOVIEMOVIE — VISUAL FX 2026
+   Cinematic atmosphere & premium interactions
+================================================== */
+
+/* Плавность интерфейса */
+
+:root {
+  --fx-speed: 0.3s;
+  --fx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* =========================================
+   ЖИВОЙ ФОН
+========================================= */
+
+body {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Декоративные световые области */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      ellipse 45% 35% at 85% 10%,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 15% 75%,
+      rgba(59, 130, 246, 0.05),
+      transparent 75%
+    );
+
+  animation: ambient-shift 18s ease-in-out infinite alternate;
+}
+
+@keyframes ambient-shift {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.65;
+  }
+
+  50% {
+    transform: translate3d(-2%, 2%, 0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate3d(2%, -2%, 0);
+    opacity: 0.75;
+  }
+}
+
+/* =========================================
+   КАРТОЧКИ МАТЕРИАЛОВ
+========================================= */
+
+.film-card {
+  position: relative;
+  isolation: isolate;
+
+  transition:
+    transform 0.45s var(--fx-ease),
+    border-color 0.3s ease,
+    box-shadow 0.45s ease;
+}
+
+.film-card:hover {
+  transform: translateY(-7px);
+
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.35),
+    0 0 25px color-mix(
+      in srgb,
+      var(--rating-color) 14%,
+      transparent
+    );
+
+  border-color: var(--rating-color);
+}
+
+/* Плавное движение постера */
+
+.film-card .poster-wrap img {
+  transition:
+    transform 0.7s var(--fx-ease),
+    filter 0.5s ease;
+}
+
+.film-card:hover .poster-wrap img {
+  transform: scale(1.09);
+  filter: saturate(1.12) contrast(1.04);
+}
+
+/* Световой блик */
+
+.film-card .poster-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(
+    115deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.12) 45%,
+    transparent 65%
+  );
+
+  transform: translateX(-150%);
+  transition: transform 0.9s ease;
+
+  z-index: 2;
+  pointer-events: none;
+}
+
+.film-card:hover .poster-wrap::before {
+  transform: translateX(150%);
+}
+
+/* =========================================
+   КНОПКИ
+========================================= */
+
+.primary-btn,
+.outline-btn {
+  transition:
+    transform 0.25s var(--fx-ease),
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 8px 25px var(--accent-glow),
+    0 0 20px var(--accent-glow);
+}
+
+.primary-btn:active,
+.outline-btn:active {
+  transform: scale(0.96);
+}
+
+/* Небольшое движение иконок */
+
+.primary-btn svg,
+.outline-btn svg {
+  transition: transform 0.25s ease;
+}
+
+.primary-btn:hover svg,
+.outline-btn:hover svg {
+  transform: translateX(2px);
+}
+
+/* =========================================
+   МЕНЮ
+========================================= */
+
+.nav-item {
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s var(--fx-ease);
+}
+
+.nav-item:hover {
+  transform: translateX(3px);
+}
+
+/* Активный пункт */
+
+.nav-item.active {
+  box-shadow:
+    inset 0 0 20px var(--accent-glow);
+}
+
+/* =========================================
+   ЗАГОЛОВКИ РАЗДЕЛОВ
+========================================= */
+
+.section-heading h2 {
+  position: relative;
+}
+
+/* Декоративная линия */
+
+.section-heading h2::after {
+  content: '';
+  display: block;
+
+  width: 32px;
+  height: 3px;
+
+  margin-top: 9px;
+  border-radius: 10px;
+
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    transparent
+  );
+
+  transition: width 0.4s ease;
+}
+
+.home-section:hover .section-heading h2::after {
+  width: 70px;
+}
+
+/* =========================================
+   МОДАЛЬНЫЕ ОКНА
+========================================= */
+
+.glass-modal {
+  box-shadow:
+    0 35px 100px rgba(0, 0, 0, 0.45),
+    0 0 35px var(--accent-glow),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Поля ввода */
+
+input,
+textarea,
+select {
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+
+  box-shadow:
+    0 0 0 3px var(--accent-glow);
+}
+
+/* =========================================
+   МОБИЛЬНАЯ ОПТИМИЗАЦИЯ
+========================================= */
+
+@media (max-width: 760px) {
+  .film-card:hover {
+    transform: none;
+  }
+
+  .nav-item:hover {
+    transform: none;
+  }
+
+  body::before {
+    animation: none;
+  }
+}
+
+/* Уважение системных настроек анимаций */
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  .film-card .poster-wrap::before {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .film-card:hover,
+  .primary-btn:hover,
+  .outline-btn:hover {
+    transform: none;
+  }
+}
