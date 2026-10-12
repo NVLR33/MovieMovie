@@ -385,17 +385,19 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const active = filmId ? 'movie' : viewUserId ? 'viewuser' : compareId ? 'compare' : roomId ? 'room' : path?.split('/')[1] || 'home';
   const openChat = (peerId: number) => { setChatPeerId(peerId); setChatOpen(true); };
 
-  const nav = [
-    { id: 'home', label: words.home, icon: Home, url: '/' },
-    { id: 'catalog', label: words.catalog, icon: Compass, url: '/catalog' },
-    { id: 'watchlist', label: words.watchlist, icon: Bookmark, url: '/watchlist' },
-    { id: 'collab', label: en ? 'Lists' : 'Подборки', icon: Layers3, url: '/collab' },
-    { id: 'leaderboard', label: words.leaderboard, icon: BarChart3, url: '/leaderboard' },
-    { id: 'achievements', label: words.achievements, icon: Trophy, url: '/achievements' },
-    { id: 'challenges', label: en ? 'Challenges' : 'Челленджи', icon: Flame, url: '/challenges' },
-    { id: 'games', label: words.games, icon: Gamepad2, url: '/games' },
-    { id: 'watchroom', label: en ? 'Watch room' : 'Кинозал', icon: Tv2, url: '/watchroom' }
-  ];
+const nav = [
+  { id: 'home', label: words.home, icon: Home, url: '/' },
+  { id: 'catalog', label: words.catalog, icon: Compass, url: '/catalog' },
+  { id: 'watchlist', label: words.watchlist, icon: Bookmark, url: '/watchlist' },
+  { id: 'favorites', label: en ? 'Favorites' : 'Любимое', icon: Heart, url: '/favorites' },
+  { id: 'collab', label: en ? 'Lists' : 'Подборки', icon: Layers3, url: '/collab' },
+
+  { id: 'leaderboard', label: words.leaderboard, icon: BarChart3, url: '/leaderboard' },
+  { id: 'achievements', label: words.achievements, icon: Trophy, url: '/achievements' },
+  { id: 'challenges', label: en ? 'Challenges' : 'Челленджи', icon: Flame, url: '/challenges' },
+  { id: 'games', label: words.games, icon: Gamepad2, url: '/games' },
+  { id: 'watchroom', label: en ? 'Watch room' : 'Кинозал', icon: Tv2, url: '/watchroom' }
+];
 
   const startRoulette = () => {
     const pool = rouletteCategory === 'Все' ? data.films : data.films.filter(f => f.category === rouletteCategory);
