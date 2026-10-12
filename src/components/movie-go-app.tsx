@@ -49,12 +49,43 @@ type ProfileData = {
   compatibility?: number;
 };
 type Data = {
-  films: FilmType[]; user: User | null; people: Person[]; watches: Watch[]; ratings: Rating[]; comments: Comment[];
-  bookmarks: { movieId: number; }[]; favorites: { movieId: number; }[]; favoriteIds: number[]; favoriteCounts: Record<number, number>;
-  leaderboard: Leader[]; friendsActivity: FriendActivity[]; unreadMessages: number; lists: any[]; club: any;
-  onThisDay: { text: string; icon: string; }[]; cineDay: { label: string; filter?: string; icon: string; };
-  monthlySummary: { watches: number; minutes: number; topGenre: string; avgRating: string; achievements: number; } | null;
-  challenges: any[]; season: any;
+  films: FilmType[];
+  user: User | null;
+  people: Person[];
+  watches: Watch[];
+  ratings: Rating[];
+  comments: Comment[];
+
+  bookmarks: { movieId: number }[];
+
+  // ❤️ Любимое
+  favorites: { movieId: number }[];
+  favoriteIds: number[];
+  favoriteCounts: Record<number, number>;
+
+  friends: Friend[];
+  notifications: Notice[];
+  scores: { game: string; score: number }[];
+
+  leaderboard: Leader[];
+  friendsActivity: FriendActivity[];
+  unreadMessages: number;
+  lists: any[];
+  club: any;
+
+  onThisDay: { text: string; icon: string }[];
+  cineDay: { label: string; filter?: string; icon: string };
+
+  monthlySummary: {
+    watches: number;
+    minutes: number;
+    topGenre: string;
+    avgRating: string;
+    achievements: number;
+  } | null;
+
+  challenges: any[];
+  season: any;
 };
 
 // --- Constants & Helpers ---
