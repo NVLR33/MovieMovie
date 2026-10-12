@@ -8,7 +8,8 @@ import {
   challenges,
   challengeProgress,
   messages,
-  favorites
+  favorites,
+  movieSuggestions
 } from '@/db/schema';
 
 import {
@@ -662,6 +663,28 @@ export async function GET() {
     const cineDay = getCineDay();
     const season = getCurrentSeason();
 
+    // [DATA:MOVIE_SUGGESTIONS]
+// Предложения доступны только администраторам и модераторам
+
+const canModerate = !!me &&
+  ['admin', 'moderator'].includes(me.role);
+
+const suggestions = canModerate
+  ? await db
+      .select()
+      .from(movieSuggestions)
+      .orderBy(desc(movieSuggestions.createdAt))
+  : [];
+
+const suggestionsWithAuthors = suggestions.map(s => ({
+  ...s,
+  author: names[s.userId] || null
+}));
+
+const pendingSuggestionsCount = suggestions.filter(
+  s => s.status === 'pending'
+).length;
+    
     // [DATA:BOOKMARKS]
 
     const myBookmarks = me
@@ -724,6 +747,12 @@ export async function GET() {
       favoriteIds,
       favoriteCounts,
 
+
+      
+      // 🎬 Предложения материалов
+suggestions: suggestionsWithAuthors,
+pendingSuggestionsCount,
+
       friends: me
         ? allFriends.filter(
             f =>
@@ -732,6 +761,35 @@ export async function GET() {
           )
         : [],
 
+{
+  "suggestions": [
+    {
+      "id": 1,
+      "title": "Интерстеллар",
+      "year": 2014,
+      "genre": "Фантастика",
+      "category": "Фильм",
+      "comment": "Очень хотелось бы увидеть в каталоге",
+      "status": "pending",
+      "author": {
+        "id": 5,
+        "username": "user123"
+      }
+    }
+  ],
+  "pendingSuggestionsCount": 1
+}
+
+{
+  "suggestions": [],
+  "pendingSuggestionsCount": 0
+}
+
+
+
+
+
+      
       notifications: me
         ? allNotifications.filter(
             n => n.userId === me.id
