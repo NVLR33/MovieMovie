@@ -1181,3 +1181,44 @@ p{margin:0}
   left: auto;
   z-index: 5;
 }
+
+
+/* [STYLE:INFO_INLINE_LINKS] Кликабельные слова вместо тегов */
+
+.info-inline-links {
+  display: inline;
+  line-height: 1.6;
+}
+
+.info-inline-link {
+  display: inline;
+  padding: 0;
+  margin: 0;
+
+  background: none;
+  border: none;
+  border-radius: 0;
+
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.info-inline-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.info-inline-link:focus-visible {
+  color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.info-inline-separator {
+  color: var(--muted);
+}
