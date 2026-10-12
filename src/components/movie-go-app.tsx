@@ -133,8 +133,12 @@ function titleFor(user: User | null, watches: number) {
   return 'Начинающий зритель';
 }
 
+// --- WatchedIds global context ---
+const WatchedIdsContext = createContext<Set<number>>(new Set<number>());
+const useWatchedIds = () => useContext(WatchedIdsContext);
+
 // --- FavoriteIds global context ---
-const FavoriteIdsContext = createContext<Set<number>>(new Set());
+const FavoriteIdsContext = createContext<Set<number>>(new Set<number>());
 const useFavoriteIds = () => useContext(FavoriteIdsContext);
 
 function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: string | null; size?: number; frame?: string | null; }) {
