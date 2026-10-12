@@ -2192,390 +2192,115 @@ select:focus {
 }
 
 
-/* ==================================================
-   MOVIEMOVIE — PROFILE & ACHIEVEMENTS FX
-   Cinematic profile experience
-================================================== */
+/* ==========================================
+   MOVIEMOVIE — PROFILE FX V2
+   Lightweight animations
+========================================== */
 
-/* =========================================
-   ШАПКА ПРОФИЛЯ
-========================================= */
+/* Шапка профиля */
 
 .profile-cover {
-  isolation: isolate;
-
-  transition:
-    box-shadow 0.5s ease,
-    border-color 0.5s ease;
+  position: relative;
+  transition: box-shadow 0.35s ease;
 }
 
-/* Атмосферный свет */
-
-.profile-cover::before {
-  content: '';
-  position: absolute;
-  inset: -30%;
-
-  background:
-    radial-gradient(
-      ellipse 35% 45% at 75% 35%,
-      rgba(167, 139, 250, 0.12),
-      transparent 75%
-    );
-
-  pointer-events: none;
-  z-index: 0;
-
-  animation: profile-ambient 12s ease-in-out infinite alternate;
+.profile-cover:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
-@keyframes profile-ambient {
-  0% {
-    transform: translate(-2%, 0);
-    opacity: 0.5;
-  }
-
-  100% {
-    transform: translate(2%, -3%);
-    opacity: 1;
-  }
-}
-
-/* Контент поверх эффектов */
-
-.profile-cover-content {
-  position: absolute;
-  z-index: 3;
-}
-
-/* =========================================
-   АВАТАР
-========================================= */
+/* Аватар */
 
 .profile-cover .avatar {
-  transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.4s ease;
+  transition: transform 0.3s ease, filter 0.3s ease;
 }
 
 .profile-cover .avatar:hover {
-  transform: scale(1.06);
-
+  transform: scale(1.05);
   filter: brightness(1.08);
 }
 
-/* Мягкое свечение вокруг аватара */
-
-.profile-cover .avatar-edit {
-  position: relative;
-}
-
-.profile-cover .avatar-edit::before {
-  content: '';
-  position: absolute;
-  inset: -8px;
-
-  border-radius: 50%;
-
-  background:
-    radial-gradient(
-      circle,
-      var(--accent-glow),
-      transparent 70%
-    );
-
-  opacity: 0;
-  transition: opacity 0.4s ease;
-
-  pointer-events: none;
-}
-
-.profile-cover .avatar-edit:hover::before {
-  opacity: 1;
-}
-
-/* =========================================
-   УРОВЕНЬ XP
-========================================= */
+/* Уровень XP */
 
 .level-card {
-  position: relative;
-  overflow: hidden;
-
-  transition:
-    transform 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-.level-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--accent);
-
-  box-shadow:
-    0 12px 35px var(--accent-glow);
-}
-
-/* Декоративное свечение */
-
-.level-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-
-  background:
-    linear-gradient(
-      115deg,
-      transparent 20%,
-      rgba(255, 255, 255, 0.035) 45%,
-      transparent 70%
-    );
-
-  transform: translateX(-120%);
-  transition: transform 1s ease;
-
-  pointer-events: none;
-}
-
-.level-card:hover::before {
-  transform: translateX(120%);
-}
-
-/* Прогресс XP */
-
-.level-track {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Блик внутри полоски */
-
-.level-track i {
-  position: relative;
-  overflow: hidden;
-}
-
-.level-track i::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.45),
-      transparent
-    );
-
-  transform: translateX(-100%);
-
-  animation: xp-shimmer 3s linear infinite;
-}
-
-@keyframes xp-shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-/* =========================================
-   КАРТОЧКИ СТАТИСТИКИ
-========================================= */
-
-.profile-mini-stat,
-.profile-stats-grid > div {
-  position: relative;
-  overflow: hidden;
-
   transition:
     transform 0.3s ease,
     border-color 0.3s ease,
     box-shadow 0.3s ease;
 }
 
-.profile-mini-stat:hover,
-.profile-stats-grid > div:hover {
-  transform: translateY(-4px);
-
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.18);
+.level-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 30px var(--accent-glow);
 }
 
-/* Подсветка иконок */
+/* Полоска опыта */
 
-.profile-mini-stat svg,
-.profile-stats-grid .stat-icon {
+.level-track i {
+  transition: width 0.6s ease;
+}
+
+/* Карточки статистики */
+
+.profile-mini-stat,
+.profile-stats-grid > div {
   transition:
     transform 0.3s ease,
-    filter 0.3s ease;
+    box-shadow 0.3s ease;
 }
 
-.profile-mini-stat:hover svg,
-.profile-stats-grid > div:hover .stat-icon {
-  transform: scale(1.12);
-
-  filter: drop-shadow(
-    0 0 8px var(--accent-glow)
-  );
+.profile-mini-stat:hover,
+.profile-stats-grid > div:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* =========================================
-   ВИДЖЕТЫ ПРОФИЛЯ
-========================================= */
+/* Виджеты профиля */
 
 .profile-tile {
-  position: relative;
-
   transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s ease,
     border-color 0.3s ease,
-    box-shadow 0.4s ease;
+    box-shadow 0.3s ease;
 }
-
-.profile-tile:hover {
-  border-color: var(--border-hi);
-
-  box-shadow:
-    0 15px 40px rgba(0, 0, 0, 0.16);
-}
-
-/* Небольшой подъём виджета */
 
 .profile-tile:hover {
   transform: translateY(-3px);
+  border-color: var(--border-hi);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.18);
 }
 
-/* Декоративная линия */
+/* Достижения */
 
-.profile-tile::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 18px;
-  right: 18px;
-
-  height: 1px;
-
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--accent),
-    transparent
-  );
-
-  opacity: 0;
-  transition: opacity 0.4s ease;
-
-  pointer-events: none;
+.achievement-card.unlocked {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
-.profile-tile:hover::before {
-  opacity: 0.65;
-}
-
-/* =========================================
-   ДОСТИЖЕНИЯ
-========================================= */
-
-.achievement-card {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Световой перелив */
-
-.achievement-card.unlocked::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-
-  background: linear-gradient(
-    115deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.07) 48%,
-    transparent 66%
-  );
-
-  transform: translateX(-150%);
-  transition: transform 0.9s ease;
-
-  pointer-events: none;
-}
-
-.achievement-card.unlocked:hover::before {
-  transform: translateX(150%);
+.achievement-card.unlocked:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px var(--accent-glow);
 }
 
 /* Иконки достижений */
 
 .achievement-icon {
-  transition:
-    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.35s ease;
+  transition: transform 0.3s ease;
 }
 
 .achievement-card.unlocked:hover .achievement-icon {
-  transform: scale(1.12) rotate(-4deg);
-
-  filter: drop-shadow(
-    0 0 12px var(--accent-glow)
-  );
+  transform: scale(1.1) rotate(-3deg);
 }
 
-/* Полностью открытые достижения */
-
-.achievement-card.maxed {
-  box-shadow:
-    0 0 20px rgba(240, 198, 116, 0.08);
-}
-
-.achievement-card.maxed:hover {
-  box-shadow:
-    0 0 30px rgba(240, 198, 116, 0.2);
-}
-
-/* =========================================
-   ЖАНРОВАЯ СТАТИСТИКА
-========================================= */
-
-.category-bar .bar-track,
-.top-genre-item .bar-track {
-  overflow: hidden;
-}
-
-/* Подсветка полосок */
+/* Жанровые полоски */
 
 .category-bar .bar-track i,
 .top-genre-item .bar-track i {
-  position: relative;
-  overflow: hidden;
+  transition: width 0.5s ease;
 }
 
-.category-bar .bar-track i::after,
-.top-genre-item .bar-track i::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
-
-  transform: translateX(-100%);
-  animation: xp-shimmer 4s linear infinite;
-}
-
-/* =========================================
-   МОБИЛЬНАЯ ОПТИМИЗАЦИЯ
-========================================= */
+/* Мобильная оптимизация */
 
 @media (max-width: 760px) {
   .profile-tile:hover,
@@ -2584,28 +2309,17 @@ select:focus {
   .profile-stats-grid > div:hover {
     transform: none;
   }
-
-  .profile-cover::before {
-    animation: none;
-  }
 }
 
-/* =========================================
-   REDUCED MOTION
-========================================= */
+/* Уменьшение анимаций */
 
 @media (prefers-reduced-motion: reduce) {
-  .profile-cover::before,
-  .level-track i::after,
-  .category-bar .bar-track i::after,
-  .top-genre-item .bar-track i::after {
-    animation: none !important;
-  }
-
-  .profile-tile:hover,
-  .level-card:hover,
-  .profile-mini-stat:hover,
-  .profile-stats-grid > div:hover {
-    transform: none !important;
+  .profile-cover .avatar,
+  .level-card,
+  .profile-mini-stat,
+  .profile-stats-grid > div,
+  .profile-tile,
+  .achievement-card.unlocked {
+    transition: none !important;
   }
 }
