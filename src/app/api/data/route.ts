@@ -3,7 +3,7 @@ import { eq, or, and } from 'drizzle-orm';
 import { getUser, publicUser } from '@/lib/auth';
 import { collabLists, collabItems, movieClub, challenges, challengeProgress } from '@/db/schema';
 import { getOverview, getTitleMinutes, db, users, watches, ratings, comments, bookmarks, friendships, notifications, gameScores, desc } from '@/lib/data';
-import { messages } from '@/db/schema';
+import { messages, favorites } from '@/db/schema';
 import type { Film } from '@/lib/data';
 
 // [API:DATA] Live application state plus temporal features.
