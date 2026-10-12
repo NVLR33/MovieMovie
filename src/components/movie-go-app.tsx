@@ -428,7 +428,7 @@ return (
           <div className="side-scroll">
             <div className="nav-group-label">{en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ'}</div>
             <nav className="nav-list">
-              {nav.slice(0, 4).map(n => (
+              {nav.slice(0, 5).map(n => (
                 <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
                   <n.icon size={19} />
                   <span>{n.label}</span>
@@ -439,7 +439,7 @@ return (
 
             <div className="nav-group-label section-gap">{en ? 'COMMUNITY' : 'СООБЩЕСТВО'}</div>
             <nav className="nav-list">
-              {nav.slice(4).map(n => (
+              {nav.slice(5).map(n => (
                 <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
                   <n.icon size={19} />
                   <span>{n.label}</span>
