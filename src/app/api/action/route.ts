@@ -138,9 +138,6 @@ export async function POST(req: NextRequest) {
       result = { ok: true, favorited: false };
 
     } else if (action === 'comment') {
-
-      result = { ok: true, saved: !saved };
-    } else if (action === 'comment') {
       const text = String(body.text || '').trim().slice(0, 2000);
       if (text.length < 2) throw Error('Напишите комментарий');
 
