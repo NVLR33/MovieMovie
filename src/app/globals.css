@@ -2323,3 +2323,171 @@ select:focus {
     transition: none !important;
   }
 }
+
+
+/* ==========================================
+   MOVIEMOVIE — HOME & NAVIGATION FX
+   Lightweight cinematic interactions
+========================================== */
+
+/* Главный баннер */
+
+.hero {
+  transition:
+    box-shadow 0.4s ease,
+    border-color 0.4s ease,
+    background-size 0.6s ease;
+}
+
+.hero:hover {
+  box-shadow:
+    0 22px 65px rgba(0, 0, 0, 0.35),
+    0 0 25px var(--accent-glow);
+
+  border-color: var(--border-hi);
+}
+
+/* Заголовок баннера */
+
+.hero h2 {
+  transition:
+    transform 0.3s ease,
+    text-shadow 0.3s ease;
+}
+
+.hero:hover h2 {
+  transform: translateY(-2px);
+  text-shadow: 0 5px 25px var(--accent-glow);
+}
+
+/* Поиск */
+
+.top-search,
+.catalog-search {
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease;
+}
+
+.top-search:focus-within,
+.catalog-search:focus-within {
+  border-color: var(--accent);
+
+  box-shadow:
+    0 0 0 3px var(--accent-glow),
+    0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* Боковое меню */
+
+.nav-item {
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.nav-item:hover {
+  transform: translateX(3px);
+}
+
+.nav-item.active {
+  box-shadow: inset 0 0 15px var(--accent-glow);
+}
+
+/* Иконки меню */
+
+.nav-item svg {
+  transition: transform 0.25s ease;
+}
+
+.nav-item:hover svg {
+  transform: scale(1.12);
+}
+
+/* Уведомления */
+
+.header-pop {
+  animation: nav-pop-in 0.25s ease-out;
+  transform-origin: top right;
+}
+
+@keyframes nav-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Карточки статистики */
+
+.quick-stat {
+  transition: background 0.25s ease;
+  border-radius: 8px;
+}
+
+.quick-stat:hover {
+  background: var(--glass);
+}
+
+/* Иконки статистики */
+
+.quick-icon {
+  transition: transform 0.3s ease;
+}
+
+.quick-stat:hover .quick-icon {
+  transform: scale(1.08);
+}
+
+/* Заголовки разделов */
+
+.section-heading h2 {
+  transition: color 0.3s ease;
+}
+
+.home-section:hover .section-heading h2 {
+  color: var(--accent2);
+}
+
+/* Кнопки переходов */
+
+.text-link svg {
+  transition: transform 0.25s ease;
+}
+
+.text-link:hover svg {
+  transform: translate(2px, -2px);
+}
+
+/* Мобильная версия */
+
+@media (max-width: 760px) {
+  .hero:hover h2,
+  .nav-item:hover,
+  .nav-item:hover svg {
+    transform: none;
+  }
+}
+
+/* Настройки доступности */
+
+@media (prefers-reduced-motion: reduce) {
+  .header-pop {
+    animation: none;
+  }
+
+  .hero,
+  .hero h2,
+  .nav-item,
+  .nav-item svg,
+  .quick-icon {
+    transition: none;
+  }
+}
