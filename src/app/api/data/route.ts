@@ -72,7 +72,7 @@ function getCurrentSeason():{name:string;icon:string;missions:{desc:string;filte
 export async function GET(){
   try {
     const films=await getOverview(); const me=await getUser();
-    const [people,allWatches,allRatings,allComments,allBookmarks,allFriends,allNotifications,allScores,allLists,allCollabItems,activeClubs,allChallenges,allChallengeProgress]=await Promise.all([
+    const [people,allWatches,allRatings,allComments,allBookmarks,allFavorites,allFriends,allNotifications,allScores,allLists,allCollabItems,activeClubs,allChallenges,allChallengeProgress]=await Promise.all([
       db.select().from(users),db.select().from(watches).orderBy(desc(watches.watchedAt)),db.select().from(ratings),db.select().from(comments).orderBy(desc(comments.createdAt)),db.select().from(bookmarks),db.select().from(friendships),db.select().from(notifications).orderBy(desc(notifications.createdAt)),db.select().from(gameScores),
       db.select().from(collabLists).orderBy(desc(collabLists.createdAt)),
       db.select().from(collabItems),
