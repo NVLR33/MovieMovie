@@ -370,7 +370,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     achievements: en ? 'Achievements' : 'Достижения',
     games: en ? 'Mini games' : 'Мини-игры',
     friends: en ? 'Friends' : 'Друзья',
-    watchlist: en ? 'My list' : 'Мой список',
+    watchlist: en ? 'Watch later' : 'Буду смотреть',
     profile: en ? 'My profile' : 'Мой профиль',
     admin: en ? 'Admin panel' : 'Админ-панель',
     search: en ? 'Search titles, genres, directors...' : 'Поиск фильмов, жанров, режиссёров...',
@@ -588,7 +588,7 @@ return (
                     <strong>{data.user?.username}</strong>
                     <small>{data.user?.email}</small>
                     <button onClick={() => go('/profile')}><Users size={16} /> Мой профиль</button>
-                    <button onClick={() => go('/watchlist')}><Bookmark size={16} /> Мой список</button>
+                    <button onClick={() => go('/watchlist')}><Bookmark size={16} /> Буду смотреть</button>
                     <button onClick={async () => {
                       await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
                       await refresh();
@@ -1344,8 +1344,19 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               <CheckCircle2 size={17} /> {isWatched ? 'Просмотрено' : 'Отметить просмотренным'}
             </button>
 
-            <button className="outline-btn" onClick={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из списка' : 'Добавлено в список'))}>
-              <Bookmark size={17} fill={saved ? 'currentColor' : 'none'} />{saved ? 'В списке' : 'В мой список'}
+            <button
+              className="outline-btn"
+              onClick={() =>
+                requireAuth(() =>
+                  action(
+                    { action: 'bookmark', movieId: film.id },
+                    saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'
+                  )
+                )
+              }
+            >
+              <Bookmark size={17} fill={saved ? 'currentColor' : 'none'} />
+              {saved ? 'В желаемом' : 'В желаемое'}
             </button>
 
             <button
@@ -1933,16 +1944,31 @@ function FavoritesPage({
 
 
 function Watchlist({ data, go, auth }: { data: Data; go: (s: string) => void; auth: () => void; }) {
-  if (!data.user) return <Gate title="Сохраняй то, что вдохновляет" description="Все истории, которые ты хочешь увидеть, в одном месте." auth={auth} />;
+  if (!data.user) return <Gate title="Буду смотреть" description="Войди, чтобы сохранять материалы, которые хочешь посмотреть позже." auth={auth} />;
   const saved = data.films.filter(f => data.bookmarks.some(b => b.movieId === f.id));
   return (
     <>
       <div className="page-heading">
-        <div><span className="eyebrow">ТВОЯ ПОДБОРКА</span><h1>Мой <em>список.</em></h1><p>Истории, которые ты отложил на потом.</p></div>
-        <div className="heading-count"><Bookmark size={18} />{saved.length} сохранено</div>
+        <div>
+          <span className="eyebrow">ЗАПЛАНИРОВАНО К ПРОСМОТРУ</span>
+          <h1>Буду <em>смотреть.</em></h1>
+          <p>Истории, которые ты добавил в желаемое и хочешь посмотреть позже.</p>
+        </div>
+        
+        <div className="heading-count">
+          <Bookmark size={18} />
+          {saved.length} в желаемом
+        </div>
       </div>
       {saved.length ? <FilmGrid films={saved} go={go} /> : (
-        <div className="empty-state"><Bookmark size={38} /><h3>Здесь пока пусто</h3><p>Найди что-нибудь интересное и добавь в свой список.</p><button className="primary-btn" onClick={() => go('/catalog')}>Исследовать каталог <ArrowRight size={17} /></button></div>
+        <div className="empty-state">
+          <Bookmark size={38} />
+          <h3>Здесь пока пусто</h3>
+          <p>Найди что-нибудь интересное и добавь в желаемое.</p>
+          <button className="primary-btn" onClick={() => go('/catalog')}>
+            Исследовать каталог <ArrowRight size={17} />
+          </button>
+        </div>
       )}
     </>
   );
@@ -2012,7 +2038,7 @@ const achievementDefs = [
   { id: 'voice', icon: '💬', name: 'Голос зала', description: 'Оставляй комментарии и отзывы', targets: [1, 10, 30], unit: 'комментариев', progress: (d: Data) => d.comments.filter(c => c.author?.id === d.user?.id).length, category: 'Критика' },
   { id: 'popular_comment', icon: '❤️', name: 'Народный любимец', description: 'Получи лайки на комментарии', targets: [1, 10, 50], unit: 'лайков', progress: (d: Data) => d.comments.filter(c => c.author?.id === d.user?.id).reduce((n, c) => n + (c.likes || 0), 0), category: 'Критика' },
   { id: 'social', icon: '🤝', name: 'Душа компании', description: 'Заводи новых друзей', targets: [1, 5, 20], unit: 'друзей', progress: (d: Data) => d.friends.filter(f => f.status === 'accepted').length, category: 'Социальное' },
-  { id: 'collector', icon: '💎', name: 'Коллекционер', description: 'Сохраняй любимые истории', targets: [1, 10, 30], unit: 'в списке', progress: (d: Data) => d.bookmarks.length, category: 'Социальное' },
+  { id: 'collector', icon: '💎', name: 'Коллекционер желаемого', description: 'Добавляй истории, которые хочешь посмотреть позже', targets: [1, 10, 30], unit: 'в желаемом', progress: (d: Data) => d.bookmarks.length, category: 'Социальное' },
   { id: 'ambassador', icon: '📢', name: 'Посол кино', description: 'Делись рекомендациями с друзьями', targets: [1, 5, 20], unit: 'рекомендаций', progress: (d: Data) => d.notifications.filter(n => n.message?.includes('рекомендует')).length, category: 'Социальное' },
   { id: 'chatty', icon: '💌', name: 'Болтун', description: 'Общайся с друзьями в чате', targets: [5, 25, 100], unit: 'сообщений', progress: (d: Data) => d.scores.filter(s => s.game === 'chat').reduce((n, s) => n + s.score, 0) || 0, category: 'Социальное' },
   { id: 'player', icon: '🎮', name: 'Игрок', description: 'Играй в кино-игры', targets: [1, 10, 50], unit: 'игр', progress: (d: Data) => d.scores.length, category: 'Игры' },
