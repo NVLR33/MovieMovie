@@ -760,35 +760,7 @@ pendingSuggestionsCount,
               f.toId === me.id
           )
         : [],
-
-{
-  "suggestions": [
-    {
-      "id": 1,
-      "title": "Интерстеллар",
-      "year": 2014,
-      "genre": "Фантастика",
-      "category": "Фильм",
-      "comment": "Очень хотелось бы увидеть в каталоге",
-      "status": "pending",
-      "author": {
-        "id": 5,
-        "username": "user123"
-      }
-    }
-  ],
-  "pendingSuggestionsCount": 1
-}
-
-{
-  "suggestions": [],
-  "pendingSuggestionsCount": 0
-}
-
-
-
-
-
+      
       
       notifications: me
         ? allNotifications.filter(
