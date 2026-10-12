@@ -285,6 +285,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [toast, setToast] = useState('');
   const [shareFilm, setShareFilm] = useState<FilmType | null>(null);
   const [editFilm, setEditFilm] = useState<FilmType | null | undefined>(undefined);
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatPeerId, setChatPeerId] = useState<number | null>(null);
 
@@ -662,7 +663,7 @@ return (
 
           <main className="content">
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
-              : active === 'catalog' ? <Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} watchedIds={watchedIds} />
+              : active === 'catalog' ? (<Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'movie' ? <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} edit={setEditFilm} />
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
@@ -863,6 +864,13 @@ return (
           </div>
         )}
 
+        {suggestOpen && (
+  <SuggestMovieModal
+    close={() => setSuggestOpen(false)}
+    action={action}
+  />
+)}
+        
         {editFilm !== undefined && <MovieForm film={editFilm} close={() => setEditFilm(undefined)} action={action} notify={notify} />}
         {chatOpen && chatPeerId && data.user && <ChatDrawer peerId={chatPeerId} data={data} go={go} close={() => { setChatOpen(false); setChatPeerId(null); }} notify={notify} />}
         {toast && <div className="toast"><Sparkles size={16} />{toast}<button onClick={() => setToast('')}><X size={14} /></button></div>}
@@ -1324,7 +1332,25 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
   );
 }
 
-function Catalog({ films, go, searchValue, en, userRole = '', onAdd, watchedIds = new Set() }: { films: FilmType[]; go: (s: string) => void; searchValue: string; en: boolean; userRole?: string; onAdd?: () => void; watchedIds?: Set<number>; }) {
+function Catalog({
+  films,
+  go,
+  searchValue,
+  en,
+  userRole = '',
+  onAdd,
+  onSuggest,
+  watchedIds = new Set(),
+}: {
+  films: FilmType[];
+  go: (s: string) => void;
+  searchValue: string;
+  en: boolean;
+  userRole?: string;
+  onAdd?: () => void;
+  onSuggest?: () => void;
+  watchedIds?: Set<number>;
+}) {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('search') || searchValue || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'Все');
@@ -1362,9 +1388,21 @@ function Catalog({ films, go, searchValue, en, userRole = '', onAdd, watchedIds 
           <p>{en ? 'Your next favorite story is waiting right here.' : 'Твоё следующее любимое кино уже где-то здесь.'}</p>
         </div>
         <div className="heading-count"><Film size={19} />{films.length} {en ? 'stories' : 'историй'}</div>
-        {['admin', 'moderator'].includes(userRole) && onAdd && (
-          <button className="primary-btn" onClick={onAdd}><Plus size={17} /> {en ? 'Add content' : 'Добавить материал'}</button>
-        )}
+{['admin', 'moderator'].includes(userRole) ? (
+  onAdd && (
+    <button className="primary-btn" onClick={onAdd}>
+      <Plus size={17} />
+      {en ? 'Add content' : 'Добавить материал'}
+    </button>
+  )
+) : (
+  onSuggest && (
+    <button className="primary-btn" onClick={onSuggest}>
+      <Clapperboard size={17} />
+      {en ? 'Suggest a movie' : 'Предложить кино'}
+    </button>
+  )
+)}
       </div>
 
       <div className="catalog-search">
@@ -2686,6 +2724,148 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
     </div>
   );
 }
+
+// [COMPONENT:SUGGEST_MOVIE] User movie suggestion form
+function SuggestMovieModal({
+  close,
+  action,
+}: {
+  close: () => void;
+  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+}) {
+  const [title, setTitle] = useState('');
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [genre, setGenre] = useState('');
+  const [category, setCategory] = useState('Фильм');
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+
+    setBusy(true);
+
+    const ok = await action(
+      {
+        action: 'suggestMovie',
+        title,
+        year,
+        genre,
+        category,
+        comment,
+      },
+      'Предложение отправлено на рассмотрение 🎬'
+    );
+
+    setBusy(false);
+
+    if (ok) close();
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={close}>
+      <div
+        className="glass-modal editor-modal"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          className="modal-close"
+          onClick={close}
+          disabled={busy}
+        >
+          <X size={20} />
+        </button>
+
+        <span className="eyebrow">
+          <Clapperboard size={14} />
+          ПРЕДЛОЖЕНИЕ МАТЕРИАЛА
+        </span>
+
+        <h2>Предложить кино</h2>
+
+        <p>
+          Не нашёл любимую историю в каталоге?
+          Предложи её нашей команде!
+        </p>
+
+        <form onSubmit={submit} className="editor-form">
+
+          <label>
+            Название *
+            <input
+              required
+              minLength={2}
+              maxLength={150}
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Например: Интерстеллар"
+            />
+          </label>
+
+          <div className="form-two">
+            <label>
+              Год выпуска *
+              <input
+                type="number"
+                required
+                min={1888}
+                max={2100}
+                value={year}
+                onChange={e => setYear(Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              Категория *
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+              >
+                {categories.slice(1).map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Жанр *
+            <input
+              required
+              maxLength={200}
+              value={genre}
+              onChange={e => setGenre(e.target.value)}
+              placeholder="Фантастика, Драма"
+            />
+          </label>
+
+          <label>
+            Почему стоит добавить? (необязательно)
+            <textarea
+              rows={3}
+              maxLength={1000}
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder="Расскажи, почему рекомендуешь этот материал..."
+            />
+          </label>
+
+          <button
+            className="primary-btn auth-submit"
+            disabled={busy}
+            type="submit"
+          >
+            {busy ? 'Отправляем...' : 'Отправить предложение'}
+            <Send size={17} />
+          </button>
+
+        </form>
+      </div>
+    </div>
+  );
+}
+
 
 function MovieForm({ film, close, action, notify }: { film: FilmType | null; close: () => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; notify: (s: string) => void; }) {
   const [form, setForm] = useState({
