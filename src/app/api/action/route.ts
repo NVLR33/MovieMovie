@@ -88,29 +88,55 @@ export async function POST(req: NextRequest) {
       const [saved] = await db
         .select()
         .from(bookmarks)
-        .where(and(eq(bookmarks.userId, user.id), eq(bookmarks.movieId, movieId)));
+        .where(
+          and(
+            eq(bookmarks.userId, user.id),
+            eq(bookmarks.movieId, movieId)
+          )
+        );
 
-      if (saved) await db.delete(bookmarks).where(eq(bookmarks.id, saved.id));
-      else await db.insert(bookmarks).values({ userId: user.id, movieId });
+      if (saved) {
+        await db.delete(bookmarks)
+          .where(eq(bookmarks.id, saved.id));
+      } else {
+        await db.insert(bookmarks)
+          .values({ userId: user.id, movieId });
+      }
+
+      result = { ok: true, saved: !saved };
 
     } else if (action === 'favorite') {
-      // добавить в избранное (идемпотентно)
-      const [saved] = await db
+      const [existing] = await db
         .select()
-        .from(bookmarks)
-        .where(and(eq(bookmarks.userId, user.id), eq(bookmarks.movieId, movieId)))
+        .from(favorites)
+        .where(
+          and(
+            eq(favorites.userId, user.id),
+            eq(favorites.movieId, movieId)
+          )
+        )
         .limit(1);
 
-      if (!saved) await db.insert(bookmarks).values({ userId: user.id, movieId });
+      if (!existing) {
+        await db.insert(favorites)
+          .values({ userId: user.id, movieId })
+          .onConflictDoNothing();
+      }
 
       result = { ok: true, favorited: true };
+
     } else if (action === 'unfavorite') {
-      // убрать из избранного (идемпотентно)
-      await db
-        .delete(bookmarks)
-        .where(and(eq(bookmarks.userId, user.id), eq(bookmarks.movieId, movieId)));
+      await db.delete(favorites)
+        .where(
+          and(
+            eq(favorites.userId, user.id),
+            eq(favorites.movieId, movieId)
+          )
+        );
 
       result = { ok: true, favorited: false };
+
+    } else if (action === 'comment') {
 
       result = { ok: true, saved: !saved };
     } else if (action === 'comment') {
