@@ -1271,6 +1271,9 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
   if (!film) return <div className="empty-state"><h2>История не найдена</h2><button className="primary-btn" onClick={() => go('/catalog')}>К каталогу</button></div>;
 
   const saved = useMemo(() => data.bookmarks.some(b => b.movieId === film.id), [data.bookmarks, film.id]);
+  // ❤️ Состояние избранного
+  const { ids: favoriteIds, toggle: toggleFavorite } = useFavoriteIds();
+  const isFavorite = favoriteIds.has(film.id);
   const myRating = useMemo(() => data.ratings.find(r => r.movieId === film.id)?.value || 0, [data.ratings, film.id]);
   const isWatched = useMemo(() => data.watches.some(w => w.movieId === film.id), [data.watches, film.id]);
 
@@ -1310,6 +1313,10 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
             <span className="big-rating"><Star size={22} fill="currentColor" />{film.rating.toFixed(1)}</span>
             <span className="rating-of">/ 10<br /><small>рейтинг сообщества</small></span>
             <span className="detail-views"><Eye size={17} />{fmt(film.views || 0)} просмотров</span>
+            <span className="detail-views" title="Сколько пользователей добавили материал в любимое">
+              <Heart size={17} fill="#fb7185" color="#fb7185" />
+              {fmt(data.favoriteCounts?.[film.id] || 0)} в любимом
+            </span>
           </div>
 
           <CollapsibleText
@@ -1336,6 +1343,18 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
 
             <button className="outline-btn" onClick={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из списка' : 'Добавлено в список'))}>
               <Bookmark size={17} fill={saved ? 'currentColor' : 'none'} />{saved ? 'В списке' : 'В мой список'}
+            </button>
+
+            <button
+              type="button"
+              className={`outline-btn detail-favorite-btn ${isFavorite ? 'is-favorite' : ''}`}
+              onClick={() => toggleFavorite(film.id)}
+            >
+              <Heart
+                size={17}
+                fill={isFavorite ? 'currentColor' : 'none'}
+              />
+              {isFavorite ? 'В любимом' : 'В любимое'}
             </button>
 
             <button className="square-btn" onClick={() => requireAuth(() => share(film))} title="Поделиться"><Share2 size={18} /></button>
