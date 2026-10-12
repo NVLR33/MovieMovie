@@ -25,8 +25,23 @@ type User = {
 type Watch = { id: number; movieId: number; watchedAt: string; };
 type Rating = { id: number; movieId: number; value: number; };
 type Comment = {
-  id: number; movieId: number; parentId: number | null; body: string; likes: number | null; createdAt: string;
-  author: { id: number; username: string; avatar: string | null; role: string; };
+  id: number;
+  movieId: number;
+  parentId: number | null;
+  body: string;
+  likes: number | null;
+  createdAt: string;
+
+  // Дата редактирования комментария
+  editedAt?: string | null;
+
+  author: {
+    id: number;
+    username: string;
+    avatar: string | null;
+    role: string;
+  };
+};
 };
 type Person = { id: number; username: string; avatar: string | null; role: string; xp: number | null; };
 type Friend = { id: number; fromId: number; toId: number; status: string; };
@@ -1671,18 +1686,45 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
 
             {topComments.length ? topComments.map(c => (
               <div key={c.id}>
-                <CommentRow
-                  c={c}
-                  reply={() => { setReply(c.id); document.querySelector('.comment-compose')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
-                  react={() => requireAuth(() => action({ action: 'react', commentId: c.id }))}
-                />
+<CommentRow
+  c={c}
+  currentUser={data.user}
+  action={action}
+  reply={() => {
+    setReply(c.id);
+    document.querySelector('.comment-compose')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+  }}
+  react={() =>
+    requireAuth(() =>
+      action({ action: 'react', commentId: c.id })
+    )
+  }
+/>
                 {movieComments.filter(r => r.parentId === c.id).map(r => (
                   <div className="comment-reply" key={r.id}>
-                    <CommentRow
-                      c={r}
-                      reply={() => { setReply(c.id); document.querySelector('.comment-compose')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
-                      react={() => requireAuth(() => action({ action: 'react', commentId: r.id }))}
-                    />
+<CommentRow
+  c={r}
+  currentUser={data.user}
+  action={action}
+  reply={() => {
+    setReply(c.id);
+    document.querySelector('.comment-compose')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+  }}
+  react={() =>
+    requireAuth(() =>
+      action({
+        action: 'react',
+        commentId: r.id
+      })
+    )
+  }
+/>
                   </div>
                 ))}
               </div>
@@ -1823,17 +1865,180 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
   );
 }
 
-function CommentRow({ c, reply, react }: { c: Comment; reply: () => void; react: () => void; }) {
+function CommentRow({
+  c,
+  reply,
+  react,
+  currentUser,
+  action,
+}: {
+  c: Comment;
+  reply: () => void;
+  react: () => void;
+  currentUser: User | null;
+  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(c.body);
+  const [busy, setBusy] = useState(false);
+
+  const isOwner = currentUser?.id === c.author?.id;
+
+  const isModerator =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'moderator';
+
+  const canDelete = isOwner || isModerator;
+
+  const save = async () => {
+    const value = text.trim();
+
+    if (value.length < 2 || busy) return;
+
+    setBusy(true);
+
+    const ok = await action(
+      {
+        action: 'commentEdit',
+        commentId: c.id,
+        text: value,
+      },
+      'Комментарий изменён'
+    );
+
+    setBusy(false);
+
+    if (ok) setEditing(false);
+  };
+
+  const remove = async () => {
+    if (busy) return;
+
+    const confirmed = window.confirm(
+      isOwner
+        ? 'Удалить свой комментарий?'
+        : 'Удалить комментарий пользователя?'
+    );
+
+    if (!confirmed) return;
+
+    let reason = '';
+
+    if (!isOwner && isModerator) {
+      reason =
+        window.prompt(
+          'Причина удаления (необязательно):'
+        ) || '';
+    }
+
+    setBusy(true);
+
+    await action(
+      {
+        action: 'commentDelete',
+        commentId: c.id,
+        reason,
+      },
+      'Комментарий удалён'
+    );
+
+    setBusy(false);
+  };
+
   return (
     <div className="comment-row">
-      <Avatar name={c.author?.username || 'User'} src={c.author?.avatar} size={40} />
+      <Avatar
+        name={c.author?.username || 'User'}
+        src={c.author?.avatar}
+        size={40}
+      />
+
       <div className="comment-content">
-        <div className="comment-by"><b>{c.author?.username || 'Зритель'}</b><span>{new Date(c.createdAt).toLocaleDateString('ru-RU')}</span></div>
-        <p>{c.body}</p>
-        <div className="comment-buttons">
-          <button onClick={react}><Heart size={15} /> {c.likes || 0}</button>
-          <button onClick={reply}><MessageCircle size={15} /> Ответить</button>
+        <div className="comment-by">
+          <b>{c.author?.username || 'Зритель'}</b>
+
+          <span>
+            {new Date(c.createdAt).toLocaleDateString('ru-RU')}
+          </span>
+
+          {c.editedAt && (
+            <span title={`Изменено ${new Date(c.editedAt).toLocaleString('ru-RU')}`}>
+              · изменено
+            </span>
+          )}
         </div>
+
+        {editing ? (
+          <div className="comment-edit-box">
+            <textarea
+              value={text}
+              maxLength={2000}
+              onChange={e => setText(e.target.value)}
+              rows={3}
+            />
+
+            <div className="comment-edit-actions">
+              <button
+                className="primary-btn small"
+                onClick={save}
+                disabled={busy || text.trim().length < 2}
+              >
+                <Check size={14} />
+                Сохранить
+              </button>
+
+              <button
+                className="outline-btn small"
+                onClick={() => {
+                  setEditing(false);
+                  setText(c.body);
+                }}
+                disabled={busy}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p>{c.body}</p>
+        )}
+
+        {!editing && (
+          <div className="comment-buttons">
+            <button onClick={react}>
+              <Heart size={15} />
+              {c.likes || 0}
+            </button>
+
+            <button onClick={reply}>
+              <MessageCircle size={15} />
+              Ответить
+            </button>
+
+            {isOwner && (
+              <button
+                onClick={() => {
+                  setText(c.body);
+                  setEditing(true);
+                }}
+              >
+                <Pencil size={14} />
+                Изменить
+              </button>
+            )}
+
+            {canDelete && (
+              <button
+                onClick={remove}
+                disabled={busy}
+                className="comment-delete-btn"
+              >
+                <Trash2 size={14} />
+                Удалить
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
