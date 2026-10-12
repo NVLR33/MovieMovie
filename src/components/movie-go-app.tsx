@@ -874,6 +874,44 @@ return (
 }
 
 // --- Helper Components ---
+
+function InfoInlineLinks({
+  value,
+  param = 'search',
+  go,
+}: {
+  value?: string | null;
+  param?: string;
+  go: (url: string) => void;
+}) {
+  const items = (value || 'Неизвестно')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  return (
+    <span className="info-inline-links">
+      {items.map((item, index) => (
+        <React.Fragment key={index}>
+          {index > 0 && (
+            <span className="info-inline-separator">, </span>
+          )}
+
+          <button
+            type="button"
+            className="info-inline-link"
+            onClick={() =>
+              go(`/catalog?${param}=${encodeURIComponent(item)}`)
+            }
+          >
+            {item}
+          </button>
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
+
 function SectionTitle({ kicker, title, link, onClick }: { kicker?: string; title: string; link?: string; onClick?: () => void; }) {
   return (
     <div className="section-heading">
@@ -1608,113 +1646,123 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
 
         <aside className="detail-side">
           <div className="info-panel-fancy">
-            <div className="info-panel-header"><Sparkles size={18} /> <h3>Детали истории</h3></div>
+            <div className="info-panel-header">
+              <Sparkles size={18} />
+              <h3>Детали истории</h3>
+            </div>
+        
             <div className="info-grid">
-
+        
+              {/* Режиссёр */}
               <div className="info-item">
-                <span className="info-icon"><Users size={15} /></span>
+                <span className="info-icon">
+                  <Users size={15} />
+                </span>
                 <div>
                   <small>Режиссёр</small>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {(film.director || 'Неизвестно').split(',').map((val, idx) => {
-                      const item = val.trim();
-                      if (!item) return null;
-                      return (
-                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <InfoInlineLinks
+                    value={film.director}
+                    go={go}
+                  />
                 </div>
               </div>
-
+        
+              {/* Год выпуска */}
               <div className="info-item">
-                <span className="info-icon"><CalendarDays size={15} /></span>
+                <span className="info-icon">
+                  <CalendarDays size={15} />
+                </span>
                 <div>
                   <small>Год выпуска</small>
-                  <button type="button" className="info-tag" onClick={() => go('/catalog?year=' + film.year)}>{film.year}</button>
+                  <InfoInlineLinks
+                    value={String(film.year)}
+                    param="year"
+                    go={go}
+                  />
                 </div>
               </div>
-
+        
+              {/* Длительность */}
               <div className="info-item">
-                <span className="info-icon"><Clock3 size={15} /></span>
+                <span className="info-icon">
+                  <Clock3 size={15} />
+                </span>
                 <div>
                   <small>Длительность</small>
                   <b>{film.duration} мин</b>
                 </div>
               </div>
-
+        
+              {/* Количество серий */}
               {film.episodes && (
                 <div className="info-item">
-                  <span className="info-icon"><Layers3 size={15} /></span>
+                  <span className="info-icon">
+                    <Layers3 size={15} />
+                  </span>
                   <div>
                     <small>Кол-во серий</small>
                     <b>{film.episodes}</b>
                   </div>
                 </div>
               )}
-
+        
+              {/* Страна */}
               <div className="info-item">
-                <span className="info-icon"><Globe2 size={15} /></span>
+                <span className="info-icon">
+                  <Globe2 size={15} />
+                </span>
                 <div>
                   <small>Страна</small>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {(film.country || 'Неизвестно').split(',').map((val, idx) => {
-                      const item = val.trim();
-                      if (!item) return null;
-                      return (
-                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?search=' + encodeURIComponent(item))}>
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <InfoInlineLinks
+                    value={film.country}
+                    go={go}
+                  />
                 </div>
               </div>
-
+        
+              {/* Категория */}
               <div className="info-item">
-                <span className="info-icon"><Film size={15} /></span>
+                <span className="info-icon">
+                  <Film size={15} />
+                </span>
                 <div>
                   <small>Категория</small>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {(film.category || '').split(',').map((val, idx) => {
-                      const item = val.trim();
-                      if (!item) return null;
-                      return (
-                        <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?category=' + encodeURIComponent(item))}>
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <InfoInlineLinks
+                    value={film.category}
+                    param="category"
+                    go={go}
+                  />
                 </div>
               </div>
-
+        
+              {/* Студия */}
               {film.studio && (
                 <div className="info-item">
-                  <span className="info-icon"><Clapperboard size={15} /></span>
+                  <span className="info-icon">
+                    <Clapperboard size={15} />
+                  </span>
                   <div>
                     <small>Студия</small>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                      {film.studio.split(',').map((val, idx) => {
-                        const item = val.trim();
-                        if (!item) return null;
-                        return (
-                          <button key={idx} type="button" className="info-tag" onClick={() => go('/catalog?studio=' + encodeURIComponent(item))}>
-                            {item}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <InfoInlineLinks
+                      value={film.studio}
+                      param="studio"
+                      go={go}
+                    />
                   </div>
                 </div>
               )}
-
+        
             </div>
           </div>
+        
           {['admin', 'moderator'].includes(data.user?.role || '') && (
-            <button className="outline-btn manage-film" onClick={() => edit(film)}><Pencil size={16} /> Редактировать материал</button>
+            <button
+              className="outline-btn manage-film"
+              onClick={() => edit(film)}
+            >
+              <Pencil size={16} />
+              Редактировать материал
+            </button>
           )}
         </aside>
       </div>
