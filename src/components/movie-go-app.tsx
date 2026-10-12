@@ -2889,8 +2889,7 @@ const [tab, setTab] = useState(
             </div>
           ))}
         </div>
-      ) : (
-) : tab === 'suggestions' ? (
+      ) : tab === 'suggestions' ? (
   <div className="suggestions-list">
     {data.suggestions.length ? (
       data.suggestions.map(s => (
