@@ -70,6 +70,9 @@ type Data = {
   ratings: Rating[];
   comments: Comment[];
 
+  suggestions: MovieSuggestion[];
+  pendingSuggestionsCount: number;
+  
   bookmarks: { movieId: number }[];
 
   // ❤️ Любимое
@@ -114,6 +117,9 @@ const blank: Data = {
   ratings: [],
   comments: [],
   bookmarks: [],
+  
+  suggestions: [],
+  pendingSuggestionsCount: 0,
 
   // ❤️ Избранное
   favorites: [],
@@ -2798,7 +2804,13 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
 }
 
 function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; edit: (f: FilmType | null) => void; }) {
-  const [tab, setTab] = useState('films');
+  const searchParams = useSearchParams();
+
+const [tab, setTab] = useState(
+  searchParams.get('tab') === 'suggestions'
+    ? 'suggestions'
+    : 'films'
+);
   if (!['admin', 'moderator'].includes(data.user?.role || '')) return <div className="gate"><Shield size={40} /><h1>Доступ закрыт</h1><p>Этот раздел доступен только команде moviemovie.</p><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>;
 
   return (
@@ -2813,10 +2825,35 @@ function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void
         <div><Eye size={21} /><b>{fmt(data.films.reduce((n, f) => n + (f.views || 0), 0))}</b><small>посещений</small></div>
         <div><MessageCircle size={21} /><b>{data.comments.length}</b><small>комментариев</small></div>
       </div>
-      <div className="category-tabs">
-        <button className={tab === 'films' ? 'selected' : ''} onClick={() => setTab('films')}>Материалы</button>
-        {data.user?.role === 'admin' && <button className={tab === 'users' ? 'selected' : ''} onClick={() => setTab('users')}>Пользователи и роли</button>}
-      </div>
+<div className="category-tabs">
+  <button
+    className={tab === 'films' ? 'selected' : ''}
+    onClick={() => setTab('films')}
+  >
+    Материалы
+  </button>
+
+  <button
+    className={tab === 'suggestions' ? 'selected' : ''}
+    onClick={() => setTab('suggestions')}
+  >
+    Предложения
+    {data.pendingSuggestionsCount > 0 && (
+      <span className="suggestion-tab-count">
+        {data.pendingSuggestionsCount}
+      </span>
+    )}
+  </button>
+
+  {data.user?.role === 'admin' && (
+    <button
+      className={tab === 'users' ? 'selected' : ''}
+      onClick={() => setTab('users')}
+    >
+      Пользователи и роли
+    </button>
+  )}
+</div>
 
       {tab === 'films' ? (
         <div className="admin-list">
@@ -2831,8 +2868,119 @@ function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void
           ))}
         </div>
       ) : (
-        <div className="admin-list">
-          {data.people.map(p => (
+) : tab === 'suggestions' ? (
+  <div className="suggestions-list">
+    {data.suggestions.length ? (
+      data.suggestions.map(s => (
+        <div className="suggestion-card" key={s.id}>
+          <div className="suggestion-card-top">
+            <div>
+              <span className="eyebrow">
+                {s.category} · {s.year}
+              </span>
+
+              <h3>{s.title}</h3>
+
+              <p>{s.genre}</p>
+            </div>
+
+            <span className={`suggestion-status ${s.status}`}>
+              {s.status === 'pending'
+                ? 'На рассмотрении'
+                : s.status === 'approved'
+                ? 'Одобрено'
+                : 'Отклонено'}
+            </span>
+          </div>
+
+          <div className="suggestion-author">
+            <Avatar
+              name={s.author?.username || 'User'}
+              src={s.author?.avatar}
+              size={30}
+            />
+
+            <span>
+              {s.author?.username || 'Пользователь'}
+            </span>
+
+            <small>
+              {new Date(s.createdAt).toLocaleDateString('ru-RU')}
+            </small>
+          </div>
+
+          {s.comment && (
+            <div className="suggestion-comment">
+              {s.comment}
+            </div>
+          )}
+
+          {s.status === 'pending' && (
+            <div className="suggestion-actions">
+              <button
+                className="primary-btn small"
+                onClick={() => {
+                  // Подключим заполнение MovieForm следующим шагом
+                  edit(null);
+                }}
+              >
+                <Check size={15} />
+                Одобрить
+              </button>
+
+              <button
+                className="outline-btn small"
+                onClick={() => {
+                  const reason = window.prompt(
+                    'Причина отклонения (необязательно):'
+                  );
+
+                  if (reason === null) return;
+
+                  action(
+                    {
+                      action: 'rejectSuggestion',
+                      id: s.id,
+                      reason
+                    },
+                    'Предложение отклонено'
+                  );
+                }}
+              >
+                <X size={15} />
+                Отклонить
+              </button>
+            </div>
+          )}
+
+          {s.status === 'rejected' && s.reviewReason && (
+            <p className="suggestion-reason">
+              Причина: {s.reviewReason}
+            </p>
+          )}
+
+          {s.status === 'approved' && s.movieId && (
+            <button
+              className="text-link"
+              onClick={() => go('/movie/' + s.movieId)}
+            >
+              Открыть материал
+              <ArrowUpRight size={15} />
+            </button>
+          )}
+        </div>
+      ))
+    ) : (
+      <div className="empty-state">
+        <Clapperboard size={36} />
+        <h3>Предложений пока нет</h3>
+        <p>Здесь будут появляться материалы, предложенные пользователями.</p>
+      </div>
+    )}
+  </div>
+) : (
+  <div className="admin-list">
+    {data.people.map(p => (
             <div className="admin-row user-admin-row" key={p.id}>
               <Avatar name={p.username} src={p.avatar} size={42} />
               <div><b>{p.username}</b><small>{p.xp} XP · ID {p.id}</small></div>
