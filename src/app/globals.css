@@ -2854,3 +2854,118 @@ select:focus {
     transition: none !important;
   }
 }
+
+/* ==========================================
+   MOVIEMOVIE — MOBILE EXPERIENCE FX
+========================================== */
+
+/* Мобильное боковое меню */
+
+@media (max-width: 760px) {
+
+  .sidebar {
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 20px 0 70px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Затемнение фона */
+
+  .mobile-scrim {
+    background: rgba(3, 5, 12, 0.65);
+    backdrop-filter: blur(6px);
+    animation: mm-scrim-in 0.25s ease-out;
+  }
+
+  /* Меню */
+
+  .sidebar.mobile-open .nav-item {
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .sidebar.mobile-open .nav-item:active {
+    background: var(--accent-glow);
+  }
+
+  /* Кнопки */
+
+  .mobile-menu,
+  .icon-button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Модальные окна */
+
+  .glass-modal {
+    max-height: calc(100dvh - 24px);
+    overscroll-behavior: contain;
+  }
+
+  /* Удобное нажатие */
+
+  .nav-item,
+  .card-favorite-btn,
+  .mobile-menu {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Эффект касания */
+
+  .primary-btn:active,
+  .outline-btn:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Анимация затемнения */
+
+@keyframes mm-scrim-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Небольшие экраны */
+
+@media (max-width: 520px) {
+
+  .glass-modal {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .modal-backdrop {
+    padding: 12px;
+  }
+
+  .nav-item {
+    min-height: 44px;
+  }
+
+  .card-favorite-btn {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+/* Уменьшение анимаций */
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .mobile-scrim,
+  .glass-modal {
+    animation: none !important;
+    transition: none !important;
+  }
+}
