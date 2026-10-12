@@ -132,6 +132,20 @@ if (action === 'watch') {
         .set({ xp: sql`coalesce(${users.xp}, 0) + 10` })
         .where(eq(users.id, user.id));
     } else if (action === 'bookmark') {
+  const [watchedAlready] = await db
+  .select({ id: watches.id })
+  .from(watches)
+  .where(
+    and(
+      eq(watches.userId, user.id),
+      eq(watches.movieId, movieId)
+    )
+  )
+  .limit(1);
+
+if (watchedAlready) {
+  throw Error('Этот материал уже просмотрен');
+}
       const [saved] = await db
         .select()
         .from(bookmarks)
