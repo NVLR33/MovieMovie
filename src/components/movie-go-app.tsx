@@ -2931,13 +2931,51 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
   }
 };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    const ok = await action({ action: 'movieSave', id: (film as any)?.id, ...form }, film ? 'Материал обновлён' : 'Материал добавлен');
+const submit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (busy) return;
+
+  setBusy(true);
+
+  try {
+    const response = await fetch('/api/action', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        action: 'movieSave',
+        id: film?.id,
+        ...form
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      notify(result.error || 'Ошибка сохранения материала');
+      return;
+    }
+
+    notify(film ? 'Материал обновлён' : 'Материал опубликован');
+
+    close();
+
+    if (result.movieId) {
+      // Переходим на страницу сохранённого материала
+      window.location.href = `/movie/${result.movieId}`;
+    } else {
+      // Резервный вариант для старой версии API
+      window.location.reload();
+    }
+
+  } catch {
+    notify('Ошибка соединения с сервером');
+  } finally {
     setBusy(false);
-    if (ok) close();
-  };
+  }
+};
 
   return (
     <div className="modal-backdrop" onClick={close}>
