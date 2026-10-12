@@ -42,7 +42,6 @@ type Comment = {
     role: string;
   };
 };
-};
 type Person = { id: number; username: string; avatar: string | null; role: string; xp: number | null; };
 type Friend = { id: number; fromId: number; toId: number; status: string; };
 type Notice = { id: number; message: string; link: string | null; read: boolean; createdAt: string; };
