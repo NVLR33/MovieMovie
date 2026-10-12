@@ -2491,3 +2491,162 @@ select:focus {
     transition: none;
   }
 }
+
+
+/* ==========================================
+   MOVIEMOVIE — INTERACTIVE CARD FX
+========================================== */
+
+/* Плавность карточек */
+
+.film-card {
+  position: relative;
+
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+
+/* Подсветка рамки */
+
+.film-card:hover {
+  border-color: var(--rating-color);
+
+  box-shadow:
+    0 14px 38px rgba(0, 0, 0, 0.3),
+    0 0 18px color-mix(
+      in srgb,
+      var(--rating-color) 15%,
+      transparent
+    );
+}
+
+/* Плавность постера */
+
+.film-card .poster-wrap img {
+  transition:
+    transform 0.55s ease,
+    filter 0.35s ease;
+}
+
+.film-card:hover .poster-wrap img {
+  transform: scale(1.07);
+  filter: brightness(1.06) saturate(1.1);
+}
+
+/* ❤️ Сердечко */
+
+.card-favorite-btn {
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.card-favorite-btn:hover {
+  transform: scale(1.12);
+}
+
+.card-favorite-btn.is-favorite {
+  animation: favorite-heart-pop 0.38s ease-out;
+}
+
+@keyframes favorite-heart-pop {
+  0% {
+    transform: scale(0.8);
+  }
+
+  55% {
+    transform: scale(1.25);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ✅ Просмотрено */
+
+.card-watched-badge {
+  animation: watched-badge-enter 0.35s ease-out;
+}
+
+@keyframes watched-badge-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-20deg);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.15) rotate(5deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+/* ⭐ Рейтинг */
+
+.card-score {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.film-card:hover .card-score {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* Кнопка просмотра */
+
+.card-play {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.film-card:hover .card-play {
+  box-shadow:
+    0 6px 20px var(--accent-glow);
+}
+
+/* Сенсорные устройства */
+
+@media (hover: none) {
+  .film-card:hover {
+    transform: none;
+  }
+
+  .film-card:hover .poster-wrap img {
+    transform: none;
+    filter: none;
+  }
+
+  .card-favorite-btn:hover {
+    transform: none;
+  }
+}
+
+/* Настройки доступности */
+
+@media (prefers-reduced-motion: reduce) {
+  .card-favorite-btn.is-favorite,
+  .card-watched-badge {
+    animation: none !important;
+  }
+
+  .film-card,
+  .film-card .poster-wrap img,
+  .card-favorite-btn,
+  .card-score {
+    transition: none !important;
+  }
+}
