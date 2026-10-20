@@ -1178,6 +1178,47 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
   const featured = useMemo(() => films.find(f => (f as any).featured) || films[0], [films]);
   const trending = useMemo(() => [...films].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5), [films]);
 
+  const [capsuleMovie, setCapsuleMovie] = useState<{
+  id: number;
+  title: string;
+  poster: string;
+  date: string;
+  rating?: number;
+  genre: string;
+  year: number;
+} | null>(null);
+
+const openTimeCapsule = () => {
+  const available = data.watches.filter(w =>
+    data.films.some(f => f.id === w.movieId)
+  );
+
+  if (!available.length) return;
+
+  const rw = available[Math.floor(Math.random() * available.length)];
+  const f = data.films.find(x => x.id === rw.movieId);
+
+  if (!f) return;
+
+  const rating = data.ratings.find(
+    x => x.movieId === f.id && x.userId === data.user?.id
+  );
+
+  setCapsuleMovie({
+    id: f.id,
+    title: f.title,
+    poster: f.poster || '',
+    date: new Date(rw.watchedAt).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }),
+    rating: rating?.value,
+    genre: f.genre,
+    year: f.year
+  });
+};
+
   if (!featured) return null;
 
   return (
@@ -1305,20 +1346,127 @@ function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; 
         </div>
       </div>
 
-      {data.user && data.watches.length > 0 && (
-        <div className="time-capsule-banner" onClick={() => {
-          const rw = data.watches[Math.floor(Math.random() * data.watches.length)];
-          const f = data.films.find(x => x.id === rw.movieId);
-          if (f) {
-            const d = new Date(rw.watchedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-            const r = data.ratings.find(x => x.movieId === f.id);
-            alert(`🕰 Капсула времени!\n\n${d} ты посмотрел(а) «${f.title}»${r ? ' и поставил(а) ' + r.value + '/10' : ''}\n\nЖанр: ${f.genre}\nГод: ${f.year}`);
-          }
-        }}>
-          <RotateCcw size={20} />
-          <div><b>Капсула времени</b><small>Перемотай время и вспомни случайный сеанс</small></div>
+{data.user && data.watches.length > 0 && (
+  <>
+    <button
+      type="button"
+      className="time-capsule-banner"
+      onClick={openTimeCapsule}
+    >
+      <RotateCcw size={20} />
+
+      <div>
+        <b>{en ? 'Time Capsule' : 'Капсула времени'}</b>
+        <small>
+          {en
+            ? 'Rewind time and remember a random movie night'
+            : 'Перемотай время и вспомни случайный сеанс'}
+        </small>
+      </div>
+
+      <ArrowRight size={18} className="capsule-arrow" />
+    </button>
+
+    {capsuleMovie && (
+      <div
+        className="capsule-overlay"
+        onClick={() => setCapsuleMovie(null)}
+      >
+        <div
+          className="capsule-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Капсула времени"
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="capsule-close"
+            onClick={() => setCapsuleMovie(null)}
+            aria-label="Закрыть"
+          >
+            <X size={20} />
+          </button>
+
+          <div className="capsule-header">
+            <div className="capsule-icon">
+              <RotateCcw size={26} />
+            </div>
+
+            <span className="capsule-kicker">
+              {en ? 'YOUR CINEMA HISTORY' : 'ТВОЯ КИНОИСТОРИЯ'}
+            </span>
+
+            <h2>{en ? 'Time Capsule' : 'Капсула времени'}</h2>
+
+            <p>
+              {en
+                ? 'Some stories are worth remembering.'
+                : 'Некоторые истории хочется пережить снова.'}
+            </p>
+          </div>
+
+          <div className="capsule-memory">
+            {capsuleMovie.poster && (
+              <img
+                src={capsuleMovie.poster}
+                alt={capsuleMovie.title}
+                className="capsule-poster"
+              />
+            )}
+
+            <div className="capsule-memory-info">
+              <span className="capsule-date">
+                📅 {capsuleMovie.date}
+              </span>
+
+              <span className="capsule-label">
+                {en ? 'On this day you watched' : 'В этот день ты посмотрел(а)'}
+              </span>
+
+              <h3>{capsuleMovie.title}</h3>
+
+              <p>
+                {capsuleMovie.genre} · {capsuleMovie.year}
+              </p>
+
+              {capsuleMovie.rating != null && (
+                <div className="capsule-rating">
+                  <Star size={16} fill="currentColor" />
+                  {en ? 'Your rating' : 'Твоя оценка'}: {capsuleMovie.rating}/10
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="capsule-actions">
+            <button
+              type="button"
+              className="capsule-primary"
+              onClick={() => {
+                const id = capsuleMovie.id;
+                setCapsuleMovie(null);
+                go('/movie/' + id);
+              }}
+            >
+              {en ? 'Open movie' : 'Открыть фильм'}
+              <ArrowRight size={16} />
+            </button>
+
+            <button
+              type="button"
+              className="capsule-secondary"
+              onClick={openTimeCapsule}
+            >
+              <RotateCcw size={16} />
+              {en ? 'Another memory' : 'Другое воспоминание'}
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+    )}
+  </>
+)}
 
       <section className="home-section pulse-section">
         <SectionTitle kicker={en ? 'CINEMA PULSE' : 'КИНОПУЛЬС'} title={en ? 'This week' : 'На этой неделе'} />
