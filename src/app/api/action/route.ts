@@ -757,9 +757,9 @@ if (watchedAlready) {
 
   // Период выхода сериалов и аниме-сериалов
 const category = String(body.category || '');
-const isSeries = ['series', 'anime-series'].includes(category);
+const isSeries = category.toLowerCase().includes('сериал');
 
-const startYear = Number(body.year) || 2024;
+const startYear = Number(body.year) || 2026;
 const ongoing = isSeries && body.ongoing === true;
 
 const endYear =
@@ -767,9 +767,9 @@ const endYear =
     ? Number(body.endYear)
     : null;
 
-if (isSeries && endYear !== null) {
-  if (!Number.isInteger(endYear) || endYear < startYear) {
-    throw Error('Год окончания не может быть меньше года начала');
+if (endYear !== null) {
+  if (!Number.isInteger(endYear) || endYear < startYear || endYear > 2100) {
+    throw Error('Укажите корректный год окончания сериала');
   }
 }
 
