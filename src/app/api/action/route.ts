@@ -755,6 +755,24 @@ if (watchedAlready) {
         throw Error('Заполните название, описание, категорию и обложку');
       }
 
+  // Период выхода сериалов и аниме-сериалов
+const category = String(body.category || '');
+const isSeries = ['series', 'anime-series'].includes(category);
+
+const startYear = Number(body.year) || 2024;
+const ongoing = isSeries && body.ongoing === true;
+
+const endYear =
+  isSeries && !ongoing && body.endYear != null && body.endYear !== ''
+    ? Number(body.endYear)
+    : null;
+
+if (isSeries && endYear !== null) {
+  if (!Number.isInteger(endYear) || endYear < startYear) {
+    throw Error('Год окончания не может быть меньше года начала');
+  }
+}
+
       if (!body.id) {
         const [dup] = await db
           .select({ id: movies.id })
@@ -778,7 +796,9 @@ if (watchedAlready) {
         category: String(body.category),
         genre: String(body.genre || ''),
         studio: String(body.studio || ''),
-        year: Number(body.year) || 2024,
+        year: startYear,
+        endYear,
+        ongoing,
         duration: Number(body.duration) || 90,
         episodes: Number(body.episodes) || null,
         mood: String(body.mood || ''),
