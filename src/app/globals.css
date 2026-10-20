@@ -3565,3 +3565,46 @@ select:focus {
     animation: none;
   }
 }
+
+
+/* MOVIEMOVIE — SERIES RELEASE PERIOD */
+
+.series-period-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  margin: 4px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--accent-glow);
+}
+
+.series-period-fields > label:not(.series-ongoing-toggle) {
+  flex: 1;
+  min-width: 180px;
+}
+
+.series-ongoing-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.series-ongoing-toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.series-period-fields .label-help {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--muted);
+}
