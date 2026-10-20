@@ -1200,9 +1200,7 @@ const openTimeCapsule = () => {
 
   if (!f) return;
 
-  const rating = data.ratings.find(
-    x => x.movieId === f.id && x.userId === data.user?.id
-  );
+const rating = data.ratings.find(x => x.movieId === f.id);
 
   setCapsuleMovie({
     id: f.id,
