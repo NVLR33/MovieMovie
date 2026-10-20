@@ -3394,7 +3394,17 @@ function SuggestMovieModal({
 }
 
 
-function MovieForm({ film, close, action, notify }: { film: FilmType | null; close: () => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; notify: (s: string) => void; }) {
+function MovieForm({
+  film,
+  close,
+  action,
+  notify
+}: {
+  film: FilmType | null;
+  close: () => void;
+  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+  notify: (s: string) => void;
+}) {
   const [form, setForm] = useState({
     title: film?.title || '',
     originalTitle: (film as any)?.originalTitle || '',
@@ -3403,6 +3413,8 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
     genre: (film as any)?.genre || '',
     studio: (film as any)?.studio || '',
     year: film?.year || 2026,
+    endYear: (film as any)?.endYear ?? '',
+    ongoing: (film as any)?.ongoing ?? false,
     duration: film?.duration || 90,
     episodes: (film as any)?.episodes || 0,
     mood: (film as any)?.mood || '',
@@ -3412,132 +3424,349 @@ function MovieForm({ film, close, action, notify }: { film: FilmType | null; clo
     director: (film as any)?.director || '',
     country: (film as any)?.country || ''
   });
+
   const [busy, setBusy] = useState(false);
-  const field = (key: keyof typeof form, value: string | number) => setForm(v => ({ ...v, [key]: value }));
+
+  const isSeries =
+    form.category.toLowerCase().includes('сериал') ||
+    form.category.toLowerCase().includes('series');
+
+  const field = (
+    key: keyof typeof form,
+    value: string | number | boolean
+  ) => {
+    setForm(v => ({ ...v, [key]: value }));
+  };
 
   const upload = async (file?: File) => {
     if (!file) return;
-    const fd = new FormData(); fd.append('file', file); fd.append('kind', 'poster');
-    const r = await fetch('/api/upload', { method: 'POST', body: fd });
-    const d = await r.json();
-    if (r.ok) { field('poster', d.url); notify('Обложка загружена'); }
-    else notify(d.error || 'Ошибка загрузки');
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('kind', 'poster');
+
+    try {
+      const r = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd
+      });
+
+      const d = await r.json();
+
+      if (r.ok && d.url) {
+        field('poster', d.url);
+        notify('Обложка загружена');
+      } else {
+        notify(d.error || 'Ошибка загрузки');
+      }
+    } catch {
+      notify('Ошибка загрузки обложки');
+    }
   };
 
   const uploadBackdrop = async (file?: File) => {
-  if (!file) return;
+    if (!file) return;
 
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('kind', 'backdrop');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('kind', 'backdrop');
 
-  try {
-    const r = await fetch('/api/upload', {
-      method: 'POST',
-      body: fd
-    });
+    try {
+      const r = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd
+      });
 
-    const d = await r.json();
+      const d = await r.json();
 
-    if (r.ok && d.url) {
-      field('backdrop', d.url);
-      notify('Фоновое изображение загружено');
-    } else {
-      notify(d.error || 'Не удалось загрузить фон');
+      if (r.ok && d.url) {
+        field('backdrop', d.url);
+        notify('Фоновое изображение загружено');
+      } else {
+        notify(d.error || 'Не удалось загрузить фон');
+      }
+    } catch {
+      notify('Ошибка загрузки фонового изображения');
     }
-  } catch {
-    notify('Ошибка загрузки фонового изображения');
-  }
-};
+  };
 
-const submit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (busy) return;
+    if (busy) return;
 
-  setBusy(true);
-
-  try {
-    const response = await fetch('/api/action', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        action: 'movieSave',
-        id: film?.id,
-        ...form
-      })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      notify(result.error || 'Ошибка сохранения материала');
-      return;
+    if (isSeries && !form.ongoing && form.endYear !== '') {
+      if (Number(form.endYear) < Number(form.year)) {
+        notify('Год окончания не может быть меньше года начала');
+        return;
+      }
     }
 
-    notify(film ? 'Материал обновлён' : 'Материал опубликован');
+    setBusy(true);
 
-    close();
+    try {
+      const response = await fetch('/api/action', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'movieSave',
+          id: film?.id,
+          ...form,
+          endYear: isSeries && !form.ongoing && form.endYear !== ''
+            ? Number(form.endYear)
+            : null,
+          ongoing: isSeries ? form.ongoing : false
+        })
+      });
 
-    if (result.movieId) {
-      // Переходим на страницу сохранённого материала
-      window.location.href = `/movie/${result.movieId}`;
-    } else {
-      // Резервный вариант для старой версии API
-      window.location.reload();
+      const result = await response.json();
+
+      if (!response.ok) {
+        notify(result.error || 'Ошибка сохранения материала');
+        return;
+      }
+
+      notify(film ? 'Материал обновлён' : 'Материал опубликован');
+
+      close();
+
+      if (result.movieId) {
+        window.location.href = `/movie/${result.movieId}`;
+      } else {
+        window.location.reload();
+      }
+    } catch {
+      notify('Ошибка соединения с сервером');
+    } finally {
+      setBusy(false);
     }
-
-  } catch {
-    notify('Ошибка соединения с сервером');
-  } finally {
-    setBusy(false);
-  }
-};
+  };
 
   return (
     <div className="modal-backdrop" onClick={close}>
-      <div className="glass-modal editor-modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={close}><X size={20} /></button>
+      <div
+        className="glass-modal editor-modal"
+        onClick={e => e.stopPropagation()}
+      >
+        <button className="modal-close" onClick={close}>
+          <X size={20} />
+        </button>
+
         <span className="eyebrow">КУРАТОР КАТАЛОГА</span>
-        <h2>{film ? 'Редактировать историю' : 'Новая история'}</h2>
+
+        <h2>
+          {film ? 'Редактировать историю' : 'Новая история'}
+        </h2>
+
         <form onSubmit={submit} className="editor-form">
+
           <div className="form-two">
-            <label>Название *<input required value={form.title} onChange={e => field('title', e.target.value)} /></label>
-            <label>Оригинальное название<input value={form.originalTitle} onChange={e => field('originalTitle', e.target.value)} /></label>
+            <label>
+              Название *
+              <input
+                required
+                value={form.title}
+                onChange={e => field('title', e.target.value)}
+              />
+            </label>
+
+            <label>
+              Оригинальное название
+              <input
+                value={form.originalTitle}
+                onChange={e => field('originalTitle', e.target.value)}
+              />
+            </label>
           </div>
-          <label>Описание *<textarea required rows={3} value={form.description} onChange={e => field('description', e.target.value)} /></label>
+
+          <label>
+            Описание *
+            <textarea
+              required
+              rows={3}
+              value={form.description}
+              onChange={e => field('description', e.target.value)}
+            />
+          </label>
+
           <div className="form-three">
-            <label>Категория *<select value={form.category} onChange={e => field('category', e.target.value)}>{categories.slice(1).map(c => <option key={c}>{c}</option>)}</select></label>
-            <label>Год<input type="number" min="1900" max="2100" value={form.year} onChange={e => field('year', Number(e.target.value))} /></label>
-            <label>Минуты<input type="number" min="1" value={form.duration} onChange={e => field('duration', Number(e.target.value))} /></label>
-            <label>Серии<input type="number" min="0" value={form.episodes} onChange={e => field('episodes', Number(e.target.value))} /></label>
+            <label>
+              Категория *
+              <select
+                value={form.category}
+                onChange={e => field('category', e.target.value)}
+              >
+                {categories.slice(1).map(c => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              {isSeries ? 'Год начала' : 'Год выпуска'}
+              <input
+                type="number"
+                min="1900"
+                max="2100"
+                value={form.year}
+                onChange={e => field('year', Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              Минуты
+              <input
+                type="number"
+                min="1"
+                value={form.duration}
+                onChange={e => field('duration', Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              Серии
+              <input
+                type="number"
+                min="0"
+                value={form.episodes}
+                onChange={e => field('episodes', Number(e.target.value))}
+              />
+            </label>
           </div>
+
+          {isSeries && (
+            <div className="series-period-fields">
+              <label className="series-ongoing-toggle">
+                <input
+                  type="checkbox"
+                  checked={form.ongoing}
+                  onChange={e => field('ongoing', e.target.checked)}
+                />
+                <span>Выходит сейчас</span>
+              </label>
+
+              {!form.ongoing && (
+                <label>
+                  Год окончания
+                  <input
+                    type="number"
+                    min={form.year}
+                    max="2100"
+                    value={form.endYear}
+                    placeholder="Например, 2024"
+                    onChange={e =>
+                      field(
+                        'endYear',
+                        e.target.value === '' ? '' : Number(e.target.value)
+                      )
+                    }
+                  />
+                  <small className="label-help">
+                    Оставь пустым, если год окончания неизвестен
+                  </small>
+                </label>
+              )}
+            </div>
+          )}
+
           <div className="form-two">
-            <label>Настроение<select value={form.mood} onChange={e => field('mood', e.target.value)}><option value="">Без настроения</option><option value="cry">Поплакать</option><option value="mind-blowing">Взрыв мозга</option><option value="cozy">Уютно</option><option value="fast-paced">На одном дыхании</option></select></label>
+            <label>
+              Настроение
+              <select
+                value={form.mood}
+                onChange={e => field('mood', e.target.value)}
+              >
+                <option value="">Без настроения</option>
+                <option value="cry">Поплакать</option>
+                <option value="mind-blowing">Взрыв мозга</option>
+                <option value="cozy">Уютно</option>
+                <option value="fast-paced">На одном дыхании</option>
+              </select>
+            </label>
           </div>
+
           <div className="form-two">
-            <label>Жанры (через запятую)<input value={form.genre} onChange={e => field('genre', e.target.value)} /></label>
-            <label>Студия<input value={form.studio} onChange={e => field('studio', e.target.value)} placeholder="Warner Bros / MAPPA / Pixar" /></label>
+            <label>
+              Жанры (через запятую)
+              <input
+                value={form.genre}
+                onChange={e => field('genre', e.target.value)}
+              />
+            </label>
+
+            <label>
+              Студия
+              <input
+                value={form.studio}
+                onChange={e => field('studio', e.target.value)}
+                placeholder="Warner Bros / MAPPA / Pixar"
+              />
+            </label>
           </div>
+
           <div className="form-two">
-            <label>Режиссёр<input value={form.director} onChange={e => field('director', e.target.value)} /></label>
-            <label>Страна<input value={form.country} onChange={e => field('country', e.target.value)} /></label>
+            <label>
+              Режиссёр
+              <input
+                value={form.director}
+                onChange={e => field('director', e.target.value)}
+              />
+            </label>
+
+            <label>
+              Страна
+              <input
+                value={form.country}
+                onChange={e => field('country', e.target.value)}
+              />
+            </label>
           </div>
+
           <div className="form-two">
-            <label>Ссылка на просмотр<input type="url" value={form.watchUrl} onChange={e => field('watchUrl', e.target.value)} /></label>
+            <label>
+              Ссылка на просмотр
+              <input
+                type="url"
+                value={form.watchUrl}
+                onChange={e => field('watchUrl', e.target.value)}
+              />
+            </label>
           </div>
-          <label>Обложка * <span className="label-help">URL или загрузи файл</span>
+
+          <label>
+            Обложка *
+            <span className="label-help">
+              URL или загрузи файл
+            </span>
+
             <div className="upload-input">
-              <input required value={form.poster} onChange={e => field('poster', e.target.value)} placeholder="https://... или загрузить →" />
-              <label className="upload-button"><Upload size={17} /><input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => upload(e.target.files?.[0])} /></label>
+              <input
+                required
+                value={form.poster}
+                onChange={e => field('poster', e.target.value)}
+                placeholder="https://... или загрузить →"
+              />
+
+              <label className="upload-button">
+                <Upload size={17} />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  onChange={e => upload(e.target.files?.[0])}
+                />
+              </label>
             </div>
           </label>
+
           <label>
             Фоновое изображение
-            <span className="label-help"> URL или загрузи файл</span>
-          
+            <span className="label-help">
+              URL или загрузи файл
+            </span>
+
             <div className="upload-input">
               <input
                 type="text"
@@ -3545,8 +3774,11 @@ const submit = async (e: React.FormEvent) => {
                 onChange={e => field('backdrop', e.target.value)}
                 placeholder="https://... или загрузить фон →"
               />
-          
-              <label className="upload-button" title="Загрузить фон">
+
+              <label
+                className="upload-button"
+                title="Загрузить фон"
+              >
                 <Upload size={17} />
                 <input
                   type="file"
@@ -3557,7 +3789,15 @@ const submit = async (e: React.FormEvent) => {
               </label>
             </div>
           </label>
-          <button className="primary-btn auth-submit" disabled={busy}>{busy ? 'Сохранение...' : 'Сохранить материал'} <Check size={17} /></button>
+
+          <button
+            className="primary-btn auth-submit"
+            disabled={busy}
+          >
+            {busy ? 'Сохранение...' : 'Сохранить материал'}
+            <Check size={17} />
+          </button>
+
         </form>
       </div>
     </div>
