@@ -3210,3 +3210,42 @@ select:focus {
     flex-wrap: wrap;
   }
 }
+
+
+/* MOVIEMOVIE — COMMUNITY BUTTONS */
+
+.community-card {
+  position: relative;
+}
+
+.community-card button {
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  pointer-events: auto;
+
+  background: transparent;
+  border: 0;
+  padding: 10px 0;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11px;
+
+  transition: color .2s ease, gap .2s ease;
+}
+
+.community-card button:hover {
+  gap: 12px;
+  color: var(--text);
+}
+
+.community-card button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
