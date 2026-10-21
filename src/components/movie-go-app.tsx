@@ -1042,6 +1042,18 @@ function heroTitleStyle(title: string): React.CSSProperties {
 function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: string) => void; rank?: number; watched?: boolean; }) {
   const primaryGenre = film.genre.split(',')[0]?.trim();
 
+  const ageRating = String((film as any).ageRating || '').trim();
+
+const ageNumber = parseInt(ageRating, 10);
+
+const ageTone =
+  !Number.isFinite(ageNumber) ? 'unknown' :
+  ageNumber <= 6 ? 'green' :
+  ageNumber <= 12 ? 'blue' :
+  ageNumber <= 15 ? 'yellow' :
+  ageNumber <= 17 ? 'orange' :
+  'red';
+
   // если watched не передан — берем из глобального контекста
   const watchedIds = useWatchedIds();
   const isWatched = watched ?? watchedIds.has(film.id);
@@ -1062,6 +1074,14 @@ function FilmCard({ film, go, rank, watched }: { film: FilmType; go: (url: strin
         <span className="card-shade" />
         {rank && <span className="rank-num">{String(rank).padStart(2, '0')}</span>}
         <span className="card-score"><Star size={12} fill="currentColor" />{film.rating.toFixed(1)}</span>
+        {ageRating && (
+        <span
+          className={`card-age-rating age-${ageTone}`}
+          title={`Возрастное ограничение: ${ageRating}`}
+        >
+          {ageRating}
+        </span>
+      )}
         <span className="card-play"><Play size={19} fill="currentColor" /></span>
         {isWatched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
         <button
