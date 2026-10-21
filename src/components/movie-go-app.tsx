@@ -3616,6 +3616,19 @@ function MovieForm({
             </label>
 
             <label>
+  Возрастной рейтинг
+  <input
+    type="text"
+    value={form.ageRating}
+    onChange={e => field('ageRating', e.target.value)}
+    placeholder="Например, 16+"
+    maxLength={3}
+    pattern="[0-9]{1,2}\+"
+    title="Введите возрастной рейтинг в формате 0+, 6+, 12+, 16+ или 18+"
+  />
+</label>
+
+            <label>
               Минуты
               <input
                 type="number"
