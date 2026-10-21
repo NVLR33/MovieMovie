@@ -773,6 +773,18 @@ if (endYear !== null) {
   }
 }
 
+      // Возрастной рейтинг
+      const ageRating = String(body.ageRating || '').trim();
+
+      if (ageRating && !/^\d{1,2}\+$/.test(ageRating)) {
+        throw Error('Возрастной рейтинг должен быть в формате 0+, 6+, 12+, 16+ или 18+');
+      }
+
+      if (ageRating && Number(ageRating.slice(0, -1)) > 21) {
+        throw Error('Возрастной рейтинг не может превышать 21+');
+      }
+
+      // Проверка дубликатов при создании
       if (!body.id) {
         const [dup] = await db
           .select({ id: movies.id })
@@ -780,25 +792,31 @@ if (endYear !== null) {
           .where(
             and(
               eq(movies.title, title),
-              eq(movies.year, Number(body.year) || 2024),
-              eq(movies.category, String(body.category))
+              eq(movies.year, startYear),
+              eq(movies.category, category)
             )
           )
           .limit(1);
 
-        if (dup) throw Error(`Материал «${title}» уже существует. Используйте редактирование.`);
+        if (dup) {
+          throw Error(
+            `Материал «${title}» уже существует. Используйте редактирование.`
+          );
+        }
       }
 
+      // Данные для сохранения фильма
       const input = {
         title: title.slice(0, 150),
         originalTitle: String(body.originalTitle || ''),
         description: description.slice(0, 3000),
-        category: String(body.category),
+        category,
         genre: String(body.genre || ''),
         studio: String(body.studio || ''),
         year: startYear,
         endYear,
         ongoing,
+        ageRating: ageRating || null,
         duration: Number(body.duration) || 90,
         episodes: Number(body.episodes) || null,
         mood: String(body.mood || ''),
