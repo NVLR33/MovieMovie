@@ -3413,6 +3413,7 @@ function MovieForm({
     genre: (film as any)?.genre || '',
     studio: (film as any)?.studio || '',
     year: film?.year || 2026,
+    ageRating: (film as any)?.ageRating || '',
     endYear: (film as any)?.endYear ?? '',
     ongoing: (film as any)?.ongoing ?? false,
     duration: film?.duration || 90,
