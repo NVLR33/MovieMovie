@@ -3674,3 +3674,123 @@ select:focus {
   color: var(--accent);
   background: rgba(15, 15, 25, .85);
 }
+
+
+/* =========================================
+   MOVIEMOVIE — SEASON THEME MENU
+========================================= */
+
+.season-theme-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.season-theme-pop {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 245px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--surface, #171821);
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  box-shadow: 0 18px 55px rgba(0,0,0,.3);
+  z-index: 1000;
+}
+
+.season-theme-title {
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 10px 12px;
+}
+
+.season-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.season-option:hover {
+  background: rgba(150,150,150,.12);
+}
+
+.season-option.active {
+  background: rgba(120,180,255,.12);
+  color: #8fc8ff;
+}
+
+.season-theme-divider {
+  height: 1px;
+  background: rgba(150,150,150,.15);
+  margin: 8px 0;
+}
+
+@media (max-width: 480px) {
+  .season-theme-pop {
+    right: -45px;
+    width: min(245px, calc(100vw - 24px));
+  }
+}
+
+/* =========================================
+   MOVIEMOVIE — FOUR SEASONS
+========================================= */
+
+:root[data-season="winter"] {
+  --season-accent: #8ccfff;
+  --season-glow: rgba(100, 190, 255, .13);
+}
+
+:root[data-season="spring"] {
+  --season-accent: #f4a3d5;
+  --season-glow: rgba(244, 163, 213, .13);
+}
+
+:root[data-season="summer"] {
+  --season-accent: #ffc76c;
+  --season-glow: rgba(255, 199, 108, .13);
+}
+
+:root[data-season="autumn"] {
+  --season-accent: #f4a261;
+  --season-glow: rgba(244, 162, 97, .13);
+}
+
+/* Атмосферное свечение шапки */
+:root[data-season]:not([data-season="off"]) .topbar {
+  box-shadow: 0 4px 30px var(--season-glow);
+}
+
+/* Сезонные акценты на карточках */
+:root[data-season]:not([data-season="off"]) .film-card:hover {
+  box-shadow:
+    0 8px 30px var(--season-glow);
+}
+
+/* Сезонное оформление челленджей */
+:root[data-season]:not([data-season="off"]) .challenges-bar {
+  border-color: var(--season-accent);
+  box-shadow: 0 0 25px var(--season-glow);
+}
+
+/* Плавность переходов */
+.topbar,
+.film-card,
+.challenges-bar {
+  transition:
+    box-shadow .3s ease,
+    border-color .3s ease;
+}
