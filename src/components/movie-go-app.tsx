@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import type { Film as FilmType } from '@/lib/data';
 import WrappedExperience from './wrapped-experience';
+import WrappedShare from './wrapped-share';
+import type { WrappedData } from './wrapped-experience';
 import ShareCenter, { type ShareContent } from './share-modal';
 
 // --- Types ---
@@ -4626,7 +4628,7 @@ function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: num
 }
 
 /* ============================================
-   MOVIEMOVIE WRAPPED 2.0
+   MOVIEMOVIE WRAPPED 2.0 + SHARE STUDIO
 ============================================ */
 
 function WrappedPage({
@@ -4638,6 +4640,8 @@ function WrappedPage({
   go: (s: string) => void;
   auth: () => void;
 }) {
+  const [shareData, setShareData] = useState<WrappedData | null>(null);
+
   if (!data.user) {
     return (
       <Gate
@@ -4649,9 +4653,21 @@ function WrappedPage({
   }
 
   return (
-    <WrappedExperience
-      onClose={() => go('/profile')}
-    />
+    <>
+      <WrappedExperience
+        onClose={() => go('/profile')}
+        onShare={(wrappedData) => {
+          setShareData(wrappedData);
+        }}
+      />
+
+      {shareData && (
+        <WrappedShare
+          data={shareData}
+          onClose={() => setShareData(null)}
+        />
+      )}
+    </>
   );
 }
 
