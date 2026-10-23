@@ -897,7 +897,6 @@ return (
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
               : active === 'catalog' ? (<Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} />)
-              onSocialShare={(film: FilmType) => {setShareContent({type: 'movie',title: film.title,description: film.description,subtitle: `${film.year} · ${film.category}`,url: `/movie/${film.id}`,image: film.poster,});}}
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'favorites' ? <FavoritesPage data={data} go={go} auth={() => setAuthOpen(true)} />
