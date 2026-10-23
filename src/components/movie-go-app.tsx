@@ -290,6 +290,24 @@ function BrandWordmark({ size = 15, align = 'left' }: { size?: number; align?: '
   );
 }
 
+type SeasonMode =
+  | 'auto'
+  | 'off'
+  | 'winter'
+  | 'spring'
+  | 'summer'
+  | 'autumn';
+
+function getCalendarSeason(): Exclude<SeasonMode, 'auto' | 'off'> {
+  const month = new Date().getMonth() + 1;
+
+  if (month === 12 || month <= 2) return 'winter';
+  if (month <= 5) return 'spring';
+  if (month <= 8) return 'summer';
+
+  return 'autumn';
+}
+
 // --- Main Shell Component ---
 export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] }) {
   const router = useRouter(), path = usePathname(), searchParams = useSearchParams();
@@ -297,6 +315,12 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [lang, setLang] = useState('ru');
+  
+  // Сезонное оформление
+  const [seasonMode, setSeasonMode] = useState('auto');
+  const [seasonAnimations, setSeasonAnimations] = useState(true);
+  const [seasonMenuOpen, setSeasonMenuOpen] = useState(false);
+  const [seasonReady, setSeasonReady] = useState(false);
   const [search, setSearch] = useState('');
   const [authOpen, setAuthOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
@@ -371,6 +395,55 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('mg_theme', theme); }, [theme]);
   useEffect(() => { localStorage.setItem('mg_lang', lang); }, [lang]);
 
+  // Загружаем сезонные настройки из браузера
+useEffect(() => {
+  const savedMode = localStorage.getItem('mg_season_mode');
+
+  const allowedModes = [
+    'auto',
+    'off',
+    'winter',
+    'spring',
+    'summer',
+    'autumn',
+  ];
+
+  if (savedMode && allowedModes.includes(savedMode)) {
+    setSeasonMode(savedMode);
+  }
+
+  setSeasonAnimations(
+    localStorage.getItem('mg_season_animations') !== 'false'
+  );
+
+  setSeasonReady(true);
+}, []);
+
+// Применяем сезонное оформление
+useEffect(() => {
+  if (!seasonReady) return;
+
+  const root = document.documentElement;
+
+  const activeSeason =
+    seasonMode === 'auto'
+      ? getCalendarSeason()
+      : seasonMode;
+
+  root.dataset.season = activeSeason;
+
+  root.dataset.seasonAnimations =
+    seasonAnimations ? 'on' : 'off';
+
+  localStorage.setItem('mg_season_mode', seasonMode);
+
+  localStorage.setItem(
+    'mg_season_animations',
+    String(seasonAnimations)
+  );
+}, [seasonMode, seasonAnimations, seasonReady]);
+
+  
   const go = (url: string) => {
     router.push(url);
     setMobileNav(false);
@@ -658,6 +731,80 @@ return (
                   ))}
                 </div>
               </div>
+
+              {/* Сезонное оформление */}
+<div className="season-theme-menu">
+  <button
+    type="button"
+    className="icon-button"
+    title="Сезонное оформление"
+    onClick={() => setSeasonMenuOpen(v => !v)}
+  >
+    <span style={{ fontSize: 20 }}>
+      {seasonMode === 'off'
+        ? '🚫'
+        : ({
+            winter: '❄️',
+            spring: '🌸',
+            summer: '☀️',
+            autumn: '🍂',
+          } as Record<string, string>)[
+            seasonMode === 'auto'
+              ? getCalendarSeason()
+              : seasonMode
+          ]}
+    </span>
+  </button>
+
+  {seasonMenuOpen && (
+    <div className="season-theme-pop">
+      <div className="season-theme-title">
+        ✨ Сезонная атмосфера
+      </div>
+
+      {[
+        { id: 'auto', label: '🔄 Автоматически' },
+        { id: 'off', label: '🚫 Выключено' },
+        { id: 'winter', label: '❄️ Зима' },
+        { id: 'spring', label: '🌸 Весна' },
+        { id: 'summer', label: '☀️ Лето' },
+        { id: 'autumn', label: '🍂 Осень' },
+      ].map(option => (
+        <button
+          type="button"
+          key={option.id}
+          className={
+            seasonMode === option.id
+              ? 'season-option active'
+              : 'season-option'
+          }
+          onClick={() => {
+            setSeasonMode(option.id);
+            setSeasonMenuOpen(false);
+          }}
+        >
+          {option.label}
+
+          {seasonMode === option.id && <Check size={15} />}
+        </button>
+      ))}
+
+      <div className="season-theme-divider" />
+
+      <button
+        type="button"
+        className="season-option"
+        onClick={() => setSeasonAnimations(v => !v)}
+      >
+        ✨ Анимации
+
+        <span>
+          {seasonAnimations ? 'Вкл.' : 'Выкл.'}
+        </span>
+      </button>
+    </div>
+  )}
+</div>
 
               <div className="popover-anchor">
                 <button className="icon-button notice-button" onClick={() => { setNoticeOpen(!noticeOpen); setProfileOpen(false); if (unread) action({ action: 'notifyRead' }); }}>
