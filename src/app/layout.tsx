@@ -29,9 +29,32 @@ const rubik = Rubik({
 
 // [SEO:METADATA]
 export const metadata: Metadata = {
-  title: 'moviemovie — твоя киновселенная',
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ||
+      'https://moviego-gamma.vercel.app'
+  ),
+
+  title: {
+    default: 'moviemovie — твоя киновселенная',
+    template: '%s',
+  },
+
   description:
     'Смотри, отмечай, оценивай. Твой личный киноархив будущего: фильмы, сериалы и аниме в одном месте.',
+
+  openGraph: {
+    type: 'website',
+    locale: 'ru_RU',
+    siteName: 'moviemovie',
+    title: 'moviemovie — твоя киновселенная',
+    description:
+      'Твоя киновселенная: фильмы, сериалы, аниме, оценки, достижения и друзья.',
+    url: '/',
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+  },
 };
 
 export default function RootLayout({
