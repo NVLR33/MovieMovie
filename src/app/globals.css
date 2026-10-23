@@ -4181,3 +4181,270 @@ select:focus {
 :root[data-season-animations="off"] .welcome-line::after {
   animation: none !important;
 }
+
+/* ==================================================
+   MOVIEMOVIE — SEASON FX V3
+   Seasonal atmosphere decorations
+================================================== */
+
+/* Общие настройки декоративных элементов */
+
+:root[data-season]:not([data-season="off"]) .content {
+  position: relative;
+  isolation: isolate;
+}
+
+/* =========================================
+   WINTER — FROST
+========================================= */
+
+:root[data-season="winter"] .content::before {
+  content: "❄";
+  position: fixed;
+  top: 100px;
+  left: 75px;
+  font-size: 110px;
+  color: rgba(160, 220, 255, .08);
+  text-shadow: 0 0 45px rgba(100, 190, 255, .25);
+  pointer-events: none;
+  z-index: -1;
+}
+
+:root[data-season="winter"] .content::after {
+  content: "❅";
+  position: fixed;
+  right: 35px;
+  bottom: 40px;
+  font-size: 145px;
+  color: rgba(160, 220, 255, .07);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* =========================================
+   SPRING — BLOSSOM
+========================================= */
+
+:root[data-season="spring"] .content::before {
+  content: "🌸";
+  position: fixed;
+  top: 110px;
+  left: 65px;
+  font-size: 95px;
+  opacity: .10;
+  pointer-events: none;
+  z-index: -1;
+}
+
+:root[data-season="spring"] .content::after {
+  content: "🌸";
+  position: fixed;
+  right: 40px;
+  bottom: 50px;
+  font-size: 120px;
+  opacity: .09;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* =========================================
+   SUMMER — SUNLIGHT
+========================================= */
+
+:root[data-season="summer"] .content::before {
+  content: "";
+  position: fixed;
+  top: 60px;
+  right: -100px;
+  width: 450px;
+  height: 450px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 210, 100, .12),
+      rgba(255, 190, 70, .04) 45%,
+      transparent 70%
+    );
+  pointer-events: none;
+  z-index: -1;
+}
+
+:root[data-season="summer"] .content::after {
+  content: "✦";
+  position: fixed;
+  bottom: 60px;
+  left: 60px;
+  font-size: 100px;
+  color: rgba(255, 210, 110, .10);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* =========================================
+   AUTUMN — LEAVES
+========================================= */
+
+:root[data-season="autumn"] .content::before {
+  content: "🍁";
+  position: fixed;
+  top: 100px;
+  left: 60px;
+  font-size: 110px;
+  opacity: .09;
+  pointer-events: none;
+  z-index: -1;
+}
+
+:root[data-season="autumn"] .content::after {
+  content: "🍂";
+  position: fixed;
+  bottom: 50px;
+  right: 35px;
+  font-size: 120px;
+  opacity: .08;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* =========================================
+   Seasonal accent separators
+========================================= */
+
+:root[data-season]:not([data-season="off"]) .section-heading {
+  position: relative;
+}
+
+:root[data-season]:not([data-season="off"]) .section-heading::after {
+  content: "";
+  display: block;
+  width: 45px;
+  height: 2px;
+  margin-top: 12px;
+  border-radius: 10px;
+  background: var(--season-accent);
+  box-shadow: 0 0 12px var(--season-glow);
+}
+
+/* =========================================
+   Seasonal hover effects
+========================================= */
+
+:root[data-season]:not([data-season="off"]) .challenge-pill:hover,
+:root[data-season]:not([data-season="off"]) .quick-stat:hover {
+  box-shadow: 0 0 20px var(--season-glow);
+}
+
+/* =========================================
+   Performance and mobile
+========================================= */
+
+@media (max-width: 900px) {
+  :root[data-season]:not([data-season="off"]) .content::before,
+  :root[data-season]:not([data-season="off"]) .content::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-season]:not([data-season="off"]) .content::before,
+  :root[data-season]:not([data-season="off"]) .content::after {
+    animation: none !important;
+  }
+}
+
+/* ==================================================
+   MOVIEMOVIE — SEASON FX V3.1
+   Unique seasonal character
+================================================== */
+
+/* ❄️ WINTER */
+
+:root[data-season="winter"] .hero {
+  border-top-color: rgba(160, 225, 255, .55);
+}
+
+:root[data-season="winter"] .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(130, 200, 255, .12),
+      transparent 32%
+    );
+  pointer-events: none;
+}
+
+/* 🌸 SPRING */
+
+:root[data-season="spring"] .hero {
+  border-top-color: rgba(255, 165, 215, .55);
+}
+
+:root[data-season="spring"] .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 150, 210, .10),
+      transparent 45%
+    );
+  pointer-events: none;
+}
+
+/* ☀️ SUMMER */
+
+:root[data-season="summer"] .hero {
+  border-top-color: rgba(255, 210, 120, .55);
+}
+
+:root[data-season="summer"] .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      130deg,
+      rgba(255, 190, 70, .13),
+      transparent 48%
+    );
+  pointer-events: none;
+}
+
+/* 🍂 AUTUMN */
+
+:root[data-season="autumn"] .hero {
+  border-top-color: rgba(255, 160, 100, .55);
+}
+
+:root[data-season="autumn"] .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 135, 60, .12),
+      transparent 45%
+    );
+  pointer-events: none;
+}
+
+/* Сохраняем текст и кнопки поверх сезонного слоя */
+
+:root[data-season]:not([data-season="off"]) .hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Декоративные рамки */
+
+:root[data-season]:not([data-season="off"]) .challenge-card,
+:root[data-season]:not([data-season="off"]) .quick-stats {
+  border-color: var(--season-border);
+}
+
