@@ -3,6 +3,7 @@ import { and, eq, sql, ne } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
 import { collabLists, collabItems } from '@/db/schema';
+import { syncChallengeProgress } from '@/lib/challenges';
 import {
   users,
   movies,
