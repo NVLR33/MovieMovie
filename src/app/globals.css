@@ -3794,3 +3794,108 @@ select:focus {
     box-shadow .3s ease,
     border-color .3s ease;
 }
+
+
+/* =========================================
+   MOVIEMOVIE — SEASON PARTICLES V1
+   Lightweight CSS animations
+========================================= */
+
+.season-particles {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+  contain: layout style;
+}
+
+.season-particle {
+  position: absolute;
+  top: -50px;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+  will-change: transform;
+  animation-name: mg-season-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+/* Зимние снежинки */
+.season-particles-winter .season-particle {
+  color: #b8e5ff;
+}
+
+/* Весенние лепестки */
+.season-particles-spring .season-particle {
+  color: #ffabd9;
+}
+
+/* Летние светлячки */
+.season-particles-summer .season-particle {
+  color: #ffd56a;
+  animation-name: mg-summer-float;
+}
+
+/* Осенние листья */
+.season-particles-autumn .season-particle {
+  color: #ffab66;
+}
+
+@keyframes mg-season-fall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg);
+  }
+
+  50% {
+    transform: translate3d(35px, 50vh, 0) rotate(180deg);
+  }
+
+  100% {
+    transform: translate3d(-25px, 110vh, 0) rotate(360deg);
+  }
+}
+
+@keyframes mg-summer-float {
+  0% {
+    transform: translate3d(0, 110vh, 0);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: .65;
+  }
+
+  50% {
+    transform: translate3d(40px, 45vh, 0);
+  }
+
+  80% {
+    opacity: .65;
+  }
+
+  100% {
+    transform: translate3d(-20px, -10vh, 0);
+    opacity: 0;
+  }
+}
+
+/* Учитываем системное уменьшение анимаций */
+@media (prefers-reduced-motion: reduce) {
+  .season-particles {
+    display: none !important;
+  }
+}
+
+/* На телефонах уменьшаем нагрузку */
+@media (max-width: 600px) {
+  .season-particle:nth-child(n + 9) {
+    display: none;
+  }
+
+  .season-particle {
+    filter: none;
+  }
+}
