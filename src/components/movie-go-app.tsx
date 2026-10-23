@@ -1061,14 +1061,99 @@ return (
 )}
         
         {editFilm !== undefined && <MovieForm film={editFilm} close={() => setEditFilm(undefined)} action={action} notify={notify} />}
-        {chatOpen && chatPeerId && data.user && <ChatDrawer peerId={chatPeerId} data={data} go={go} close={() => { setChatOpen(false); setChatPeerId(null); }} notify={notify} />}
-        {toast && <div className="toast"><Sparkles size={16} />{toast}<button onClick={() => setToast('')}><X size={14} /></button></div>}
-        {loading && <div className="loading-line" />}
+{chatOpen && chatPeerId && data.user && (
+  <ChatDrawer
+    peerId={chatPeerId}
+    data={data}
+    go={go}
+    close={() => {
+      setChatOpen(false);
+      setChatPeerId(null);
+    }}
+    notify={notify}
+  />
+)}
+
+{/* Сезонные атмосферные эффекты */}
+{seasonReady && (
+  <SeasonParticles
+    season={seasonMode}
+    enabled={seasonAnimations}
+  />
+)}
+
+{toast && (
+  <div className="toast">
+    <Sparkles size={16} />
+    {toast}
+    <button onClick={() => setToast('')}>
+      <X size={14} />
+    </button>
+  </div>
+)}
+
+{loading && <div className="loading-line" />}
       </div>
     </FavoriteIdsContext.Provider>
     </WatchedIdsContext.Provider>
   );
 }
+
+
+// ==========================================
+// MOVIEMOVIE — SEASON PARTICLES
+// ==========================================
+
+function SeasonParticles({
+  season,
+  enabled,
+}: {
+  season: string;
+  enabled: boolean;
+}) {
+  if (!enabled || season === 'off') return null;
+
+  const activeSeason =
+    season === 'auto'
+      ? getCalendarSeason()
+      : season;
+
+  const symbols: Record<string, string[]> = {
+    winter: ['❄', '❅', '❆'],
+    spring: ['🌸', '🌺', '✿'],
+    summer: ['✦', '✧', '•'],
+    autumn: ['🍂', '🍁', '🍃'],
+  };
+
+  const particles = symbols[activeSeason];
+
+  if (!particles) return null;
+
+  return (
+    <div
+      className={`season-particles season-particles-${activeSeason}`}
+      aria-hidden="true"
+    >
+      {Array.from({ length: 16 }, (_, i) => (
+        <span
+          key={i}
+          className="season-particle"
+          style={{
+            left: `${(i * 37 + 9) % 100}%`,
+            animationDelay: `-${(i * 1.7) % 18}s`,
+            animationDuration: `${12 + (i % 6) * 2}s`,
+            fontSize: `${12 + (i % 4) * 5}px`,
+            opacity: 0.25 + (i % 4) * 0.1,
+          }}
+        >
+          {particles[i % particles.length]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+
 
 // --- Helper Components ---
 
