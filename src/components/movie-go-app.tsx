@@ -1957,7 +1957,25 @@ function Catalog({
   );
 }
 
-function MovieDetail({ film, data, go, action, requireAuth, share, edit, onSocialShare }: { film?: FilmType; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; requireAuth: (f: () => void) => void; share: (f: FilmType) => void; edit: (f: FilmType) => void; }) {
+function MovieDetail({
+  film,
+  data,
+  go,
+  action,
+  requireAuth,
+  share,
+  onSocialShare,
+  edit
+}: {
+  film?: FilmType;
+  data: Data;
+  go: (s: string) => void;
+  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+  requireAuth: (f: () => void) => void;
+  share: (f: FilmType) => void;
+  onSocialShare: (f: FilmType) => void;
+  edit: (f: FilmType) => void;
+}) {
   const [comment, setComment] = useState('');
   const [reply, setReply] = useState<number | null>(null);
   const [hover, setHover] = useState(0);
@@ -2075,14 +2093,14 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit, onSocia
             </button>
 
             <button
-  type="button"
-  className="square-btn"
-  onClick={() => onSocialShare(film)}
-  title="Поделиться в соцсетях"
-  aria-label="Поделиться в соцсетях"
->
-  <Share2 size={18} />
-</button>
+              type="button"
+              className="square-btn"
+              onClick={() => onSocialShare(film)}
+              title="Поделиться в соцсетях"
+              aria-label="Поделиться в соцсетях"
+            >
+              <Share2 size={18} />
+            </button>
 
             <button className="outline-btn" onClick={() => requireAuth(() => go('/room/' + Math.random().toString(36).slice(2, 8)))} title="Смотреть вместе с другом">
               <Tv2 size={17} /> Кинозал
