@@ -3899,3 +3899,285 @@ select:focus {
     filter: none;
   }
 }
+
+
+/* ==================================================
+   MOVIEMOVIE — SEASON FX V2
+   Atmospheric seasonal styling
+================================================== */
+
+/* Общие сезонные переменные */
+
+:root[data-season="winter"] {
+  --season-accent: #8dd7ff;
+  --season-glow: rgba(80, 180, 255, .20);
+  --season-soft: rgba(100, 190, 255, .06);
+  --season-border: rgba(140, 215, 255, .35);
+}
+
+:root[data-season="spring"] {
+  --season-accent: #ff9ed4;
+  --season-glow: rgba(255, 130, 195, .19);
+  --season-soft: rgba(255, 170, 210, .06);
+  --season-border: rgba(255, 165, 215, .35);
+}
+
+:root[data-season="summer"] {
+  --season-accent: #ffd078;
+  --season-glow: rgba(255, 190, 70, .20);
+  --season-soft: rgba(255, 190, 90, .06);
+  --season-border: rgba(255, 205, 110, .35);
+}
+
+:root[data-season="autumn"] {
+  --season-accent: #ffad70;
+  --season-glow: rgba(255, 130, 55, .20);
+  --season-soft: rgba(255, 150, 70, .06);
+  --season-border: rgba(255, 165, 90, .35);
+}
+
+/* =========================================
+   1. Фоновая атмосфера
+========================================= */
+
+:root[data-season]:not([data-season="off"]) body {
+  background-image:
+    radial-gradient(
+      ellipse at 85% 5%,
+      var(--season-soft),
+      transparent 42%
+    ),
+    radial-gradient(
+      ellipse at 5% 75%,
+      var(--season-soft),
+      transparent 45%
+    );
+  background-attachment: fixed;
+}
+
+/* =========================================
+   2. Сезонное свечение шапки
+========================================= */
+
+:root[data-season]:not([data-season="off"]) .topbar {
+  border-bottom-color: var(--season-border);
+  box-shadow:
+    0 4px 35px var(--season-glow);
+}
+
+/* =========================================
+   3. Главный баннер
+========================================= */
+
+:root[data-season]:not([data-season="off"]) .hero {
+  border-color: var(--season-border);
+  box-shadow:
+    0 15px 55px rgba(0,0,0,.18),
+    0 0 35px var(--season-glow);
+}
+
+/* Декоративная сезонная линия */
+
+:root[data-season]:not([data-season="off"]) .hero::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--season-accent),
+    transparent
+  );
+  opacity: .65;
+  pointer-events: none;
+}
+
+/* =========================================
+   4. Карточки фильмов
+========================================= */
+
+:root[data-season]:not([data-season="off"]) .film-card {
+  transition:
+    transform .25s ease,
+    box-shadow .3s ease,
+    border-color .3s ease;
+}
+
+:root[data-season]:not([data-season="off"]) .film-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 12px 35px rgba(0,0,0,.18),
+    0 0 22px var(--season-glow);
+}
+
+/* =========================================
+   5. Сезонные блоки
+========================================= */
+
+:root[data-season]:not([data-season="off"]) 
+:is(
+  .quick-stats,
+  .challenges-bar,
+  .season-pass,
+  .monthly-wrap,
+  .cine-day-banner,
+  .editorial-feature,
+  .roulette-banner
+) {
+  border-color: var(--season-border);
+  background-image:
+    linear-gradient(
+      135deg,
+      var(--season-soft),
+      transparent 65%
+    );
+}
+
+/* =========================================
+   6. Кнопки
+========================================= */
+
+:root[data-season]:not([data-season="off"]) .primary-btn {
+  box-shadow: 0 4px 20px var(--season-glow);
+}
+
+:root[data-season]:not([data-season="off"]) .primary-btn:hover {
+  box-shadow: 0 6px 28px var(--season-glow);
+}
+
+/* =========================================
+   7. Акцентные элементы
+========================================= */
+
+:root[data-season]:not([data-season="off"]) 
+:is(
+  .eyebrow,
+  .section-heading h2 em,
+  .page-heading h1 em
+) {
+  text-shadow: 0 0 18px var(--season-glow);
+}
+
+/* =========================================
+   8. Декоративный свет на главной
+========================================= */
+
+:root[data-season]:not([data-season="off"]) .welcome-line {
+  position: relative;
+}
+
+:root[data-season]:not([data-season="off"]) .welcome-line::before {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 100px;
+  right: 0;
+  top: -25px;
+  background:
+    radial-gradient(
+      ellipse,
+      var(--season-glow),
+      transparent 70%
+    );
+  filter: blur(25px);
+  pointer-events: none;
+}
+
+/* =========================================
+   9. Декоративное свечение заголовков
+========================================= */
+
+:root[data-season]:not([data-season="off"]) 
+:is(
+  .welcome-line h1,
+  .page-heading h1
+) {
+  text-shadow:
+    0 0 28px var(--season-glow);
+}
+
+/* =========================================
+   10. Производительность
+========================================= */
+
+@media (max-width: 600px) {
+  :root[data-season]:not([data-season="off"]) body {
+    background-attachment: scroll;
+  }
+
+  :root[data-season]:not([data-season="off"]) .welcome-line::before {
+    width: 120px;
+    height: 70px;
+    filter: blur(15px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-season]:not([data-season="off"]) .film-card {
+    transition: none;
+  }
+
+  :root[data-season]:not([data-season="off"]) .film-card:hover {
+    transform: none;
+  }
+}
+
+/* =========================================
+   MOVIEMOVIE — SEASON DECORATIONS
+========================================= */
+
+:root[data-season="winter"] .welcome-line::after {
+  content: "❄  ✧  ❅";
+  color: #a8ddff;
+}
+
+:root[data-season="spring"] .welcome-line::after {
+  content: "🌸  ✿  🌸";
+  color: #ffadd8;
+}
+
+:root[data-season="summer"] .welcome-line::after {
+  content: "☀  ✦  ✧";
+  color: #ffd079;
+}
+
+:root[data-season="autumn"] .welcome-line::after {
+  content: "🍁  ✦  🍂";
+  color: #ffac6b;
+}
+
+:root[data-season]:not([data-season="off"]) .welcome-line::after {
+  position: absolute;
+  right: 15px;
+  top: -8px;
+  font-size: 23px;
+  letter-spacing: 16px;
+  opacity: .65;
+  pointer-events: none;
+  animation: mg-season-decor 6s ease-in-out infinite;
+}
+
+@keyframes mg-season-decor {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: .45;
+  }
+
+  50% {
+    transform: translateY(-7px);
+    opacity: .85;
+  }
+}
+
+@media (max-width: 760px) {
+  :root[data-season]:not([data-season="off"]) .welcome-line::after {
+    display: none;
+  }
+}
+
+:root[data-season-animations="off"] .welcome-line::after {
+  animation: none !important;
+}
