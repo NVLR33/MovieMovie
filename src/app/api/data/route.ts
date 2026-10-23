@@ -448,7 +448,8 @@ const myChallenges = allChallenges
       ? allChallengeProgress.find(
           p =>
             p.challengeId === c.id &&
-            p.userId === me.id
+            p.userId === me.id &&
+            p.year === new Date().getUTCFullYear()
         )
       : null;
 
@@ -456,7 +457,7 @@ const myChallenges = allChallenges
       ...c,
       progress: prog?.progress || 0,
       completed: prog?.completed || false,
-      current: c.month === currentMonth
+      const currentMonth = new Date().getUTCMonth() + 1;
     };
   })
   .sort((a, b) => {
