@@ -442,22 +442,31 @@ export async function GET() {
     const currentMonth =
       new Date().getMonth() + 1;
 
-    const myChallenges = allChallenges.map(c => {
-      const prog = me
-        ? allChallengeProgress.find(
-            p =>
-              p.challengeId === c.id &&
-              p.userId === me.id
-          )
-        : null;
+const myChallenges = allChallenges
+  .map(c => {
+    const prog = me
+      ? allChallengeProgress.find(
+          p =>
+            p.challengeId === c.id &&
+            p.userId === me.id
+        )
+      : null;
 
-      return {
-        ...c,
-        progress: prog?.progress || 0,
-        completed: prog?.completed || false,
-        current: c.month === currentMonth
-      };
-    });
+    return {
+      ...c,
+      progress: prog?.progress || 0,
+      completed: prog?.completed || false,
+      current: c.month === currentMonth
+    };
+  })
+  .sort((a, b) => {
+    // Сначала челленджи текущего месяца
+    if (a.current !== b.current) {
+      return a.current ? -1 : 1;
+    }
+
+    return a.id - b.id;
+  });
 
     if (me) {
       const acceptedFriends =
