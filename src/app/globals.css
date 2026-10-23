@@ -4779,3 +4779,11 @@ select:focus {
     transition: none;
   }
 }
+
+.max-logo {
+  font-size: 26px;
+  font-weight: 950;
+  font-family: Arial, sans-serif;
+  letter-spacing: -3px;
+  transform: skew(-8deg);
+}
