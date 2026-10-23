@@ -14,6 +14,7 @@ import {
   CircleHelp, Tv2, Link2, UsersRound
 } from 'lucide-react';
 import type { Film as FilmType } from '@/lib/data';
+import WrappedExperience from './wrapped-experience';
 import ShareCenter, { type ShareContent } from './share-modal';
 
 // --- Types ---
@@ -4624,22 +4625,34 @@ function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: num
   );
 }
 
-function WrappedPage({ data, go, auth }: { data: Data; go: (s: string) => void; auth: () => void; }) {
-  const [step, setStep] = useState(0);
-  if (!data.user) return <Gate title="Итоги Киногода" description="Смотри фильмы весь год, чтобы получить персональную статистику." auth={auth} />;
+/* ============================================
+   MOVIEMOVIE WRAPPED 2.0
+============================================ */
 
-  const minutes = data.watches.reduce((n, w) => n + (data.films.find(f => f.id === w.movieId)?.duration || 0), 0);
-  const genreMap = new Map<string, number>();
-  data.watches.forEach(w => { const f = data.films.find(x => x.id === w.movieId); if (f) f.genre.split(',').forEach(g => genreMap.set(g.trim(), (genreMap.get(g.trim()) || 0) + 1)); });
-  const topGenre = [...genreMap.entries()].sort((a, b) => b[1] - a[1])[0];
+function WrappedPage({
+  data,
+  go,
+  auth,
+}: {
+  data: Data;
+  go: (s: string) => void;
+  auth: () => void;
+}) {
+  if (!data.user) {
+    return (
+      <Gate
+        title="Итоги Киногода"
+        description="Твой год в кино заслуживает отдельной истории. Войди в аккаунт, чтобы увидеть персональный Wrapped."
+        auth={auth}
+      />
+    );
+  }
 
-  const slides = [
-    <div className="wrapped-slide wrapped-1" key={1}><h1>Твой 2026 киногод</h1><p>Это было легендарно.</p><button className="primary-btn" onClick={() => setStep(1)}>Начать <ArrowRight size={16} /></button></div>,
-    <div className="wrapped-slide wrapped-2" key={2} onClick={() => setStep(2)}><h2>Ты провёл в кино<br /><span>{Math.floor(minutes / 60)} часов</span></h2><p>Это {Math.floor(minutes / 1440)} полных дней без сна!</p></div>,
-    <div className="wrapped-slide wrapped-3" key={3} onClick={() => setStep(3)}><h2>Твоя жанровая душа:<br /><span>{topGenre ? topGenre[0] : 'Неизвестно'}</span></h2><p>Ты посмотрел {topGenre ? topGenre[1] : 0} историй в этом жанре.</p></div>,
-    <div className="wrapped-slide wrapped-final" key={4}><h2>moviemovie Wrapped</h2><p>Твой год в цифрах. Делись в сторис!</p><div className="wrapped-card"><b>{data.user.username}</b><p>{data.watches.length} просмотров</p><p>{Math.floor(minutes / 60)} часов</p><p>Любимый жанр: {topGenre ? topGenre[0] : '-'}</p></div><button className="primary-btn" onClick={() => go('/profile')}>Завершить</button></div>
-  ];
-  return <div className="wrapped-container">{slides[step]}</div>;
+  return (
+    <WrappedExperience
+      onClose={() => go('/profile')}
+    />
+  );
 }
 
 function CollabLists({ data, go, action, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; auth: () => void; }) {
