@@ -1,4 +1,4 @@
-'use client';
+м'use client';
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -319,6 +319,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   // Сезонное оформление
   const [seasonMode, setSeasonMode] = useState('auto');
   const [seasonAnimations, setSeasonAnimations] = useState(true);
+  const [seasonGlow, setSeasonGlow] = useState(true);
   const [seasonMenuOpen, setSeasonMenuOpen] = useState(false);
   const [seasonReady, setSeasonReady] = useState(false);
   const [search, setSearch] = useState('');
@@ -416,6 +417,10 @@ useEffect(() => {
     localStorage.getItem('mg_season_animations') !== 'false'
   );
 
+  setSeasonGlow(
+    localStorage.getItem('mg_season_glow') !== 'false'
+  );
+
   setSeasonReady(true);
 }, []);
 
@@ -435,13 +440,21 @@ useEffect(() => {
   root.dataset.seasonAnimations =
     seasonAnimations ? 'on' : 'off';
 
+  root.dataset.seasonGlow =
+    seasonGlow ? 'on' : 'off';
+
   localStorage.setItem('mg_season_mode', seasonMode);
 
   localStorage.setItem(
     'mg_season_animations',
     String(seasonAnimations)
   );
-}, [seasonMode, seasonAnimations, seasonReady]);
+
+  localStorage.setItem(
+    'mg_season_glow',
+    String(seasonGlow)
+  );
+}, [seasonMode, seasonAnimations, seasonGlow, seasonReady]);
 
   
   const go = (url: string) => {
@@ -802,6 +815,20 @@ return (
           {seasonAnimations ? 'Вкл.' : 'Выкл.'}
         </span>
       </button>
+
+
+      <button
+  type="button"
+  className="season-option"
+  onClick={() => setSeasonGlow(v => !v)}
+>
+  💡 Свечение
+
+  <span>
+    {seasonGlow ? 'Вкл.' : 'Выкл.'}
+  </span>
+</button>
+      
     </div>
   )}
 </div>
