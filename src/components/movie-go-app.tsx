@@ -1,4 +1,4 @@
-м'use client';
+'use client';
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
