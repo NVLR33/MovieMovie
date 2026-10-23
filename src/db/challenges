@@ -1,0 +1,129 @@
+import { and, eq, gte, lt, sql } from 'drizzle-orm';
+import { db } from '@/db';
+import {
+  challenges,
+  challengeProgress,
+  movies,
+  watches,
+  users,
+} from '@/db/schema';
+
+function matchesFilter(
+  value: string | null,
+  filter: string | null
+) {
+  if (!filter?.trim()) return true;
+
+  const expected = filter.trim().toLowerCase();
+
+  return (value || '')
+    .split(',')
+    .some(part => part.trim().toLowerCase() === expected);
+}
+
+export async function syncChallengeProgress(userId: number) {
+  const now = new Date();
+
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1;
+
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 1));
+
+  const activeChallenges = await db
+    .select()
+    .from(challenges)
+    .where(eq(challenges.month, month));
+
+  if (!activeChallenges.length) return;
+
+  const watchedMovies = await db
+    .select({
+      movieId: watches.movieId,
+      genre: movies.genre,
+      category: movies.category,
+    })
+    .from(watches)
+    .innerJoin(movies, eq(watches.movieId, movies.id))
+    .where(
+      and(
+        eq(watches.userId, userId),
+        gte(watches.watchedAt, start),
+        lt(watches.watchedAt, end)
+      )
+    );
+
+  for (const challenge of activeChallenges) {
+    const uniqueMovies = new Set<number>();
+
+    for (const movie of watchedMovies) {
+      if (
+        matchesFilter(movie.genre, challenge.filterGenre) &&
+        matchesFilter(movie.category, challenge.filterCategory)
+      ) {
+        uniqueMovies.add(movie.movieId);
+      }
+    }
+
+    const progress = Math.min(
+      uniqueMovies.size,
+      challenge.target
+    );
+
+    const completed = progress >= challenge.target;
+
+    await db.transaction(async tx => {
+      const [existing] = await tx
+        .select()
+        .from(challengeProgress)
+        .where(
+          and(
+            eq(challengeProgress.userId, userId),
+            eq(challengeProgress.challengeId, challenge.id),
+            eq(challengeProgress.year, year)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        await tx.insert(challengeProgress).values({
+          userId,
+          challengeId: challenge.id,
+          year,
+          progress,
+          completed,
+          rewardClaimed: completed,
+        });
+
+        if (completed) {
+          await tx
+            .update(users)
+            .set({
+              xp: sql`coalesce(${users.xp}, 0) + ${challenge.xpReward}`,
+            })
+            .where(eq(users.id, userId));
+        }
+
+        return;
+      }
+
+      await tx
+        .update(challengeProgress)
+        .set({
+          progress,
+          completed,
+          rewardClaimed: existing.rewardClaimed || completed,
+        })
+        .where(eq(challengeProgress.id, existing.id));
+
+      if (completed && !existing.rewardClaimed) {
+        await tx
+          .update(users)
+          .set({
+            xp: sql`coalesce(${users.xp}, 0) + ${challenge.xpReward}`,
+          })
+          .where(eq(users.id, userId));
+      }
+    });
+  }
+}
