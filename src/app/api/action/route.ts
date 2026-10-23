@@ -85,6 +85,8 @@ if (action === 'watch') {
       )
     );
 
+  await syncChallengeProgress(user.id);
+  
   result = {
     ok: true,
     watched: true,
@@ -112,6 +114,8 @@ if (action === 'watch') {
       )
     );
 
+  await syncChallengeProgress(user.id);
+  
   result = {
     ok: true,
     watched: false
