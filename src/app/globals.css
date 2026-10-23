@@ -4448,3 +4448,50 @@ select:focus {
   border-color: var(--season-border);
 }
 
+/* =========================================
+   MOVIEMOVIE — SEASON GLOW CONTROL
+========================================= */
+
+/* Убираем сезонное свечение */
+
+:root[data-season-glow="off"] {
+  --season-glow: transparent !important;
+  --season-soft: transparent !important;
+}
+
+/* Убираем дополнительные световые эффекты */
+
+:root[data-season-glow="off"] .welcome-line::before {
+  display: none !important;
+}
+
+:root[data-season-glow="off"] .topbar,
+:root[data-season-glow="off"] .hero,
+:root[data-season-glow="off"] .film-card:hover,
+:root[data-season-glow="off"] .primary-btn,
+:root[data-season-glow="off"] .primary-btn:hover,
+:root[data-season-glow="off"] .challenges-bar,
+:root[data-season-glow="off"] .challenge-pill:hover,
+:root[data-season-glow="off"] .quick-stat:hover {
+  box-shadow: none !important;
+}
+
+/* Отключаем свечение текста */
+
+:root[data-season-glow="off"] .welcome-line h1,
+:root[data-season-glow="off"] .page-heading h1,
+:root[data-season-glow="off"] .eyebrow {
+  text-shadow: none !important;
+}
+
+/* Отключаем светящиеся частицы, оставляя сами частицы */
+
+:root[data-season-glow="off"] .season-particle {
+  filter: none !important;
+}
+
+/* Отключаем летний солнечный ореол */
+
+:root[data-season="summer"][data-season-glow="off"] .content::before {
+  display: none !important;
+}
