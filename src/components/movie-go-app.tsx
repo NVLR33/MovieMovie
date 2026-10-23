@@ -1288,14 +1288,17 @@ const rating = data.ratings.find(x => x.movieId === f.id);
         </div>
       )}
 
-      {data.challenges?.length > 0 && (
+      {data.challenges?.some(c => c.current) && (
         <div className="challenges-bar">
           <div className="challenges-header">
             <Flame size={18} /><h3>Челленджи месяца</h3>
             <button className="text-link" onClick={() => go('/challenges')}>Все челленджи <ArrowUpRight size={14} /></button>
           </div>
           <div className="challenges-row">
-            {data.challenges.slice(0, 3).map((c: any) => (
+            {data.challenges
+            .filter(c => c.current)
+            .slice(0, 3)
+            .map((c: any) => (
               <div className={`challenge-pill ${c.completed ? 'done' : ''}`} key={c.id}>
                 <span>{c.icon}</span>
                 <div><b>{c.title}</b><small>{c.progress}/{c.target}</small><div className="bar-track"><i style={{ width: `${Math.min(100, (c.progress / c.target) * 100)}%` }} /></div></div>
