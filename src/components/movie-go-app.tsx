@@ -360,6 +360,18 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatPeerId, setChatPeerId] = useState<number | null>(null);
 
+
+  const openMovieShare = (film: FilmType) => {
+  setShareContent({
+    type: 'movie',
+    title: film.title,
+    description: film.description,
+    subtitle: `${film.year} · ${film.category} · ★ ${film.rating.toFixed(1)}`,
+    url: `/movie/${film.id}`,
+    image: film.poster,
+  });
+};
+
   // оптимизация: один стабильный Set для watched
   const watchedIds = useMemo(() => new Set<number>(data.watches.map(w => w.movieId)), [data.watches]);
 
@@ -884,7 +896,7 @@ return (
           <main className="content" key={path}>
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
               : active === 'catalog' ? (<Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
-              : active === 'movie' ? <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} edit={setEditFilm} />
+              : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} />)
               onSocialShare={(film: FilmType) => {setShareContent({type: 'movie',title: film.title,description: film.description,subtitle: `${film.year} · ${film.category}`,url: `/movie/${film.id}`,image: film.poster,});}}
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
@@ -1948,7 +1960,7 @@ function Catalog({
   );
 }
 
-function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { film?: FilmType; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; requireAuth: (f: () => void) => void; share: (f: FilmType) => void; edit: (f: FilmType) => void; }) {
+function MovieDetail({ film, data, go, action, requireAuth, share, edit, onSocialShare }: { film?: FilmType; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; requireAuth: (f: () => void) => void; share: (f: FilmType) => void; edit: (f: FilmType) => void; }) {
   const [comment, setComment] = useState('');
   const [reply, setReply] = useState<number | null>(null);
   const [hover, setHover] = useState(0);
@@ -2065,7 +2077,15 @@ function MovieDetail({ film, data, go, action, requireAuth, share, edit }: { fil
               {isFavorite ? 'В любимом' : 'В любимое'}
             </button>
 
-            <button className="square-btn" onClick={() => requireAuth(() => share(film))} title="Поделиться"><Share2 size={18} /></button>
+            <button
+  type="button"
+  className="square-btn"
+  onClick={() => onSocialShare(film)}
+  title="Поделиться в соцсетях"
+  aria-label="Поделиться в соцсетях"
+>
+  <Share2 size={18} />
+</button>
 
             <button className="outline-btn" onClick={() => requireAuth(() => go('/room/' + Math.random().toString(36).slice(2, 8)))} title="Смотреть вместе с другом">
               <Tv2 size={17} /> Кинозал
