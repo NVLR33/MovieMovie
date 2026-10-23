@@ -439,8 +439,7 @@ export async function GET() {
       achievements: number;
     } | null = null;
 
-    const currentMonth =
-      new Date().getMonth() + 1;
+const currentMonth = new Date().getMonth() + 1;
 
 const myChallenges = allChallenges
   .map(c => {
@@ -457,7 +456,7 @@ const myChallenges = allChallenges
       ...c,
       progress: prog?.progress || 0,
       completed: prog?.completed || false,
-      const currentMonth = new Date().getUTCMonth() + 1;
+      current: c.month === currentMonth
     };
   })
   .sort((a, b) => {
