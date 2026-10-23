@@ -71,7 +71,27 @@ export const watchRooms = pgTable('mg_watch_rooms', { id: text('id').primaryKey(
 export const movieClub = pgTable('mg_movie_club', { id: serial('id').primaryKey(), movieId: integer('movie_id').notNull().references(() => movies.id), weekStart: text('week_start').notNull(), active: boolean('active').default(true) });
 // [DB:CHALLENGES] Monthly challenges with XP rewards
 export const challenges = pgTable('mg_challenges', { id: serial('id').primaryKey(), title: text('title').notNull(), description: text('description').notNull(), month: integer('month').notNull(), filterGenre: text('filter_genre'), filterCategory: text('filter_category'), target: integer('target').notNull().default(3), xpReward: integer('xp_reward').notNull().default(300), icon: text('icon').default('🎬') });
-export const challengeProgress = pgTable('mg_challenge_progress', { id: serial('id').primaryKey(), userId: integer('user_id').notNull().references(() => users.id), challengeId: integer('challenge_id').notNull().references(() => challenges.id), progress: integer('progress').default(0), completed: boolean('completed').default(false) });
+export const challengeProgress = pgTable('mg_challenge_progress', {
+  id: serial('id').primaryKey(),
+
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+
+  challengeId: integer('challenge_id')
+    .notNull()
+    .references(() => challenges.id),
+
+  year: integer('year').notNull(),
+
+  progress: integer('progress').default(0),
+
+  completed: boolean('completed').default(false),
+
+  rewardClaimed: boolean('reward_claimed')
+    .notNull()
+    .default(false),
+});
 
 // [DB:FAVORITES] Personal favorite titles with unique user/movie pairs.
 export const favorites = pgTable(
