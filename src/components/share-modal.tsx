@@ -2,6 +2,13 @@
 
 import { useState } from 'react';
 import {
+  FaTelegramPlane,
+  FaVk,
+  FaInstagram,
+  FaDiscord,
+} from 'react-icons/fa';
+
+import {
   X,
   Link2,
   Check,
@@ -29,37 +36,37 @@ const SOCIALS = [
   {
     id: 'telegram',
     name: 'Telegram',
-    icon: '✈',
+    icon: <FaTelegramPlane size={25} />,
     color: '#27A7E7',
   },
   {
     id: 'max',
     name: 'MAX',
-    icon: 'M',
+    icon: <span className="max-logo">M</span>,
     color: '#685BFF',
   },
   {
     id: 'vk',
     name: 'ВКонтакте',
-    icon: 'VK',
+    icon: <FaVk size={25} />,
     color: '#0077FF',
   },
   {
     id: 'instagram',
     name: 'Instagram',
-    icon: '◎',
+    icon: <FaInstagram size={25} />,
     color: '#E4405F',
   },
   {
     id: 'discord',
     name: 'Discord',
-    icon: '◈',
+    icon: <FaDiscord size={25} />,
     color: '#5865F2',
   },
   {
     id: 'copy',
     name: 'Копировать',
-    icon: '🔗',
+    icon: <Link2 size={24} />,
     color: '#8B8BFF',
   },
 ] as const;
