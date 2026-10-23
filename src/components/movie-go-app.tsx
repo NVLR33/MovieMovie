@@ -14,6 +14,9 @@ import {
   CircleHelp, Tv2, Link2, UsersRound
 } from 'lucide-react';
 import type { Film as FilmType } from '@/lib/data';
+import ShareCenter, {
+  type ShareContent,
+} from './share-center';
 
 // --- Types ---
 type User = {
@@ -351,6 +354,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
   const [shareFilm, setShareFilm] = useState<FilmType | null>(null);
+  const [shareContent, setShareContent] = useState<ShareContent | null>(null);
   const [editFilm, setEditFilm] = useState<FilmType | null | undefined>(undefined);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -1055,7 +1059,7 @@ return (
   </div>
 )}
 
-        {shareFilm && (
+        
           <div className="modal-backdrop" onClick={() => setShareFilm(null)}>
             <div className="glass-modal share-modal" onClick={e => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setShareFilm(null)}><X size={20} /></button>
