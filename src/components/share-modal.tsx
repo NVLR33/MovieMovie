@@ -175,199 +175,228 @@ export default function ShareCenter({
     }
   };
 
-  const exportPNG = async () => {
-    setExporting(true);
+const exportPNG = async () => {
+  if (exporting) return;
 
-    try {
-      const canvas = document.createElement('canvas');
+  setExporting(true);
+  setMessage('');
 
-      canvas.width = 1080;
-      canvas.height = 1350;
+  try {
+    const canvas = document.createElement('canvas');
 
-      const ctx = canvas.getContext('2d');
+    canvas.width = 1080;
+    canvas.height = 1350;
 
-      if (!ctx) throw new Error('Canvas unavailable');
+    const ctx = canvas.getContext('2d');
 
-      // Фон
-      const gradient = ctx.createLinearGradient(
-        0,
-        0,
-        1080,
-        1350
-      );
+    if (!ctx) {
+      throw new Error('Canvas unavailable');
+    }
 
-      gradient.addColorStop(0, '#171329');
-      gradient.addColorStop(0.5, '#10121D');
-      gradient.addColorStop(1, '#080A12');
+    const W = canvas.width;
+    const H = canvas.height;
 
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 1080, 1350);
+    // Фоновый градиент
+    const background = ctx.createLinearGradient(0, 0, W, H);
 
-      // Декоративное свечение
-      const glow = ctx.createRadialGradient(
-        540,
-        300,
-        0,
-        540,
-        300,
-        650
-      );
+    background.addColorStop(0, '#18112D');
+    background.addColorStop(0.48, '#111321');
+    background.addColorStop(1, '#070911');
 
-      glow.addColorStop(0, 'rgba(170,130,255,.25)');
-      glow.addColorStop(1, 'rgba(170,130,255,0)');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, W, H);
 
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, 1080, 1350);
+    // Атмосферное свечение
+    const glow = ctx.createRadialGradient(
+      540, 360, 0,
+      540, 360, 720
+    );
 
-      // Брендинг
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#B7A2FF';
-      ctx.font = '800 48px Arial';
+    glow.addColorStop(0, 'rgba(174,136,255,.23)');
+    glow.addColorStop(1, 'rgba(174,136,255,0)');
 
-      ctx.fillText('moviemovie', 540, 110);
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
 
-      ctx.fillStyle = '#888CA8';
-      ctx.font = '24px Arial';
+    // Верхняя декоративная линия
+    const line = ctx.createLinearGradient(90, 0, 990, 0);
 
-      ctx.fillText(
-        'ТВОЯ КИНОВСЕЛЕННАЯ',
-        540,
-        155
-      );
+    line.addColorStop(0, 'transparent');
+    line.addColorStop(0.5, '#B49AFF');
+    line.addColorStop(1, 'transparent');
 
-      // Рамка контента
-      ctx.strokeStyle = 'rgba(183,162,255,.35)';
-      ctx.lineWidth = 2;
+    ctx.fillStyle = line;
+    ctx.fillRect(90, 45, 900, 3);
+
+    // Брендинг
+    ctx.textAlign = 'center';
+
+    ctx.fillStyle = '#B7A2FF';
+    ctx.font = '900 48px Arial';
+
+    ctx.fillText('moviemovie', 540, 125);
+
+    ctx.fillStyle = '#858AA6';
+    ctx.font = '700 20px Arial';
+
+    ctx.fillText('ТВОЯ КИНОВСЕЛЕННАЯ', 540, 168);
+
+    // Постер
+    let posterLoaded = false;
+
+    if (content.image) {
+      try {
+        const img = new Image();
+
+        img.crossOrigin = 'anonymous';
+
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = reject;
+          img.src = content.image!;
+        });
+
+        // Большой постер в центре
+        const posterX = 270;
+        const posterY = 225;
+        const posterW = 540;
+        const posterH = 720;
+
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.roundRect(
+          posterX,
+          posterY,
+          posterW,
+          posterH,
+          26
+        );
+
+        ctx.clip();
+
+        const scale = Math.max(
+          posterW / img.width,
+          posterH / img.height
+        );
+
+        const drawW = img.width * scale;
+        const drawH = img.height * scale;
+
+        ctx.drawImage(
+          img,
+          posterX + (posterW - drawW) / 2,
+          posterY + (posterH - drawH) / 2,
+          drawW,
+          drawH
+        );
+
+        ctx.restore();
+
+        posterLoaded = true;
+      } catch {
+        posterLoaded = false;
+      }
+    }
+
+    // Заглушка, если постер недоступен
+    if (!posterLoaded) {
+      ctx.fillStyle = '#242039';
 
       ctx.beginPath();
-      ctx.roundRect(90, 220, 900, 900, 36);
-      ctx.stroke();
+      ctx.roundRect(270, 225, 540, 720, 26);
+      ctx.fill();
 
-      // Тип карточки
-      const typeLabels: Record<string, string> = {
-        movie: '🎬 ФИЛЬМ',
-        collection: '🎞 ПОДБОРКА',
-        wrapped: '🏆 ИТОГИ КИНОГОДА',
-        achievement: '⭐ ДОСТИЖЕНИЕ',
-        profile: '👤 КИНОПРОФИЛЬ',
-      };
-
-      ctx.fillStyle = '#B7A2FF';
-      ctx.font = '700 30px Arial';
-
-      ctx.fillText(
-        typeLabels[content.type] || 'MOVIEMOVIE',
-        540,
-        310
-      );
-
-      // Изображение
-      if (content.image) {
-        try {
-          const img = new Image();
-
-          img.crossOrigin = 'anonymous';
-
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject();
-
-            img.src = content.image!;
-          });
-
-          const maxWidth = 540;
-          const maxHeight = 520;
-
-          const scale = Math.min(
-            maxWidth / img.width,
-            maxHeight / img.height
-          );
-
-          const width = img.width * scale;
-          const height = img.height * scale;
-
-          ctx.drawImage(
-            img,
-            (1080 - width) / 2,
-            365,
-            width,
-            height
-          );
-        } catch {
-          // Если внешний сервер запрещает Canvas,
-          // карточка сохранится без изображения.
-        }
-      }
-
-      // Название
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '800 48px Arial';
+      ctx.fillStyle = '#A990FF';
+      ctx.font = '900 100px Arial';
       ctx.textAlign = 'center';
 
-      const title = content.title.length > 32
-        ? content.title.slice(0, 32) + '…'
+      ctx.fillText('M', 540, 600);
+    }
+
+    // Рамка постера
+    ctx.strokeStyle = 'rgba(183,162,255,.45)';
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.roundRect(270, 225, 540, 720, 26);
+    ctx.stroke();
+
+    // Название
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 48px Arial';
+    ctx.textAlign = 'center';
+
+    const title =
+      content.title.length > 34
+        ? content.title.slice(0, 34) + '…'
         : content.title;
 
-      ctx.fillText(title, 540, 975);
+    ctx.fillText(title, 540, 1040);
 
-      // Подзаголовок
-      if (content.subtitle) {
-        ctx.fillStyle = '#C1B7E9';
-        ctx.font = '28px Arial';
+    // Дополнительная информация
+    ctx.fillStyle = '#BEB4DD';
+    ctx.font = '28px Arial';
 
-        ctx.fillText(
-          content.subtitle.slice(0, 55),
-          540,
-          1035
-        );
-      }
+    const subtitle = content.subtitle || '';
 
-      // Нижняя часть
-      ctx.fillStyle = '#A5A8BC';
-      ctx.font = '25px Arial';
+    ctx.fillText(
+      subtitle.slice(0, 60),
+      540,
+      1100
+    );
 
-      ctx.fillText(
-        'Смотри. Оценивай. Делись.',
-        540,
-        1210
-      );
+    // Подпись
+    ctx.fillStyle = '#9295AA';
+    ctx.font = '24px Arial';
 
-      ctx.fillStyle = '#B7A2FF';
-      ctx.font = '22px Arial';
+    ctx.fillText(
+      'Смотри. Оценивай. Делись.',
+      540,
+      1195
+    );
 
-      ctx.fillText(
-        'moviemovie',
-        540,
-        1260
-      );
+    // Ссылка на платформу
+    ctx.fillStyle = '#B7A2FF';
+    ctx.font = '700 25px Arial';
 
-      const blob = await new Promise<Blob | null>(resolve => {
-        canvas.toBlob(resolve, 'image/png');
-      });
+    ctx.fillText(
+      'moviemovie',
+      540,
+      1250
+    );
 
-      if (!blob) throw new Error('PNG export failed');
+    // Экспорт
+    const blob = await new Promise<Blob | null>(resolve => {
+      canvas.toBlob(resolve, 'image/png');
+    });
 
-      const downloadUrl = URL.createObjectURL(blob);
-
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `moviemovie-${content.type}.png`;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(() => {
-        URL.revokeObjectURL(downloadUrl);
-      }, 1000);
-
-      setMessage('Карточка PNG готова!');
-    } catch {
-      setMessage('Не удалось создать изображение');
-    } finally {
-      setExporting(false);
+    if (!blob) {
+      throw new Error('PNG export failed');
     }
-  };
+
+    const downloadUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+
+    link.href = downloadUrl;
+    link.download = `moviemovie-${content.type}.png`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => {
+      URL.revokeObjectURL(downloadUrl);
+    }, 2000);
+
+    setMessage('Красивая карточка сохранена!');
+  } catch {
+    setMessage('Не удалось создать PNG-карточку');
+  } finally {
+    setExporting(false);
+  }
+};
 
   return (
     <div
