@@ -14,7 +14,7 @@ import {
   CircleHelp, Tv2, Link2, UsersRound
 } from 'lucide-react';
 import type { Film as FilmType } from '@/lib/data';
-import ShareCenter, { type ShareContent, } from './share-center';
+import ShareCenter, { type ShareContent } from './share-center';
 
 // --- Types ---
 type User = {
