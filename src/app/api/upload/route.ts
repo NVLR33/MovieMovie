@@ -1,3 +1,22 @@
+Понял, раз своя аватарка тоже не грузится — это уже не «шапка сломалась», это один общий `/api/upload` падает.
+
+И раз ты проверил ключи, а `Invalid Compact JWS` остался — дело не в отсутствии переменных, а в их **содержимом**. Supabase говорит: «ключ до меня дошел, но это не валидный JWT».
+
+Самые частые причины при правильных на вид ключах:
+
+1. Пробел / перенос строки / кавычки в значении в Vercel — `Bearer "eyJ... "` уже невалиден
+2. URL вставлен с `/rest/v1/` на конце
+3. URL от одного проекта, а `service_role` от другого
+4. Скопирован старый `service_role` после сброса JWT Secret
+5. Vercel задеплоил со старым значением из кэша
+
+Твой текущий код этого не чистит и не диагностирует, поэтому давай его усилим. Логику не меняем, просто делаем защиту от пробелов и понятные ошибки.
+
+### 1. Обнови `src/app/api/upload/route.ts`
+
+Открой файл в GitHub и замени целиком на этот:
+
+```ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
@@ -25,6 +44,22 @@ const ALLOWED_KINDS = [
 
 type UploadKind = (typeof ALLOWED_KINDS)[number];
 
+function cleanSupabaseUrl(raw: string) {
+  let url = (raw || '').trim();
+  // убираем /rest/v1 если случайно вставили API URL целиком
+  url = url.replace(/\/rest\/v1\/?$/, '');
+  url = url.replace(/\/+$/, '');
+  return url;
+}
+
+function cleanSupabaseKey(raw: string) {
+  // убираем кавычки, пробелы и переносы строк
+  return (raw || '')
+    .trim()
+    .replace(/^["']+|["']+$/g, '')
+    .replace(/\s+/g, '');
+}
+
 export async function POST(req: NextRequest) {
   const user = await getUser();
 
@@ -41,7 +76,6 @@ export async function POST(req: NextRequest) {
     const file = form.get('file');
     const kind = String(form.get('kind') || 'avatar');
 
-    // Проверяем назначение изображения
     if (!ALLOWED_KINDS.includes(kind as UploadKind)) {
       return NextResponse.json(
         { error: 'Недопустимый тип загрузки' },
@@ -49,8 +83,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Постеры и фоновые изображения материалов:
-    // только администраторы и модераторы
     if (
       ['poster', 'backdrop'].includes(kind) &&
       !['admin', 'moderator'].includes(user.role)
@@ -61,7 +93,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Проверяем файл
     if (!(file instanceof File)) {
       return NextResponse.json(
         { error: 'Файл не найден' },
@@ -85,9 +116,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Настройки Supabase Storage
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Берем URL из любого варианта, чтобы не зависеть от кэша сборки NEXT_PUBLIC_
+    const rawUrl =
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      '';
+    const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+    const supabaseUrl = cleanSupabaseUrl(rawUrl);
+    const serviceRoleKey = cleanSupabaseKey(rawKey);
 
     if (!supabaseUrl || !serviceRoleKey) {
       console.error('[UPLOAD] Supabase Storage environment variables missing');
@@ -96,6 +133,37 @@ export async function POST(req: NextRequest) {
         {
           error:
             'Хранилище изображений не настроено. Проверьте переменные Supabase в Vercel.',
+        },
+        { status: 500 }
+      );
+    }
+
+    // Диагностика без секрета: только хост, длина и формат
+    let urlHost = '';
+    try {
+      urlHost = new URL(supabaseUrl).host;
+    } catch {
+      urlHost = 'invalid-url';
+    }
+
+    const keyParts = serviceRoleKey.split('.').length;
+    const keyPrefix = serviceRoleKey.slice(0, 3);
+
+    console.error('[UPLOAD] env diag', {
+      urlHost,
+      keyLen: serviceRoleKey.length,
+      keyPrefix,
+      keyParts,
+    });
+
+    // Legacy service_role это всегда JWT вида eyJ.xxx.yyy
+    if (keyPrefix !== 'eyJ' || keyParts !== 3) {
+      console.error('[UPLOAD] service_role has invalid JWT format');
+
+      return NextResponse.json(
+        {
+          error:
+            'Серверный ключ Supabase имеет неверный формат. В Vercel нужен свежий Legacy service_role (начинается на eyJ...), а не sb_secret_...',
         },
         { status: 500 }
       );
@@ -112,11 +180,8 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // Уникальное имя файла
     const filename = `${randomUUID()}.${extension}`;
 
-    // Размещаем файлы в отдельных папках пользователей
-    // или материалов
     const path =
       kind === 'avatar' || kind === 'header'
         ? `${kind}/${user.id}/${filename}`
@@ -124,7 +189,6 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Загружаем файл в Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('uploads')
       .upload(path, buffer, {
@@ -136,6 +200,34 @@ export async function POST(req: NextRequest) {
     if (uploadError) {
       console.error('[UPLOAD] Supabase Storage:', uploadError.message);
 
+      if (
+        uploadError.message.includes('Invalid Compact JWS') ||
+        uploadError.message.includes('JWS') ||
+        uploadError.message.includes('JWT') ||
+        uploadError.message.includes('invalid JWT')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'Supabase отклонил серверный ключ (Invalid Compact JWS). Нужен свежий Legacy service_role от того же проекта, что и URL, без пробелов и кавычек.',
+          },
+          { status: 500 }
+        );
+      }
+
+      if (
+        uploadError.message.toLowerCase().includes('bucket') &&
+        uploadError.message.toLowerCase().includes('not found')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'В Supabase Storage не найден бакет uploads. Создай публичный бакет uploads.',
+          },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
         {
           error: `Не удалось загрузить изображение: ${uploadError.message}`,
@@ -144,7 +236,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Получаем публичную ссылку
     const { data: publicUrlData } = supabase.storage
       .from('uploads')
       .getPublicUrl(path);
@@ -155,7 +246,6 @@ export async function POST(req: NextRequest) {
       throw new Error('Не удалось получить ссылку на изображение');
     }
 
-    // Автоматически сохраняем аватар или шапку в профиль
     if (kind === 'avatar') {
       await db
         .update(users)
@@ -188,3 +278,41 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+```
+
+Что изменилось:
+- чистим пробелы, кавычки, `/rest/v1/`
+- умеем брать `SUPABASE_URL` как запасной вариант к `NEXT_PUBLIC_SUPABASE_URL`
+- сразу говорим если вставлен `sb_secret_...` вместо `eyJ...`
+- в логах теперь будет строка `[UPLOAD] env diag` с хостом и форматом, без секрета
+
+### 2. Добавь в Vercel дублирующую переменную
+
+Чтобы не зависеть от кэша сборки `NEXT_PUBLIC_`:
+
+Vercel → Environment Variables → Add:
+
+- Key: `SUPABASE_URL`
+- Type: Config
+- Value: `https://ttvqumefvcqdohcdqymp.supabase.co`
+- Environments: Production и Preview
+
+Это то же значение что и `NEXT_PUBLIC_SUPABASE_URL`.
+
+### 3. Задеплой правильно
+
+1. Commit нового `route.ts`
+2. Vercel → Deployments → последний → Redeploy
+3. **Сними галочку `Use existing Build Cache`** если она есть, иначе Vercel может подставить старые `NEXT_PUBLIC_` значения
+4. Дождись Ready
+
+### 4. Что прислать дальше
+
+Попробуй загрузить шапку еще раз и посмотри:
+
+1. Какой текст ошибки теперь внизу справа?
+2. Что в Vercel Logs в строке `[UPLOAD] env diag`? Там будет `urlHost`, `keyLen`, `keyPrefix`, `keyParts`. Сам ключ не нужен.
+
+И еще одна проверка без секретов: открой Supabase, посмотри в адресной строке `/project/xxxx/` — там ref должен быть `ttvqumefvcqdohcdqymp`. Если там другой ref — значит ключ и URL от разных проектов, отсюда и JWS.
+
+Если хочешь, пока чиним Storage, могу сделать запасной вариант шапки без загрузки — выбор градиента + «вставить ссылкой», в твоем строгом стиле. Тогда профиль будет красивый даже если Storage лежит.
