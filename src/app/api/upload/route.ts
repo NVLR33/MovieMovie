@@ -1,3 +1,30 @@
+Это из-за вставки — ты случайно вставил в `.ts` файл весь мой текст вместе с объяснением.
+
+Ошибка прямо об этом говорит:
+
+```
+1 | Понял, раз своя аватарка тоже не грузится...
+```
+
+TypeScript-файл не может начинаться с русского текста. Там должен быть только код с `import ...`
+
+Сейчас чиним билд. Ничего с ключами пока делать не надо.
+
+### 1. Открой файл
+
+GitHub → `NVLR33/MovieMovie` → `main`:
+
+`src/app/api/upload/route.ts`
+
+Нажми карандаш **Edit**.
+
+### 2. Удали всё и вставь только код
+
+Нажми `Ctrl+A` → `Delete`, затем вставь **только код ниже**, от первой строки `import` до последней `}`.
+
+Без моего текста сверху/снизу.
+
+```ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
@@ -25,18 +52,22 @@ const ALLOWED_KINDS = [
 
 type UploadKind = (typeof ALLOWED_KINDS)[number];
 
-function cleanSupabaseUrl(raw: string) {
-  let url = (raw || '').trim();
-  url = url.replace(/\/rest\/v1\/?$/, '');
-  url = url.replace(/\/+$/, '');
-  return url;
-}
-
-function cleanSupabaseKey(raw: string) {
-  return (raw || '')
+function cleanUrl(value: string | undefined) {
+  if (!value) return '';
+  return value
     .trim()
     .replace(/^["']+|["']+$/g, '')
-    .replace(/\s+/g, '');
+    .replace(/\s+/g, '')
+    .replace(/\/rest\/v1\/?$/, '')
+    .replace(/\/+$/, '');
+}
+
+function cleanKey(value: string | undefined) {
+  if (!value) return '';
+  return value
+    .trim()
+    .replace(/^["']+|["']+$/g, '')
+    .replace(/[\r\n\s]+/g, '');
 }
 
 export async function POST(req: NextRequest) {
@@ -95,14 +126,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rawUrl =
-      process.env.SUPABASE_URL ||
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      '';
-    const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-    const supabaseUrl = cleanSupabaseUrl(rawUrl);
-    const serviceRoleKey = cleanSupabaseKey(rawKey);
+    const supabaseUrl = cleanUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const serviceRoleKey = cleanKey(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     if (!supabaseUrl || !serviceRoleKey) {
       console.error('[UPLOAD] Supabase Storage environment variables missing');
@@ -115,32 +140,66 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let urlHost = '';
+    let host = 'invalid-url';
     try {
-      urlHost = new URL(supabaseUrl).host;
+      host = new URL(supabaseUrl).host;
     } catch {
-      urlHost = 'invalid-url';
+      host = 'invalid-url';
     }
 
     const keyParts = serviceRoleKey.split('.').length;
-    const keyPrefix = serviceRoleKey.slice(0, 3);
 
-    console.error('[UPLOAD] env diag', {
-      urlHost,
+    console.error('[UPLOAD] env check', {
+      host,
+      urlLen: supabaseUrl.length,
       keyLen: serviceRoleKey.length,
-      keyPrefix,
       keyParts,
+      keyPrefix: serviceRoleKey.slice(0, 4),
     });
 
-    if (keyPrefix !== 'eyJ' || keyParts !== 3) {
-      console.error('[UPLOAD] service_role has invalid JWT format');
+    if (serviceRoleKey.startsWith('sb_')) {
+      console.error('[UPLOAD] looks like new sb_ key, need legacy service_role JWT');
       return NextResponse.json(
         {
           error:
-            'Серверный ключ Supabase имеет неверный формат. В Vercel нужен свежий Legacy service_role (начинается на eyJ...), а не sb_secret_...',
+            'В Vercel лежит новый ключ sb_..., а нужен legacy service_role (начинается с eyJ) из Settings → API Keys → Legacy API Keys.',
         },
         { status: 500 }
       );
+    }
+
+    if (keyParts !== 3) {
+      console.error('[UPLOAD] service key is not JWT');
+      return NextResponse.json(
+        {
+          error:
+            'Ключ Supabase не похож на JWT. Нужен именно service_role из Legacy API Keys, а не JWT Secret.',
+        },
+        { status: 500 }
+      );
+    }
+
+    try {
+      const payloadJson = Buffer.from(
+        serviceRoleKey.split('.')[1],
+        'base64'
+      ).toString('utf8');
+      const payload = JSON.parse(payloadJson) as { ref?: string };
+      if (payload.ref && !supabaseUrl.includes(payload.ref)) {
+        console.error('[UPLOAD] key ref mismatch', {
+          host,
+          keyRef: payload.ref,
+        });
+        return NextResponse.json(
+          {
+            error:
+              'URL и ключ Supabase из разных проектов. Проверьте, что оба взяты из moviemovie / main PRODUCTION.',
+          },
+          { status: 500 }
+        );
+      }
+    } catch {
+      // дальше Supabase сам вернет ошибку
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -169,35 +228,6 @@ export async function POST(req: NextRequest) {
 
     if (uploadError) {
       console.error('[UPLOAD] Supabase Storage:', uploadError.message);
-
-      if (
-        uploadError.message.includes('Invalid Compact JWS') ||
-        uploadError.message.includes('JWS') ||
-        uploadError.message.includes('JWT') ||
-        uploadError.message.includes('invalid JWT')
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              'Supabase отклонил серверный ключ (Invalid Compact JWS). Нужен свежий Legacy service_role от того же проекта, что и URL, без пробелов и кавычек.',
-          },
-          { status: 500 }
-        );
-      }
-
-      if (
-        uploadError.message.toLowerCase().includes('bucket') &&
-        uploadError.message.toLowerCase().includes('not found')
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              'В Supabase Storage не найден бакет uploads. Создай публичный бакет uploads.',
-          },
-          { status: 500 }
-        );
-      }
-
       return NextResponse.json(
         {
           error: `Не удалось загрузить изображение: ${uploadError.message}`,
@@ -217,11 +247,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (kind === 'avatar') {
-      await db.update(users).set({ avatar: url }).where(eq(users.id, user.id));
+      await db
+        .update(users)
+        .set({ avatar: url })
+        .where(eq(users.id, user.id));
     }
 
     if (kind === 'header') {
-      await db.update(users).set({ headerImage: url }).where(eq(users.id, user.id));
+      await db
+        .update(users)
+        .set({ headerImage: url })
+        .where(eq(users.id, user.id));
     }
 
     return NextResponse.json({
@@ -241,3 +277,14 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+```
+
+### 3. Сохрани
+
+**Commit changes** → дождись Vercel **Ready**.
+
+После того как билд станет зелёным, попробуй загрузить шапку ещё раз и пришли новую строку из логов:
+
+`[UPLOAD] env check ...`
+
+Сам ключ там не светится, только host / длины / префикс. По ней сразу увидим, что реально видит деплой и почему Storage говорит `Invalid Compact JWS`.
