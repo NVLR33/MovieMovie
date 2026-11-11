@@ -23,8 +23,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   }
 
   // Динамический Callback URL под любой текущий домен (moviemovie.duckdns.org или vercel.app)
-  const origin = req.nextUrl.origin;
-  const redirectUri = `${origin}/api/oauth/yandex`;
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || req.nextUrl.origin).replace(/\/$/, '');
+  const redirectUri = `${baseUrl}/api/oauth/yandex`;
   const code = req.nextUrl.searchParams.get('code');
 
   // Шаг 1: Перенаправление пользователя на страницу авторизации Яндекс
