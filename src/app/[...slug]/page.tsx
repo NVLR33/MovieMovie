@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://moviego-gamma.vercel.app';
+  'https://moviemovie.ru';
 
 type PageProps = {
   params: Promise<{
