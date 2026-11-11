@@ -1557,10 +1557,57 @@ const rating = data.ratings.find(x => x.movieId === f.id);
       </div>
 
       <div className="quick-stats">
-        <div className="quick-stat"><span className="quick-icon violet"><Clapperboard size={19} /></span><div><b>{fmt(films.length)}</b><small>{en ? 'stories in the library' : 'историй в каталоге'}</small></div></div>
-        <div className="quick-stat"><span className="quick-icon amber"><Star size={19} /></span><div><b>{(films.reduce((n, f) => n + f.rating, 0) / films.length).toFixed(1)}</b><small>{en ? 'average rating' : 'средний рейтинг'}</small></div></div>
-        <div className="quick-stat"><span className="quick-icon blue"><Users size={19} /></span><div><b>{fmt(data.people.length)}</b><small>{en ? 'movie lovers' : 'кинолюбителей'}</small></div></div>
-        <div className="quick-stat"><span className="quick-icon green"><Sparkles size={19} /></span><div><b>{data.user ? fmt(data.watches.length) : '∞'}</b><small>{data.user ? (en ? 'your watches' : 'твоих просмотров') : (en ? 'moments ahead' : 'впечатлений впереди')}</small></div></div>
+        {/* 1. Историй в каталоге */}
+        <div className="quick-stat">
+          <span className="quick-icon violet"><Clapperboard size={19} /></span>
+          <div>
+            <b><AnimatedNumber value={films.length} duration={1000} /></b>
+            <small>{en ? 'stories in the library' : 'историй в каталоге'}</small>
+          </div>
+        </div>
+
+        {/* 2. Средний рейтинг (1 знак после запятой) */}
+        <div className="quick-stat">
+          <span className="quick-icon amber"><Star size={19} /></span>
+          <div>
+            <b>
+              <AnimatedNumber 
+                value={films.length ? (films.reduce((n, f) => n + f.rating, 0) / films.length) : 0} 
+                decimals={1} 
+                duration={1200} 
+              />
+            </b>
+            <small>{en ? 'average rating' : 'средний рейтинг'}</small>
+          </div>
+        </div>
+
+        {/* 3. Кинолюбителей (плавно наберет от 0 до 7 при загрузке) */}
+        <div className="quick-stat">
+          <span className="quick-icon blue"><Users size={19} /></span>
+          <div>
+            <b><AnimatedNumber value={data.people.length} duration={1500} /></b>
+            <small>{en ? 'movie lovers' : 'кинолюбителей'}</small>
+          </div>
+        </div>
+
+        {/* 4. Впечатлений впереди / Мои просмотры */}
+        <div className="quick-stat">
+          <span className="quick-icon green"><Sparkles size={19} /></span>
+          <div>
+            <b>
+              {data.user ? (
+                <AnimatedNumber value={data.watches.length} duration={1000} />
+              ) : (
+                '∞'
+              )}
+            </b>
+            <small>
+              {data.user 
+                ? (en ? 'your watches' : 'твоих просмотров') 
+                : (en ? 'moments ahead' : 'впечатлений впереди')}
+            </small>
+          </div>
+        </div>
       </div>
 
       {data.cineDay?.label && (
