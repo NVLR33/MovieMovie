@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     return NextResponse.redirect(new URL('/?auth=config', req.url));
   }
 
-  // Динамический Callback URL под любой текущий домен (moviemovie.duckdns.org или vercel.app)
+  // Динамический Callback URL под любой текущий домен (moviemovie.ru или timeweb.cloud)
   const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || req.nextUrl.origin).replace(/\/$/, '');
   const redirectUri = `${baseUrl}/api/oauth/yandex`;
   const code = req.nextUrl.searchParams.get('code');
