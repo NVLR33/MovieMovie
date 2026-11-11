@@ -10,8 +10,15 @@ import { ensureSeed } from '@/lib/data';
 export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
 
+  // Жестко фиксируем базовый адрес сайта, чтобы НИКОГДА не было редиректов на localhost
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || 
+    process.env.SITE_URL || 
+    'https://moviemovie.ru'
+  ).replace(/\/$/, '');
+
   if (provider !== 'yandex') {
-    return NextResponse.redirect(new URL('/?auth=provider', req.url));
+    return NextResponse.redirect(new URL('/?auth=provider', baseUrl));
   }
 
   const clientId = process.env.YANDEX_CLIENT_ID;
@@ -19,11 +26,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
   if (!clientId || !clientSecret) {
     console.error('[OAUTH] Yandex credentials not configured');
-    return NextResponse.redirect(new URL('/?auth=config', req.url));
+    return NextResponse.redirect(new URL('/?auth=config', baseUrl));
   }
 
-  // Динамический Callback URL под любой текущий домен (moviemovie.ru или timeweb.cloud)
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || req.nextUrl.origin).replace(/\/$/, '');
   const redirectUri = `${baseUrl}/api/oauth/yandex`;
   const code = req.nextUrl.searchParams.get('code');
 
@@ -41,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     response.cookies.set('mg_oauth_yandex', state, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       maxAge: 600,
       path: '/',
     });
@@ -132,11 +137,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     await setSession(u.id);
     console.log('[OAUTH] Yandex login success:', u.username);
 
-    const response = NextResponse.redirect(new URL('/', req.url));
+    const response = NextResponse.redirect(new URL('/', baseUrl));
     response.cookies.delete('mg_oauth_yandex');
     return response;
   } catch (e) {
     console.error('[OAUTH] Yandex auth error:', e);
-    return NextResponse.redirect(new URL('/?auth=failed', req.url));
+    return NextResponse.redirect(new URL('/?auth=failed', baseUrl));
   }
 }
