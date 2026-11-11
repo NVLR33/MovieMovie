@@ -17,6 +17,7 @@ import type { Film as FilmType } from '@/lib/data';
 import WrappedExperience from './wrapped-experience';
 import WrappedShare from './wrapped-share';
 import type { WrappedData } from './wrapped-experience';
+import { AnimatedNumber } from '@/components/animated-number';
 import ShareCenter, { type ShareContent } from './share-modal';
 
 // --- Types ---
