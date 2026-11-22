@@ -17,6 +17,7 @@ import type { Film as FilmType } from '@/lib/data';
 import WrappedExperience from './wrapped-experience';
 import WrappedShare from './wrapped-share';
 import type { WrappedData } from './wrapped-experience';
+import BrandLogo from './brand-logo';
 import { AnimatedNumber } from '@/components/animated-number';
 import { useJsonResource } from './use-json-resource';
 import ShareCenter, { type ShareContent } from './share-modal';
@@ -274,27 +275,6 @@ function PosterThumb({
   );
 }
 
-
-/* --- БРЕНД: НОВЫЙ ЛОГОТИП "moviemovie" (movie над movie) --- */
-function BrandWordmark({ size = 15, align = 'left' }: { size?: number; align?: 'left' | 'center'; }) {
-  return (
-    <span
-      className="brand-wordmark-stack"
-      style={{
-        display: 'inline-flex',
-        flexDirection: 'column',
-        lineHeight: 1.02,
-        fontWeight: 800,
-        letterSpacing: '-0.02em',
-        fontSize: size,
-        textAlign: align,
-      }}
-    >
-      <span className="brand-wordmark-top" style={{ opacity: 1 }}>movie</span>
-      <span className="brand-wordmark-bottom" style={{ opacity: 0.55, marginTop: Math.max(1, Math.round(size * 0.08)) }}>movie</span>
-    </span>
-  );
-}
 
 type SeasonMode =
   | 'auto'
@@ -645,10 +625,9 @@ return (
     <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
       <div className="app-shell">
         <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
-          <div className="side-brand" onClick={() => go('/')}>
-            <span className="brand-mark"><Clapperboard size={21} strokeWidth={2.4} /></span>
-            <BrandWordmark size={17} />
-          </div>
+          <button type="button" className="side-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
+            <BrandLogo sizes="(max-width: 760px) 160px, (max-width: 1050px) 48px, 160px" priority />
+          </button>
           <div className="side-scroll">
             <div className="nav-group-label">{en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ'}</div>
             <nav className="nav-list">
@@ -713,6 +692,10 @@ return (
           <header className="topbar">
             <button className="mobile-menu icon-button" onClick={() => setMobileNav(!mobileNav)}>
               <Menu size={21} />
+            </button>
+
+            <button type="button" className="mobile-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
+              <BrandLogo sizes="96px" />
             </button>
 
             <div className="top-search">
@@ -939,7 +922,9 @@ return (
           </main>
 
           <footer className="footer">
-            <div className="footer-logo"><BrandWordmark size={20} /></div>
+            <button type="button" className="footer-logo" onClick={() => go('/')} aria-label="moviemovie — на главную">
+              <BrandLogo sizes="128px" />
+            </button>
             <p>Твоя история. Твоё кино. Твоя вселенная.</p>
             <span>Сделано с любовью к кино · 2026</span>
           </footer>
