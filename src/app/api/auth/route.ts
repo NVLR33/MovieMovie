@@ -1,3 +1,4 @@
+import { readJsonObject, RequestError, requestFailure, isDatabaseFailure } from '@/lib/request-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyTelegramLogin } from '@/lib/auth-validation';
 import bcrypt from 'bcryptjs';
@@ -11,7 +12,7 @@ import { ensureSeed } from '@/lib/data';
 export async function GET() {
   try {
     await ensureSeed();
-    return NextResponse.json({ user: publicUser(await getUser()) });
+    return NextResponse.json({ user: publicUser(await getUser()) }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (e) {
     console.error('[AUTH:GET]', e);
     return NextResponse.json({ user: null });
@@ -20,11 +21,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const body = await readJsonObject(req);
     await ensureSeed();
-    const body = await req.json();
     const { action, email, password, username, telegramData } = body;
 
-    console.log('[AUTH:POST] action:', action);
+    if (typeof action !== 'string') throw new RequestError('Укажите действие');
 
     if (action === 'logout') {
       await clearSession();
@@ -119,6 +120,8 @@ export async function POST(req: NextRequest) {
     console.log('[AUTH] Login:', u.username);
     return NextResponse.json({ user: publicUser(u) });
   } catch (e) {
+    if (e instanceof RequestError) return requestFailure(e);
+    if (isDatabaseFailure(e) && ((e as { code?: string }).code === '23505' || (e as { cause?: { code?: string } }).cause?.code === '23505')) return NextResponse.json({ error: 'Почта или имя уже используются' }, { status: 409 });
     console.error('[AUTH:POST] Error:', e);
     return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 });
   }

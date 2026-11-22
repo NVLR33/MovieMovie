@@ -1,3 +1,4 @@
+import { readJsonObject, RequestError, requestFailure, databaseId, isDatabaseFailure } from '@/lib/request-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq, or, desc, sql } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
@@ -6,12 +7,13 @@ import { messages, users, friendships, movies } from '@/db/schema';
 
 // [API:CHAT] Direct message history between friends.
 export async function GET(req: NextRequest) {
+  try {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Необходимо войти' }, { status: 401 });
 
   const withParam = req.nextUrl.searchParams.get('with');
-  const withId = Number(withParam);
-  if (withParam !== null && (!Number.isSafeInteger(withId) || withId < 1)) {
+  const withId = withParam === null ? 0 : Number(withParam);
+  if (withParam !== null && (!Number.isSafeInteger(withId) || withId < 1 || withId > 2147483647)) {
     return NextResponse.json({ error: 'Неверный ID собеседника' }, { status: 400 });
   }
 
@@ -53,7 +55,7 @@ export async function GET(req: NextRequest) {
         ...m,
         film: m.movieId ? filmMap[m.movieId] || null : null,
       })),
-    });
+    }, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 
   // [CHAT:INBOX] Overview of all conversations — latest message + unread count per friend.
@@ -92,7 +94,8 @@ export async function GET(req: NextRequest) {
     .filter(c => c.peer)
     .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
 
-  return NextResponse.json({ conversations });
+  return NextResponse.json({ conversations }, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) { return requestFailure(error, 'Не удалось загрузить сообщения'); }
 }
 
 // [API:CHAT:SEND] Send a message to a friend.
@@ -101,10 +104,10 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Необходимо войти' }, { status: 401 });
 
   try {
-    const body = await req.json();
-    const toId = Number(body.toId);
+    const body = await readJsonObject(req);
+    const toId = databaseId(body.toId);
     const text = String(body.text || '').trim().slice(0, 2000);
-    const movieId = body.movieId ? Number(body.movieId) : null;
+    const movieId = body.movieId ? databaseId(body.movieId) : null;
 
     if (!Number.isSafeInteger(toId) || toId < 1 || (movieId !== null && (!Number.isSafeInteger(movieId) || movieId < 1))) throw Error('Неверный ID');
     if (!text && !movieId) throw Error('Сообщение не может быть пустым');
@@ -139,6 +142,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, message: msg });
   } catch (e) {
+    if (e instanceof RequestError || isDatabaseFailure(e)) return requestFailure(e);
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка отправки' }, { status: 400 });
   }
 }

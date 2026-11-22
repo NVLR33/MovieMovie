@@ -1,5 +1,7 @@
+import { notFound } from 'next/navigation';
+import { resolveSiteRoute } from '@/lib/site-routes';
 import type { Metadata } from 'next';
-import { getOverview } from '@/lib/data';
+import { getOverview, db, users, eq } from '@/lib/data';
 import MovieGoApp from '@/components/movie-go-app';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +27,7 @@ export async function generateMetadata({
   if (slug?.[0] === 'top') {
     return {
       title: 'Лучшие материалы — топ-10, 50 и 100 | moviemovie',
-      description: 'Лучшие фильмы, сериалы, мультфильмы и аниме по оценкам пользователей и числу просмотров на moviemovie.',
+      description: 'Лучшие фильмы, сериалы, мультфильмы и аниме по оценкам пользователей, просмотрам и добавлениям в любимое на moviemovie.',
       alternates: { canonical: `${SITE_URL}/top` },
     };
   }
@@ -112,8 +114,16 @@ export async function generateMetadata({
 }
 
 // [PAGE:ROUTES] Direct links to catalog, profiles, games, and film details.
-export default async function RoutedPage() {
+export default async function RoutedPage({ params }: PageProps) {
+  const { slug } = await params;
+  const route = resolveSiteRoute('/' + slug.join('/'));
+  if (!route) notFound();
+  if (route.page === 'viewuser' || route.page === 'compare') {
+    const [person] = await db.select({ id: users.id }).from(users).where(eq(users.id, route.id!)).limit(1);
+    if (!person) notFound();
+  }
   const films = await getOverview();
+  if (route.page === 'movie' && !films.some(film => film.id === route.id)) notFound();
 
   return <MovieGoApp initialFilms={films} />;
 }

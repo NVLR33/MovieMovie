@@ -911,7 +911,7 @@ pendingSuggestionsCount,
       collectibleYear,
       challenges: myChallenges,
       season
-    });
+    }, { headers: { 'Cache-Control': 'private, no-store' } });
 
   } catch (e) {
     console.error(e);

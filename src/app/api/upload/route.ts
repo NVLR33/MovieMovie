@@ -1,3 +1,4 @@
+import { requireSameOrigin, RequestError, requestFailure } from '@/lib/request-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
@@ -5,6 +6,8 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+
+import { validImageBytes } from '@/lib/image-storage';
 
 export const runtime = 'nodejs';
 
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    requireSameOrigin(req);
+    if (Number(req.headers.get('content-length')) > MAX_FILE_SIZE + 65536) return NextResponse.json({ error: 'Изображение слишком большое' }, { status: 413 });
     const form = await req.formData();
 
     const file = form.get('file');
@@ -107,7 +112,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'Хранилище изображений не настроено. Проверьте переменные Supabase в Vercel.',
+            'Хранилище изображений не настроено. Проверьте серверные переменные Supabase Storage.',
         },
         { status: 500 }
       );
@@ -131,11 +136,13 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    if (!validImageBytes(buffer, file.type)) return NextResponse.json({ error: 'Содержимое файла не соответствует JPEG, PNG или WebP' }, { status: 400 });
+
     const { error: uploadError } = await supabase.storage
       .from('uploads')
       .upload(path, buffer, {
         contentType: file.type,
-        cacheControl: '3600',
+        cacheControl: '31536000',
         upsert: false,
       });
 
@@ -143,7 +150,7 @@ export async function POST(req: NextRequest) {
       console.error('[UPLOAD] Supabase Storage:', uploadError.message);
       return NextResponse.json(
         {
-          error: `Не удалось загрузить изображение: ${uploadError.message}`,
+          error: 'Не удалось загрузить изображение в хранилище. Повторите позже.',
         },
         { status: 500 }
       );
@@ -178,13 +185,11 @@ export async function POST(req: NextRequest) {
       url,
     });
   } catch (error) {
+    if (error instanceof RequestError) return requestFailure(error);
     console.error('[UPLOAD]', error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Неизвестная ошибка загрузки',
+        error: 'Не удалось загрузить изображение. Повторите позже.',
       },
       { status: 500 }
     );

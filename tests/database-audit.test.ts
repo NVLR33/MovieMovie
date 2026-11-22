@@ -9,7 +9,7 @@ import { checkDatabase, DATABASE_CHECK_FILES } from '../scripts/database-checks'
 const audit = readFileSync('scripts/supabase/03-schema-audit.sql', 'utf8');
 test('full schema audit is generated from every application table, not a hand-maintained subset', () => {
   const tables = Object.values(schema);
-  assert.equal(tables.length, 30);
+  assert.equal(tables.length, 31);
   assert.equal(audit, buildSchemaAudit(tables));
   for (const table of tables) {
     const config = getTableConfig(table);

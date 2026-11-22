@@ -1,3 +1,4 @@
+import { readJsonObject, RequestError, requestFailure } from '@/lib/request-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq, gt, ne, sql } from 'drizzle-orm';
 import { db } from '@/db';
@@ -7,7 +8,7 @@ import { isSeries, validSeriesRating } from '@/lib/series';
 import { loadSeries, syncSeriesCompletion } from '@/lib/series-server';
 
 class InputError extends Error {}
-function positive(value: unknown, max = Number.MAX_SAFE_INTEGER) {
+function positive(value: unknown, max = 2147483647) {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1 || value > max) throw new InputError('Некорректный номер или ID');
   return value;
 }
@@ -16,6 +17,7 @@ function title(value: unknown) {
   return value.trim();
 }
 function failure(error: unknown) {
+  if (error instanceof RequestError) return requestFailure(error);
   if (error instanceof SyntaxError) return NextResponse.json({ error: 'Некорректный JSON' }, { status: 400 });
   if (error instanceof InputError) return NextResponse.json({ error: error.message }, { status: 400 });
   console.error('Series API:', error);
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Войдите в аккаунт' }, { status: 401 });
   try {
-    const body = await req.json();
+    const body = await readJsonObject(req);
     if (!body || typeof body !== 'object' || Array.isArray(body)) throw new InputError('Некорректный запрос');
     const movieId = positive(body.movieId);
     const action = String(body.action || '');

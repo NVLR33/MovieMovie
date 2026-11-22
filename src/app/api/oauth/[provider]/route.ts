@@ -33,6 +33,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   const redirectUri = `${baseUrl}/api/oauth/yandex`;
   const code = req.nextUrl.searchParams.get('code');
 
+  if (req.nextUrl.searchParams.has('error')) {
+    const response = NextResponse.redirect(new URL('/?auth=cancelled', baseUrl));
+    response.cookies.delete('mg_oauth_yandex');
+    return response;
+  }
+
   // Шаг 1: Перенаправление пользователя на страницу авторизации Яндекс
   if (!code) {
     const state = randomBytes(20).toString('hex');
@@ -67,6 +73,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   try {
     // Обмен authorization code на access_token
     const tokenRes = await fetch('https://oauth.yandex.ru/token', {
+      signal: AbortSignal.timeout(10000),
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -79,8 +86,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     });
 
     if (!tokenRes.ok) {
-      const errBody = await tokenRes.text();
-      console.error('[OAUTH] Token error:', tokenRes.status, errBody);
+      console.error('[OAUTH] Token error status:', tokenRes.status);
       throw new Error('token_failed');
     }
 
@@ -88,6 +94,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
     // Запрос данных профиля пользователя из Яндекс ID
     const infoRes = await fetch('https://login.yandex.ru/info?format=json', {
+      signal: AbortSignal.timeout(10000),
       headers: { Authorization: `OAuth ${token.access_token}` },
     });
 
@@ -145,6 +152,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     return response;
   } catch (e) {
     console.error('[OAUTH] Yandex auth error:', e);
-    return NextResponse.redirect(new URL('/?auth=failed', baseUrl));
+    const response = NextResponse.redirect(new URL('/?auth=failed', baseUrl));
+    response.cookies.delete('mg_oauth_yandex');
+    return response;
   }
 }

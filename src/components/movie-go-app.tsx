@@ -1,7 +1,8 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { browserStorage, copyText } from '@/lib/browser-preferences';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useOptimistic, startTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Home, Clapperboard, Compass, Trophy, Gamepad2, Users, Bookmark, Shield, Search,
@@ -26,6 +27,13 @@ import {
   type LeaderboardMetric,
 } from '@/lib/leaderboard';
 import BrandLogo from './brand-logo';
+import { playerEmbedUrl } from '@/lib/player-url';
+import { resolveSiteRoute } from '@/lib/site-routes';
+import { catalogTokens, filterCatalog, parseCatalogOptions } from '@/lib/catalog-filter';
+import { CATALOG_MOODS, parseCatalogMood } from '@/lib/catalog-moods';
+import { tiltPoster, resetTilt, MagneticButton, ReviewDrawer, MovieContextBar, RatingCelebration, AchievementReveal } from './cinema-interactions';
+import { useLiveUpdates } from './use-live-updates';
+import { applyCollectionUpdate, type CollectionUpdate } from '@/lib/optimistic-collections';
 import { achievementDefs, ACHIEVEMENT_TIERS } from '@/lib/achievements';
 import type { AchievementProgress, AchievementId } from '@/lib/achievements';
 import type { OwnershipStats } from '@/lib/ownership';
@@ -335,7 +343,10 @@ function getCalendarSeason(): Exclude<SeasonMode, 'auto' | 'off'> {
 // --- Main Shell Component ---
 export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] }) {
   const router = useRouter(), path = usePathname(), searchParams = useSearchParams();
-  const [data, setData] = useState<Data>({ ...blank, films: initialFilms });
+  const [serverData, setData] = useState<Data>({ ...blank, films: initialFilms });
+  const [data, addOptimistic] = useOptimistic(serverData, applyCollectionUpdate<Data>);
+  const pendingActions = useRef(new Set<string>());
+  const refreshVersion = useRef(0);
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [lang, setLang] = useState('ru');
@@ -417,14 +428,17 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const notify = (s: string) => { setToast(s); setTimeout(() => setToast(''), 3700); };
 
   const refresh = async () => {
+    if (pendingActions.current.size) return;
+    const version = ++refreshVersion.current;
     try {
       const r = await fetch('/api/data', { cache: 'no-store' });
       if (r.ok) {
         const d = await r.json();
+        if (version !== refreshVersion.current || pendingActions.current.size) return;
         setData(d);
         if (d.user) {
-          setTheme(localStorage.getItem('mg_theme') || d.user.theme || 'dark');
-          setLang(localStorage.getItem('mg_lang') || d.user.language || 'ru');
+          setTheme(browserStorage.getItem('mg_theme') || d.user.theme || 'dark');
+          setLang(browserStorage.getItem('mg_lang') || d.user.language || 'ru');
         }
       }
     } catch {
@@ -433,6 +447,21 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
       setLoading(false);
     }
   };
+
+  const refreshLive = async (channels: string[]) => {
+    if (loading || channels.some(channel => channel !== 'pulse')) { await refresh(); return; }
+    if (pendingActions.current.size) return;
+    const version = refreshVersion.current;
+    try {
+      const response = await fetch('/api/pulse', { cache: 'no-store' });
+      if (!response.ok) return;
+      const snapshot = await response.json();
+      if (version === refreshVersion.current && !pendingActions.current.size && Array.isArray(snapshot.films)) {
+        setData(current => ({ ...current, films: snapshot.films, weeklyLeaders: snapshot.weeklyLeaders }));
+      }
+    } catch { /* Keep the last valid public snapshot; reconnect/fallback will resync. */ }
+  };
+  const liveStatus = useLiveUpdates(data.user?.id, refreshLive);
 
   useEffect(() => {
     // Initial network synchronization; refresh updates state after the response.
@@ -453,16 +482,16 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   useEffect(() => {
     // Browser-only preferences must be read after hydration, before persistence effects run.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTheme(localStorage.getItem('mg_theme') || 'dark');
-    setLang(localStorage.getItem('mg_lang') || 'ru');
+    setTheme(browserStorage.getItem('mg_theme') || 'dark');
+    setLang(browserStorage.getItem('mg_lang') || 'ru');
     setPreferencesReady(true);
   }, []);
-  useEffect(() => { if (preferencesReady) { document.documentElement.dataset.theme = theme; localStorage.setItem('mg_theme', theme); } }, [theme, preferencesReady]);
-  useEffect(() => { if (preferencesReady) localStorage.setItem('mg_lang', lang); }, [lang, preferencesReady]);
+  useEffect(() => { if (preferencesReady) { document.documentElement.dataset.theme = theme; browserStorage.setItem('mg_theme', theme); } }, [theme, preferencesReady]);
+  useEffect(() => { if (preferencesReady) browserStorage.setItem('mg_lang', lang); }, [lang, preferencesReady]);
 
   // Загружаем сезонные настройки из браузера
 useEffect(() => {
-  const savedMode = localStorage.getItem('mg_season_mode');
+  const savedMode = browserStorage.getItem('mg_season_mode');
 
   const allowedModes = [
     'auto',
@@ -480,11 +509,11 @@ useEffect(() => {
   }
 
   setSeasonAnimations(
-    localStorage.getItem('mg_season_animations') !== 'false'
+    browserStorage.getItem('mg_season_animations') !== 'false'
   );
 
   setSeasonGlow(
-    localStorage.getItem('mg_season_glow') !== 'false'
+    browserStorage.getItem('mg_season_glow') !== 'false'
   );
 
   setSeasonReady(true);
@@ -509,14 +538,14 @@ useEffect(() => {
   root.dataset.seasonGlow =
     seasonGlow ? 'on' : 'off';
 
-  localStorage.setItem('mg_season_mode', seasonMode);
+  browserStorage.setItem('mg_season_mode', seasonMode);
 
-  localStorage.setItem(
+  browserStorage.setItem(
     'mg_season_animations',
     String(seasonAnimations)
   );
 
-  localStorage.setItem(
+  browserStorage.setItem(
     'mg_season_glow',
     String(seasonGlow)
   );
@@ -531,27 +560,43 @@ useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const action = async (payload: Record<string, unknown>, success?: string) => {
-    try {
-      const r = await fetch('/api/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })
-      });
-      const d = await r.json();
-      if (!r.ok) {
-        if (r.status === 401) setAuthOpen(true);
-        notify(d.error || 'Ошибка');
-        return false;
+  const action = (payload: Record<string, unknown>, success?: string): Promise<boolean> => {
+    const name = String(payload.action), movieId = Number(payload.movieId);
+    const kind = name === 'unwatch' ? 'watch' : name === 'unfavorite' ? 'favorite' : name;
+    const optimistic = data.user && Number.isSafeInteger(movieId) && ['bookmark', 'favorite', 'watch', 'rate'].includes(kind);
+    const key = optimistic ? `${kind}:${movieId}` : '';
+    if (key && pendingActions.current.has(key)) return Promise.resolve(false);
+    const update: CollectionUpdate | null = optimistic ? {
+      movieId, kind: kind as CollectionUpdate['kind'],
+      enabled: kind === 'bookmark' ? !data.bookmarks.some(b => b.movieId === movieId) : !['unwatch', 'unfavorite'].includes(name),
+      value: Number(payload.value), watchedAt: new Date().toISOString(),
+    } : null;
+    if (key) { pendingActions.current.add(key); refreshVersion.current++; }
+    return new Promise(resolve => startTransition(async () => {
+      if (update) addOptimistic(update);
+      let ok = false;
+      try {
+        const r = await fetch('/api/action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, ...(kind === 'bookmark' && update ? { saved: update.enabled } : {}), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })
+        });
+        const d = await r.json();
+        if (!r.ok) {
+          if (r.status === 401) setAuthOpen(true);
+          notify(d.error || 'Ошибка: изменение отменено');
+        } else {
+          ok = true;
+          if (update) setData(current => applyCollectionUpdate(current, update));
+          if (d.unlockedTrophies?.length) notify(d.unlockedTrophies.map((trophy: { icon: string; name: string }) => `${trophy.icon} Скрытый трофей: ${trophy.name}!`).join(' · '));
+          else if (success) notify(success);
+        }
+      } catch { notify('Ошибка соединения: изменение отменено. Можно повторить.'); }
+      finally {
+        if (key) pendingActions.current.delete(key);
+        if (ok) await refresh();
+        resolve(ok);
       }
-      await refresh();
-      if (d.unlockedTrophies?.length) notify(d.unlockedTrophies.map((trophy: { icon: string; name: string }) => `${trophy.icon} Скрытый трофей: ${trophy.name}!`).join(' · '));
-      else if (success) notify(success);
-      return true;
-    } catch {
-      notify('Ошибка соединения');
-      return false;
-    }
+    }));
   };
 
   const requireAuth = (fn: () => void) => { if (!data.user) setAuthOpen(true); else fn(); };
@@ -592,11 +637,12 @@ useEffect(() => {
   };
 
   const unread = data.notifications.filter(n => !n.read).length;
-  const filmId = path?.startsWith('/movie/') ? Number(path.split('/')[2]) : 0;
-  const viewUserId = path?.startsWith('/user/') ? Number(path.split('/')[2]) : 0;
-  const compareId = path?.startsWith('/compare/') ? Number(path.split('/')[2]) : 0;
-  const roomId = path?.startsWith('/room/') ? path.split('/')[2] : '';
-  const active = filmId ? 'movie' : viewUserId ? 'viewuser' : compareId ? 'compare' : roomId ? 'room' : path?.split('/')[1] || 'home';
+  const route = resolveSiteRoute(path || '/');
+  const filmId = route?.page === 'movie' ? route.id || 0 : 0;
+  const viewUserId = route?.page === 'viewuser' ? route.id || 0 : 0;
+  const compareId = route?.page === 'compare' ? route.id || 0 : 0;
+  const roomId = route?.roomId || '';
+  const active = route?.page || 'not-found';
   const openChat = (peerId: number) => { setChatPeerId(peerId); setChatOpen(true); };
 
 const nav = [
@@ -676,7 +722,8 @@ const startRoulette = () => {
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
     <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
-      <div className="app-shell">
+      <div className={`app-shell ${filmId ? 'has-cinema-atmosphere' : ''}`} data-live={liveStatus}>
+        {filmId > 0 && <CinemaAtmosphere film={data.films.find(f => f.id === filmId)} />}
         <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
           <button type="button" className="side-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
             <BrandLogo sizes="(max-width: 760px) 160px, (max-width: 1050px) 48px, 160px" priority />
@@ -743,6 +790,7 @@ return (
 
         <div className="main-wrap">
           <header className="topbar">
+            <div id="movie-context-slot" />
             <button className="mobile-menu icon-button" onClick={() => setMobileNav(!mobileNav)}>
               <Menu size={21} />
             </button>
@@ -811,6 +859,7 @@ return (
             </div>
 
             <div className="top-actions">
+              <span className={`live-connection live-${liveStatus}`} role="status" title={liveStatus === 'live' ? 'Живые обновления подключены' : 'Восстанавливаем живые обновления; резервное обновление включено'}><i /><span>{liveStatus === 'live' ? 'Live' : 'Соединение…'}</span></span>
               <div className="language-switch" onClick={changeLang}>
                 {lang.toUpperCase()} <ChevronDown size={12} />
               </div>
@@ -976,7 +1025,7 @@ return (
               : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
               : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
               : active === 'viewuser' ? <ViewUserProfile key={viewUserId} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
-              : active === 'compare' ? <ComparePage data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
+              : active === 'compare' ? <ComparePage key={compareId} data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
               : active === 'wrapped' ? <WrappedPage data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'collab' ? <CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
@@ -984,7 +1033,7 @@ return (
               : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
               : active === 'admin' ? <Admin data={data} go={go} action={action} edit={setEditFilm} />
               : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
-              : <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
+              : <div className="empty-state"><h1>Страница не найдена</h1><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>
             }
           </main>
 
@@ -1157,7 +1206,7 @@ return (
               <span className="eyebrow">ПОДЕЛИТЬСЯ ВПЕЧАТЛЕНИЕМ</span>
               <h2>Расскажи друзьям</h2>
               <p>«{shareFilm.title}» стоит увидеть.</p>
-              <button className="share-copy" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/movie/' + shareFilm.id); notify('Ссылка скопирована'); }}>
+              <button className="share-copy" onClick={async () => { notify(await copyText(window.location.origin + '/movie/' + shareFilm.id) ? 'Ссылка скопирована' : 'Не удалось скопировать ссылку'); }}>
                 <Copy size={17} /> Скопировать ссылку <ArrowRight size={16} />
               </button>
               <h4>Отправить пользователю</h4>
@@ -1182,7 +1231,7 @@ return (
   />
 )}
         
-        {editFilm !== undefined && <MovieForm film={editFilm} close={() => setEditFilm(undefined)} action={action} notify={notify} />}
+        {editFilm !== undefined && <MovieForm film={editFilm} close={() => setEditFilm(undefined)} action={action} notify={notify} onSaved={async id => { await refresh(); go(`/movie/${id}`); router.refresh(); }} />}
 {chatOpen && chatPeerId && data.user && (
   <ChatDrawer
     peerId={chatPeerId}
@@ -1429,7 +1478,8 @@ const ageTone =
         }
       }}
     >
-      <div className="poster-wrap">
+      <div className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
+        <span className="poster-gloss" aria-hidden="true" />
         <img src={image(film)} alt={film.title} />
         <span className="card-shade" />
         {rank && <span className="rank-num">{String(rank).padStart(2, '0')}</span>}
@@ -1955,24 +2005,21 @@ function Catalog({
   watchedIds?: Set<number>;
 }) {
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('search') || searchValue || '');
-  const [category, setCategory] = useState(searchParams.get('category') || 'Все');
-  const [genre, setGenre] = useState(searchParams.get('genre') || 'Все жанры');
-  const [studio, setStudio] = useState(searchParams.get('studio') || 'Все студии');
-  const [year, setYear] = useState(searchParams.get('year') || 'Любой год');
-  const [sort, setSort] = useState('popular');
-  const [minRating, setMinRating] = useState('0');
-  const [watchFilter, setWatchFilter] = useState('all');
-
-  const filtered = useMemo(() => films.filter(f =>
-    (!query || [f.title, f.originalTitle, f.genre, f.director, f.description, f.category, f.studio || '', f.cast || ''].join(' ').toLowerCase().includes(query.toLowerCase())) &&
-    (category === 'Все' || f.category === category) &&
-    (genre === 'Все жанры' || f.genre.includes(genre)) &&
-    (studio === 'Все студии' || (f.studio || '') === studio) &&
-    (year === 'Любой год' || (year === 'before1960' ? f.year >= 1888 && f.year < 1960 : String(f.year) === year)) &&
-    f.rating >= Number(minRating) &&
-    (watchFilter === 'all' || (watchFilter === 'watched' && watchedIds.has(f.id)) || (watchFilter === 'unwatched' && !watchedIds.has(f.id)))
-  ).sort((a, b) => sort === 'rating' ? b.rating - a.rating : sort === 'new' ? b.year - a.year : sort === 'old' ? a.year - b.year : (b.views || 0) - (a.views || 0)), [films, query, category, genre, studio, year, sort, minRating, watchFilter, watchedIds]);
+  const initial = parseCatalogOptions(searchParams, searchValue);
+  const [query, setQuery] = useState(initial.query);
+  const [category, setCategory] = useState(initial.category);
+  const [genre, setGenre] = useState(initial.genre);
+  const [studio, setStudio] = useState(initial.studio);
+  const [year, setYear] = useState(initial.year);
+  const [sort, setSort] = useState(initial.sort);
+  const [minRating, setMinRating] = useState(initial.minRating);
+  const [watchFilter, setWatchFilter] = useState(initial.watchFilter);
+  const [mood, setMood] = useState(initial.mood);
+  const [filtersOpen, setFiltersOpen] = useState(() => ['genre', 'studio', 'year', 'minRating', 'watch', 'sort'].some(key => !!searchParams.get(key)));
+  const preciseCount = Number(genre !== 'Все жанры') + Number(studio !== 'Все студии') + Number(year !== 'Любой год') + Number(minRating !== '0') + Number(watchFilter !== 'all');
+  const catalogGenres = useMemo(() => [...new Set([...genres, ...films.flatMap(f => catalogTokens(f.genre)), genre])], [films, genre]);
+  const catalogStudios = useMemo(() => [...new Set([...films.flatMap(f => catalogTokens(f.studio)), ...(studio !== 'Все студии' ? [studio] : [])])].sort(), [films, studio]);
+  const filtered = useMemo(() => filterCatalog(films, { query, category, genre, studio, year, sort, minRating, watchFilter, mood }, watchedIds), [films, query, category, genre, studio, year, sort, minRating, watchFilter, watchedIds, mood]);
 
   return (
     <>
@@ -2009,23 +2056,29 @@ function Catalog({
         <span>ENTER ↵</span>
       </div>
 
+      <div className="catalog-mood-heading"><span className="eyebrow">{en ? 'WHAT IS YOUR MOOD?' : 'КАКОЕ СЕГОДНЯ НАСТРОЕНИЕ?'}</span><button type="button" className="outline-btn small" aria-expanded={filtersOpen} aria-controls="catalog-precise-filters" onClick={() => setFiltersOpen(value => !value)}><SlidersHorizontal size={15} />{en ? 'All filters' : 'Все фильтры'}{preciseCount > 0 && ` · ${preciseCount}`}</button></div>
+      <div className="catalog-moods" role="group" aria-label={en ? 'Choose a mood' : 'Выбери настроение'}>
+        <button type="button" aria-pressed={mood === 'all'} onClick={() => setMood('all')}>{en ? '✨ Any mood' : '✨ Любое настроение'}</button>
+        {CATALOG_MOODS.map(item => <button key={item.id} type="button" aria-pressed={mood === item.id} onClick={() => setMood(item.id)}>{en ? item.en : item.label}</button>)}
+      </div>
+      <p className="catalog-mood-note">{en ? 'Based on editorial mood tags; genres are used when a tag is missing.' : 'По настроению, указанному редактором; если его нет — по жанрам. Без скрытых рекомендаций.'}</p>
       <div className="category-tabs catalog-categories">
         {categories.map(c => <button key={c} className={category === c ? 'selected' : ''} onClick={() => setCategory(c)}>{c}</button>)}
       </div>
 
-      <div className="filter-bar catalog-filters">
+      <div id="catalog-precise-filters" className="filter-bar catalog-filters" hidden={!filtersOpen}>
         <span><SlidersHorizontal size={17} /> {en ? 'Filters' : 'Фильтры'}</span>
         <select className="catalog-genre-filter" aria-label={en ? 'Genre' : 'Жанр'} value={genre} onChange={e => setGenre(e.target.value)}>
-          {genres.map(g => <option key={g}>{g}</option>)}
+          {catalogGenres.map(g => <option key={g}>{g}</option>)}
         </select>
         <select className="catalog-studio-filter" aria-label={en ? 'Studio' : 'Студия'} value={studio} onChange={e => setStudio(e.target.value)}>
           <option>Все студии</option>
-          {[...new Set(films.map(f => f.studio).filter(Boolean) as string[])].sort().map(st => <option key={st}>{st}</option>)}
+          {catalogStudios.map(st => <option key={st}>{st}</option>)}
         </select>
         <select aria-label={en ? 'Year' : 'Год'} value={year} onChange={e => setYear(e.target.value)}>
           <option>Любой год</option>
           <option value="before1960">До 1960 года</option>
-          {[...new Set(films.map(f => f.year))].sort((a, b) => b - a).map(y => <option key={y}>{y}</option>)}
+          {[...new Set([...films.map(f => f.year), ...( /^\d{4}$/.test(year) ? [Number(year)] : [])])].sort((a, b) => b - a).map(y => <option key={y}>{y}</option>)}
         </select>
         <select aria-label={en ? 'Minimum rating' : 'Минимальный рейтинг'} value={minRating} onChange={e => setMinRating(e.target.value)}>
           <option value="0">Любой рейтинг</option>
@@ -2048,6 +2101,7 @@ function Catalog({
         </select>
       </div>
 
+      <p className="catalog-result-summary" role="status">{en ? 'Found' : 'Найдено'}: {filtered.length}{mood !== 'all' && ` · ${CATALOG_MOODS.find(item => item.id === mood)?.[en ? 'en' : 'label']}`}</p>
       {filtered.length ? (
         <FilmGrid films={filtered} go={go} watchedIds={watchedIds} />
       ) : (
@@ -2055,7 +2109,7 @@ function Catalog({
           <Search size={36} />
           <h3>{en ? 'Nothing found yet' : 'Пока ничего не найдено'}</h3>
           <p>{en ? 'Try another search or clear your filters.' : 'Попробуй другой запрос или сбрось фильтры.'}</p>
-          <button className="outline-btn" onClick={() => { setQuery(''); setCategory('Все'); setGenre('Все жанры'); setStudio('Все студии'); setYear('Любой год'); setMinRating('0'); }}>
+          <button className="outline-btn" onClick={() => { setQuery(''); setCategory('Все'); setGenre('Все жанры'); setStudio('Все студии'); setYear('Любой год'); setMinRating('0'); setWatchFilter('all'); setMood('all'); setSort('popular'); }}>
             {en ? 'Clear filters' : 'Сбросить фильтры'}
           </button>
         </div>
@@ -2074,7 +2128,7 @@ function MovieDetailContent({
   data,
   go,
   action,
-  requireAuth,
+  requireAuth: requestAuth,
   share,
   onSocialShare,
   edit,
@@ -2090,6 +2144,12 @@ function MovieDetailContent({
   edit: (f: FilmType) => void;
   onSeriesUpdated: () => Promise<void>;
 }) {
+  const posterAnchor = useRef<HTMLDivElement>(null);
+  const [reviewsOpen, setReviewsOpen] = useState(false);
+  const requireAuth = (callback: () => void) => { if (!data.user) setReviewsOpen(false); requestAuth(callback); };
+  const submittingComment = useRef(false);
+  const [ratingBurst, setRatingBurst] = useState(0);
+  const ratingInFlight = useRef(false);
   const [comment, setComment] = useState('');
   const [commentSpoiler, setCommentSpoiler] = useState(false);
   const [reply, setReply] = useState<number | null>(null);
@@ -2117,21 +2177,32 @@ function MovieDetailContent({
       .slice(0, 5);
   }, [data.films, film.id, film.genre]);
 
+  const rate = (value: number) => requireAuth(() => {
+    if (ratingInFlight.current) return;
+    ratingInFlight.current = true;
+    void action({ action: 'rate', movieId: film.id, value }, 'Оценка сохранена').then(ok => {
+      if (ok && value === 10 && myRating !== 10) setRatingBurst(sequence => sequence + 1);
+    }).finally(() => { ratingInFlight.current = false; });
+  });
   const submit = async () => {
-    if (!comment.trim()) return;
-    if (await action({ action: 'comment', movieId: film.id, text: comment, parentId: reply, spoiler: commentSpoiler }, 'Комментарий опубликован')) {
-      setComment('');
-      setCommentSpoiler(false);
-      setReply(null);
-    }
+    if (!comment.trim() || submittingComment.current) return;
+    submittingComment.current = true;
+    try {
+      if (await action({ action: 'comment', movieId: film.id, text: comment, parentId: reply, spoiler: commentSpoiler }, 'Комментарий опубликован')) {
+        setComment('');
+        setCommentSpoiler(false);
+        setReply(null);
+      }
+    } finally { submittingComment.current = false; }
   };
 
   return (
     <div className="movie-detail-page">
+      <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       <button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
 
       <div className={`detail-hero tone-${tone(film.rating)}`} style={{ backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` }}>
-        <div className="detail-poster">
+        <div className="detail-poster" ref={posterAnchor}>
           <PosterThumb movieId={film.id} src={image(film)} alt={film.title} wrapStyle={{ display: 'block' }} />
         </div>
 
@@ -2184,7 +2255,7 @@ function MovieDetailContent({
   {isWatched ? 'Просмотрено' : 'Отметить просмотренным'}
 </button>
 
-            <button
+            <MagneticButton active={saved} kind="bookmark"
               className="outline-btn"
               onClick={() =>
                 requireAuth(() =>
@@ -2197,9 +2268,9 @@ function MovieDetailContent({
             >
               <Bookmark size={17} fill={saved ? 'currentColor' : 'none'} />
               {saved ? 'В желаемом' : 'В желаемое'}
-            </button>
+            </MagneticButton>
 
-            <button
+            <MagneticButton active={isFavorite} kind="heart"
               type="button"
               className={`outline-btn detail-favorite-btn ${isFavorite ? 'is-favorite' : ''}`}
               onClick={() => toggleFavorite(film.id)}
@@ -2209,7 +2280,7 @@ function MovieDetailContent({
                 fill={isFavorite ? 'currentColor' : 'none'}
               />
               {isFavorite ? 'В любимом' : 'В любимое'}
-            </button>
+            </MagneticButton>
 
             <button
               type="button"
@@ -2221,6 +2292,7 @@ function MovieDetailContent({
               <Share2 size={18} />
             </button>
 
+            <button type="button" className="outline-btn" aria-haspopup="dialog" onClick={() => setReviewsOpen(true)}><MessageCircle size={17} /> Мнения сообщества · {movieComments.length}</button>
             <button className="outline-btn" onClick={() => requireAuth(() => go('/room/' + Math.random().toString(36).slice(2, 8)))} title="Смотреть вместе с другом">
               <Tv2 size={17} /> Кинозал
             </button>
@@ -2235,22 +2307,25 @@ function MovieDetailContent({
           {isSeries(film.category) && <SeriesPanel key={`${film.id}:${data.user?.id || 'guest'}`} movieId={film.id} userId={data.user?.id ?? null} auth={() => requireAuth(() => {})} onUpdated={onSeriesUpdated} />}
           <div className="rating-panel-advanced">
             <div className="rating-selector-box">
+              <RatingCelebration sequence={ratingBurst} />
               <span className="eyebrow">ТВОЙ ВЕРДИКТ</span>
               <h3>{myRating ? "Твоя оценка" : "Оцени историю"}</h3>
-              <div className="fancy-stars">
+              <div className="fancy-stars" role="group" aria-label="Твоя оценка" onMouseLeave={() => setHover(0)}>
                 {Array.from({ length: 10 }).map((_, i) => {
                   const val = i + 1;
                   return (
                     <div key={i} className="star-wrapper">
                       <button
+                        aria-label={`Оценить на ${val - 0.5} из 10`} aria-pressed={myRating === val - 0.5}
                         className={`star-half left ${myRating >= val - 0.5 ? "active" : ""}`}
                         onMouseEnter={() => setHover(val - 0.5)}
-                        onClick={() => requireAuth(() => action({ action: "rate", movieId: film.id, value: val - 0.5 }, "Оценка сохранена"))}
+                        onClick={() => rate(val - 0.5)}
                       />
                       <button
+                        aria-label={`Оценить на ${val} из 10`} aria-pressed={myRating === val}
                         className={`star-half right ${myRating >= val ? "active" : ""}`}
                         onMouseEnter={() => setHover(val)}
-                        onClick={() => requireAuth(() => action({ action: "rate", movieId: film.id, value: val }, "Оценка сохранена"))}
+                        onClick={() => rate(val)}
                       />
                       <Star size={32} className={`base-star ${(hover || myRating) >= val ? "filled" : (hover || myRating) >= val - 0.5 ? "half" : ""}`} />
                     </div>
@@ -2284,12 +2359,14 @@ function MovieDetailContent({
             ) : null}
           </div>
 
+          <div className="community-review-entry"><MessageCircle size={26} /><div><h3>Истории интереснее обсуждать</h3><p>{movieComments.length ? `${movieComments.length} мнений сообщества. Отзывы, ответы и реакции — рядом с фильмом.` : 'Поделись первым впечатлением — без спойлеров или со скрытым текстом.'}</p></div><button type="button" className="outline-btn" aria-haspopup="dialog" onClick={() => setReviewsOpen(true)}>Читать и написать отзыв <ArrowRight size={16} /></button></div>
+          <ReviewDrawer open={reviewsOpen} close={() => setReviewsOpen(false)}>
           <div className="discussion">
             <SectionTitle kicker="ДЕЛИСЬ ВПЕЧАТЛЕНИЯМИ" title={`Обсуждение · ${movieComments.length}`} />
             <div className="comment-compose">
               <Avatar name={data.user?.username || 'G'} src={data.user?.avatar} size={40} />
               <div>
-                <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder={reply ? 'Напиши ответ...' : 'Что ты думаешь об этой истории? Напиши свой отзыв...'} />
+                <textarea aria-label="Текст отзыва" maxLength={2000} value={comment} onChange={e => setComment(e.target.value)} placeholder={reply ? 'Напиши ответ...' : 'Что ты думаешь об этой истории? Напиши свой отзыв...'} />
                 <div className="emoji-bar">
                   {['😍', '🔥', '👏', '😂', '😢', '🤯', '💀', '👎', '❤️', '🍿', '⭐', '💯', '🎬', '😱', '🤔', '👀', '✨', '🏆'].map(e => (
                     <button key={e} type="button" onClick={() => setComment(prev => prev + e)}>{e}</button>
@@ -2315,7 +2392,7 @@ function MovieDetailContent({
   reply={() => {
     setReply(c.id);
     document.querySelector('.comment-compose')?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       block: 'center'
     });
   }}
@@ -2334,7 +2411,7 @@ function MovieDetailContent({
   reply={() => {
     setReply(c.id);
     document.querySelector('.comment-compose')?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       block: 'center'
     });
   }}
@@ -2352,6 +2429,7 @@ function MovieDetailContent({
               </div>
             )) : <p className="muted">Начни разговор первым!</p>}
           </div>
+          </ReviewDrawer>
         </div>
 
         <aside className="detail-side">
@@ -2686,6 +2764,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
   const [order, setOrder] = useState((u?.tileOrder || 'stats,genres,history,achievements,friends').split(','));
   const [dragged, setDragged] = useState('');
   const [statTab, setStatTab] = useState('all');
+  const [profileSection, setProfileSection] = useState('diary');
   const upload = useRef<HTMLInputElement>(null);
 
   if (!u) return <Gate title="Твоя киновселенная ждёт" description="Войди, чтобы вести историю просмотров, собирать достижения и создавать профиль мечты." auth={auth} />;
@@ -2777,7 +2856,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         <div className="tile-heading"><span><Trophy size={18} /> Достижения</span>{editing && <GripVertical size={18} />}</div>
         <div className="profile-badges">
           {achievementDefs.slice(0, 4).map(a => (
-            <div key={a.id} className={(data.achievementProgress[a.id] ?? 0) >= a.targets[0] ? 'earned' : ''}>
+            <div key={a.id} role="button" tabIndex={0} aria-label={`Подробнее: ${a.name}`} onClick={() => go('/achievements')} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); go('/achievements'); } }} className={(data.achievementProgress[a.id] ?? 0) >= a.targets[0] ? 'earned' : ''}>
               <span>{a.icon}</span><b>{a.name}</b><small>{(data.achievementProgress[a.id] ?? 0) >= a.targets[0] ? 'Открыто' : 'Не открыто'}</small>
               <OwnershipBadge stats={data.achievementStats[a.id]?.[0]} tier={1} compact />
             </div>
@@ -2837,17 +2916,20 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
             <input ref={upload} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => handleUpload(e.target.files?.[0])} />
             <div className="cover-actions-bar">
               <button className="cover-edit" onClick={() => go("/wrapped")}><Sparkles size={16} /> Итоги года</button>
-              <button className="cover-edit" onClick={() => setEditing(!editing)}>{editing ? <><Check size={16} /> Готово</> : <><Pencil size={16} /> Настроить профиль</>}</button>
+              <button className="cover-edit" onClick={() => { setEditing(!editing); setProfileSection('diary'); }}>{editing ? <><Check size={16} /> Готово</> : <><Pencil size={16} /> Настроить профиль</>}</button>
             </div>
           </div>
         </div>
       </div>
 
-      <button type="button" className="world-profile-entry" onClick={() => go('/world')}><Globe2 size={22} /><span><b>Твоя кино-карта мира</b><small>Открывай страны через кино и выбирай следующее путешествие</small></span><ArrowRight size={18} /></button>
-      <React.Suspense fallback={<p role="status">Загружаем питомца…</p>}><CinemaPetStudio key={u.id} go={go} /></React.Suspense>
-      <CinemaCardStudio user={u} films={data.films} watches={data.watches} progress={data.achievementProgress} ownership={data.achievementStats} hiddenAchievements={data.hiddenAchievements} go={go} />
-
-      <UserTitleStudio collection={data.titles} username={u.username} action={action} />
+      <nav className="profile-section-tabs" aria-label="Разделы профиля">{[
+        ['diary', 'Кинодневник', BookOpen], ['pet', 'Кинопитомец и попкорн', Sparkles], ['card', 'Киновизитка', Clapperboard], ['titles', 'Титулы', Crown],
+      ].map(([id, label, Icon]) => { const TabIcon = Icon as typeof BookOpen; return <button key={String(id)} type="button" aria-pressed={profileSection === id} onClick={() => setProfileSection(String(id))}><TabIcon size={17} />{String(label)}</button>; })}</nav>
+      {profileSection === 'pet' && <React.Suspense fallback={<p role="status">Загружаем питомца…</p>}><CinemaPetStudio key={u.id} go={go} /></React.Suspense>}
+      {profileSection === 'card' && <CinemaCardStudio user={u} films={data.films} watches={data.watches} progress={data.achievementProgress} ownership={data.achievementStats} hiddenAchievements={data.hiddenAchievements} go={go} />}
+      {profileSection === 'titles' && <UserTitleStudio collection={data.titles} username={u.username} action={action} />}
+      {profileSection === 'diary' && <>
+      <button type="button" className="world-profile-entry" onClick={() => go('/world')}><Globe2 size={22} /><span><b>Твоя кино-карта мира</b><small>Открывай страны через кино</small></span><ArrowRight size={18} /></button>
 
       <div className="profile-level-row">
         <div className="level-card">
@@ -2932,6 +3014,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
           </div>
         ))}
       </div>
+      </>}
     </>
   );
 }
@@ -3141,7 +3224,8 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
         })}
       </div>
 
-      <HiddenTrophies awards={hiddenAwards} />
+      <p className="collectible-note">Переворот открывает оформление уже заслуженного трофея на этом устройстве. Награды и XP не начисляются повторно.</p>
+      <HiddenTrophies awards={hiddenAwards} revealUserId={data.user.id} />
 
       {cats.map(cat => {
         const catDefs = achievementDefs.filter(a => (a as any).category === cat);
@@ -3170,7 +3254,7 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
                     onClick={() => setExpandedAch(expandedAch === a.id ? null : a.id)}
                   >
                     <div className="achievement-top">
-                      <span className="achievement-icon">{a.icon}</span>
+                      <span className="achievement-icon">{tier ? <AchievementReveal key={`${data.user!.id}:${a.id}:${tier}`} userId={data.user!.id} achievementId={a.id} tier={tier} icon={a.icon} name={`${a.name} · ${ACHIEVEMENT_TIERS[tier - 1]}`} /> : a.icon}</span>
                       <span className="achievement-tier">{tier ? `${tier === 4 ? '✦ ' : ''}${ACHIEVEMENT_TIERS[tier - 1]}` : 'ЗАКРЫТО'}</span>
                     </div>
                     <h3>{a.name}</h3><p>{a.description}</p>
@@ -3282,12 +3366,12 @@ const gameModes = [
   { id: 'original', icon: '🔤', name: 'Оригинальное имя', description: 'Как называется фильм в оригинале?', color: 'violet' },
   { id: 'category', icon: '🎞️', name: 'Тип истории', description: 'Фильм, сериал или аниме?', color: 'pink' },
   { id: 'higher', icon: '🏆', name: 'Рейтинговая битва', description: 'У кого оценка выше?', color: 'green' },
-  { id: 'wordle', icon: '🟩', name: 'Кино-Вордли', description: 'Угадай зашифрованный фильм дня за 6 попыток', color: 'green' },
+  { id: 'wordle', icon: '🟩', name: 'Кино-Вордли', description: 'Выбери название по буквенной подсказке', color: 'green' },
   { id: 'hangman', icon: '🔡', name: 'Кино-Поле Чудес', description: 'Угадай название по буквам', color: 'amber' },
   { id: 'anagram', icon: '🔀', name: 'Кино-Анаграмма', description: 'Собери буквы названия в правильном порядке', color: 'violet' },
   { id: 'truths', icon: '🤥', name: 'Две правды, одна ложь', description: 'Найди ложный факт о фильме', color: 'pink' },
-  { id: 'chrono', icon: '⏳', name: 'Хроно-Слайдер', description: 'Расставь фильмы от старого к нового', color: 'blue' },
-  { id: 'connections', icon: '🧩', name: 'Кино-Связи', description: 'Найди 4 группы по 4 фильма по скрытому признаку', color: 'green' }
+  { id: 'chrono', icon: '⏳', name: 'Хроно-Слайдер', description: 'Выбери самый ранний фильм', color: 'blue' },
+  { id: 'connections', icon: '🧩', name: 'Кино-Связи', description: 'Выбери фильм по общему жанровому признаку', color: 'green' }
 ];
 
 function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; user: User | null; auth: () => void; }) {
@@ -3295,10 +3379,14 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
   const [choice, setChoice] = useState<string | null>(null);
+  const [gameError, setGameError] = useState('');
+  const finishingGame = useRef(false);
   const [questions, setQuestions] = useState<{ movieId?: number; question: string; options: string[]; correct: string; poster?: string }[]>([]);
 
   const make = (id: string) => {
-    const usable = films.length >= 5 ? films : [...films, ...films, ...films].slice(0, 5);
+    setGameError('');
+    const usable = [...new Map(films.map(film => [film.id, film])).values()];
+    if (usable.length < 2) { setGameError('Для викторины нужны хотя бы два разных материала в каталоге.'); return; }
     const source = [...usable].sort(() => Math.random() - 0.5).slice(0, 5);
     const pool = (field: (f: FilmType) => string, current: FilmType) =>
       [...new Set([field(current), ...usable.filter(f => f.id !== current.id).sort(() => Math.random() - 0.5).map(field)])]
@@ -3320,18 +3408,20 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
         case 'wordle': { question = `Угадай фильм: жанр «${f.genre.split(',')[0].trim()}», ${f.year} год, ${f.country}`; correct = f.title; options = pool(x => x.title, f); break; }
         case 'hangman': { const hidden = f.title.replace(/[а-яёa-z]/gi, '_'); question = `Угадай: ${hidden} (${f.category}, ${f.year})`; correct = f.title; options = pool(x => x.title, f); break; }
         case 'anagram': { const shuffled = f.title.split('').sort(() => Math.random() - 0.5).join(''); question = `Собери название: «${shuffled}» (${f.category})`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'truths': { const lie = `Режиссёр — ${usable.filter(x => x.director !== f.director)[0]?.director || 'неизвестно'}`; question = `Найди ЛОЖЬ о «${f.title}»:`; correct = lie; options = [`Год выпуска — ${f.year}`, `Категория — ${f.category}`, lie].sort(() => Math.random() - 0.5); break; }
-        case 'chrono': { question = `Какой из этих фильмов вышел раньше всех?`; correct = source.sort((a, b) => a.year - b.year)[0].title; options = source.slice(0, 4).map(x => x.title).sort(() => Math.random() - 0.5); break; }
+        case 'truths': { const lie = `Год выпуска — ${f.year + 1}`; question = `Найди ЛОЖЬ о «${f.title}»:`; correct = lie; options = [`Год выпуска — ${f.year}`, `Категория — ${f.category}`, lie].sort(() => Math.random() - 0.5); break; }
+        case 'chrono': { question = `Какой из этих фильмов вышел раньше всех?`; correct = [...source].sort((a, b) => a.year - b.year)[0].title; options = source.slice(0, 4).map(x => x.title).sort(() => Math.random() - 0.5); break; }
         case 'connections': {
           question = `Какой фильм НЕ связан общим жанром «${f.genre.split(',')[0].trim()}»?`;
-          const outsider = usable.filter(x => !x.genre.includes(f.genre.split(',')[0].trim()))[0] || usable[0];
+          const outsider = usable.find(x => !catalogTokens(x.genre).includes(catalogTokens(f.genre)[0]));
+          if (!outsider) return { movieId: f.id, question, correct: '', options: [] };
           correct = outsider.title;
           options = [...source.filter(x => x.genre.includes(f.genre.split(',')[0].trim())).slice(0, 3).map(x => x.title), outsider.title].sort(() => Math.random() - 0.5);
           break;
         }
         default: {
           const others = usable.filter(x => x.rating !== f.rating);
-          const opponent = others[Math.floor(Math.random() * others.length)] || usable[0];
+          if (!others.length) return { movieId: f.id, question: '', correct: '', options: [] };
+          const opponent = others[Math.floor(Math.random() * others.length)];
           correct = f.rating >= opponent.rating ? f.title : opponent.title;
           options = [f.title, opponent.title];
           question = `Что оценили выше: «${f.title}» или другое кино?`;
@@ -3340,7 +3430,9 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
       return { movieId: f.id, question, correct, options, poster };
     });
 
-    setQuestions(qs);
+    const valid = qs.map(question => ({ ...question, options: [...new Set(question.options)].filter(Boolean) })).filter(question => question.options.length >= 2 && question.options.includes(question.correct));
+    if (!valid.length) { setGameError('В каталоге недостаточно разных данных для этого режима. Попробуй другой.'); return; }
+    setQuestions(Array.from({ length: 5 }, (_, index) => valid[index % valid.length]));
     setMode(gameModes.find(g => g.id === id) || null);
     setRound(0);
     setScore(0);
@@ -3349,8 +3441,12 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
 
   const next = async () => {
     if (round === 4) {
-      if (user) await action({ action: 'game', game: mode?.id, score }, `+${score * 10} XP за игру!`);
+      if (finishingGame.current) return;
+      finishingGame.current = true;
+      try {
+      if (user) await action({ action: 'game', game: mode?.id, score }, 'Результат тренировки сохранён');
       setRound(5);
+      } finally { finishingGame.current = false; }
     } else {
       setRound(round + 1);
       setChoice(null);
@@ -3365,8 +3461,8 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
       </div>
       <div className="games-intro">
         <span className="games-intro-icon"><Zap size={27} /></span>
-        <div><h3>Играй. Побеждай. Прокачивайся.</h3><p>За каждый верный ответ получай очки. За прохождение — опыт XP для профиля.</p></div>
-        <span>+ XP</span>
+        <div><h3>Играй. Узнавай. Тренируйся.</h3><p>Пять вопросов за раунд. Тренировочные результаты сохраняются без начисления XP: ответы пока проверяются в браузере.</p></div>
+        <span>ПРАКТИКА</span>
       </div>
 
       <div className="games-grid">
@@ -3379,6 +3475,7 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
         ))}
       </div>
 
+      {gameError && <p className="collectible-note" role="status">{gameError}</p>}
       {mode && (
         <div className="modal-backdrop" onClick={() => setMode(null)}>
           <div className="glass-modal game-modal" onClick={e => e.stopPropagation()}>
@@ -3430,8 +3527,8 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
             ) : (
               <div className="game-result">
                 <span>🏆</span><h2>Игра окончена!</h2><p>Ты ответил правильно на <b>{score} из 5</b> вопросов.</p>
-                <div className="result-points">+{user ? score * 10 : 0} XP</div>
-                {!user && <p>Войди, чтобы сохранять результаты и получать XP.</p>}
+                <div className="result-points">{score} / 5</div>
+                {!user && <p>Войди, чтобы сохранять результаты тренировок.</p>}
                 <button className="primary-btn" onClick={() => make(mode.id)}><RotateCcw size={17} /> Сыграть ещё</button>
                 <button className="text-link" onClick={() => { setMode(null); if (!user) auth(); }}>{user ? 'К другим играм' : 'Войти в аккаунт'}</button>
               </div>
@@ -3718,7 +3815,9 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
           <div className="telegram-login-box">
             {botName ? <div ref={tgRef} /> : <button type="button" className="telegram-fallback" disabled title="Вход через Telegram не настроен"><span className="telegram-badge">✈</span> Telegram<small>Не настроен</small></button>}
           </div>
-          <button type="button" className="yandex-login-btn" onClick={() => { window.location.href = '/api/oauth/yandex'; }}><b className="yandex-y">Я</b> Яндекс</button>
+          {/* OAuth needs a document redirect and state cookie, not an RSC fetch. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a className="yandex-login-btn" href="/api/oauth/yandex"><b className="yandex-y">Я</b> Яндекс</a>
         </div>
       </div>
     </div>
@@ -3871,12 +3970,14 @@ function MovieForm({
   film,
   close,
   action,
+  onSaved,
   notify
 }: {
   film: FilmType | null;
   close: () => void;
   action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
   notify: (s: string) => void;
+  onSaved: (id: number) => Promise<void>;
 }) {
   const [form, setForm] = useState({
     title: film?.title || '',
@@ -4010,9 +4111,9 @@ function MovieForm({
       close();
 
       if (result.movieId) {
-        window.location.href = `/movie/${result.movieId}`;
+        await onSaved(result.movieId);
       } else {
-        window.location.reload();
+        notify('Сервер не вернул ID материала. Обнови каталог.');
       }
     } catch {
       notify('Ошибка соединения с сервером');
@@ -4169,10 +4270,8 @@ function MovieForm({
                 onChange={e => field('mood', e.target.value)}
               >
                 <option value="">Без настроения</option>
-                <option value="cry">Поплакать</option>
-                <option value="mind-blowing">Взрыв мозга</option>
-                <option value="cozy">Уютно</option>
-                <option value="fast-paced">На одном дыхании</option>
+                {form.mood && !CATALOG_MOODS.some(item => item.id === form.mood) && <option value={form.mood}>{CATALOG_MOODS.find(item => item.id === parseCatalogMood(form.mood))?.label || form.mood}</option>}
+                {CATALOG_MOODS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
               </select>
             </label>
           </div>
@@ -4311,10 +4410,12 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/profile?id=' + userId).then(r => r.json()).then(d => {
+    const controller = new AbortController();
+    fetch('/api/profile?id=' + userId, { signal: controller.signal, cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(d => {
       if (d.profile) setProfile(d);
       else setProfile(null);
-    }).catch(() => setProfile(null)).finally(() => setLoading(false));
+    }).catch(() => { if (!controller.signal.aborted) setProfile(null); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [userId]);
 
   if (loading) return <div className="empty-state"><h3>Загрузка...</h3></div>;
@@ -4476,7 +4577,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [inbox, loadInbox] = useJsonResource<{ conversations: ChatConversation[] }>(data.user ? '/api/chat' : null);
-  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>(activePeer ? '/api/chat?with=' + activePeer : null, 4000);
+  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>(activePeer ? '/api/chat?with=' + activePeer : null);
   const conversations = inbox?.conversations || [];
   const thread = conversation?.messages || [];
   const lastMessageId = thread[thread.length - 1]?.id;
@@ -4623,7 +4724,7 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
 
   const peer = data.people.find(p => p.id === peerId);
 
-  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>('/api/chat?with=' + peerId, 4000);
+  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>('/api/chat?with=' + peerId);
   const thread = conversation?.messages || [];
   const lastMessageId = thread[thread.length - 1]?.id;
   useEffect(() => {
@@ -4716,10 +4817,20 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
 
 function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: number; go: (s: string) => void; auth: () => void; }) {
   const [compData, setCompData] = useState<ProfileData | null>(null);
-  useEffect(() => { fetch('/api/profile?id=' + compareId).then(r => r.json()).then(d => setCompData(d.profile ? d : null)); }, [compareId]);
+  const [compareError, setCompareError] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    // Reset for a newly mounted comparison; failed requests must not spin forever.
+    fetch('/api/profile?id=' + compareId, { signal: controller.signal, cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error();
+      const snapshot = await response.json();
+      if (!controller.signal.aborted) { setCompData(snapshot.profile ? snapshot : null); setCompareError(!snapshot.profile); }
+    }).catch(() => { if (!controller.signal.aborted) { setCompData(null); setCompareError(true); } });
+    return () => controller.abort();
+  }, [compareId]);
 
   if (!data.user) return <Gate title="Битва вкусов" description="Войди, чтобы сравнить свои вкусы с друзьями." auth={auth} />;
-  if (!compData) return <div className="empty-state">Загрузка...</div>;
+  if (!compData) return <div className="empty-state">{compareError ? 'Не удалось загрузить сравнение. Проверь подключение или выбери другого пользователя.' : 'Загрузка...'}</div>;
 
   const myRatingsMap = new Map(data.ratings.map(r => [r.movieId, r.value]));
   const disputes = compData.ratings
@@ -4848,6 +4959,7 @@ function CollabLists({ data, go, action, auth }: { data: Data; go: (s: string) =
 function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>) => Promise<boolean>; auth: () => void; }) {
   const [videoUrl, setVideoUrl] = useState('');
   const [activeEmbed, setActiveEmbed] = useState('');
+  const [playerError, setPlayerError] = useState('');
   const [chatLog, setChatLog] = useState<{ id: number, user: string, text: string }[]>([]);
   const [chat, setChat] = useState('');
   const [reactions, setReactions] = useState<{ id: number, emoji: string }[]>([]);
@@ -4873,11 +4985,10 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
   };
 
   const applyVideo = () => {
-    if (!videoUrl) return;
-    let finalUrl = videoUrl;
-    if (videoUrl.includes('youtube.com/watch?v=')) finalUrl = videoUrl.replace('watch?v=', 'embed/');
-    else if (videoUrl.includes('youtu.be/')) finalUrl = videoUrl.replace('youtu.be/', 'youtube.com/embed/');
-    setActiveEmbed(finalUrl);
+    const embed = playerEmbedUrl(videoUrl);
+    if (!embed) { setPlayerError('Нужна HTTPS-ссылка YouTube, RuTube или VK video_ext.php. Произвольные страницы не поддерживаются.'); return; }
+    setPlayerError('');
+    setActiveEmbed(embed);
   };
 
   if (!film) return <div className="empty-state"><Sparkles size={40} /><h3>Подготовка зала...</h3><p>Устанавливаем связь с кинотеатром</p></div>;
@@ -4889,6 +5000,7 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
         <button className="outline-btn small" onClick={() => go('/watchroom')}>← Выйти из зала</button>
       </div>
 
+      <p className="collectible-note" role="note">Локальный предпросмотр: видео, сообщения и реакции видны только в этой вкладке. Общая комната и синхронизация между зрителями пока не реализованы. Для переписки используй раздел «Чат».</p>
       <div className="room-layout">
         <div className="room-player">
           <div className="room-video-area">
@@ -4896,16 +5008,20 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
               <div className="room-setup-prompt">
                 <MonitorPlay size={48} />
                 <h3>Вставьте ссылку на плеер</h3>
-                <p>Поддерживаются YouTube, VK Видео, RuTube и другие прямые iframe-ссылки.</p>
+                <p>Поддерживаются HTTPS-ссылки YouTube, VK video_ext.php и RuTube.</p>
                 <div className="room-url-input">
                   <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
                   <button className="primary-btn" onClick={applyVideo}>Запустить <Play size={14} /></button>
                 </div>
-                <span className="room-disclaimer">Синхронизация происходит автоматически при вставке ссылки.</span>
+                {playerError && <p role="alert">{playerError}</p>}
+                <span className="room-disclaimer">Плеер запускается локально; синхронизации с другими вкладками нет.</span>
               </div>
             ) : (
               <iframe
                 src={activeEmbed}
+                title="Локальный предпросмотр плеера"
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                referrerPolicy="strict-origin-when-cross-origin"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
@@ -4925,7 +5041,7 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
             <button onClick={() => sendReaction('😍')}>😍</button>
           </div>
           <div className="room-messages" ref={msgRef}>
-            <div className="chat-empty-thread" style={{ marginBottom: 20 }}><Sparkles size={20} /><p>Комната {roomId} создана.<br />Пригласи друзей по коду!</p></div>
+            <div className="chat-empty-thread" style={{ marginBottom: 20 }}><Sparkles size={20} /><p>Локальная сессия {roomId}.<br />Сообщения здесь не отправляются другим зрителям.</p></div>
             {chatLog.map(m => <div key={m.id} className="room-chat-msg"><b>{m.user}:</b> <span>{m.text}</span></div>)}
           </div>
           <div className="chat-input-row" style={{ padding: '10px' }}>
@@ -4955,13 +5071,13 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
   const sections = [
     { id: 'catalog', icon: <Film size={20} />, color: 'violet', title: 'Каталог материалов', subtitle: 'Хранилище всего контента проекта', items: ['12+ материалов в стартовом каталоге', '6 категорий: Фильм, Сериал, Мультфильм, Мультсериал, Аниме-сериал, Аниме-фильм', 'Поиск по названию, жанру, режиссёру, описанию', 'Фильтры: год, жанр, минимальный рейтинг, категория', 'Сортировка: популярные, по рейтингу, новые, старые', 'Рейтинговые цвета карточек: золото (8.5+), бирюза (7+), синий (5+), красный', 'Счётчик уникальных просмотров страниц материала', 'Поле «Серии» для сериалов и аниме', 'Тег настроения (mood) для фильтров', 'Кнопка «Добавить материал» в каталоге для admin/moderator'] },
     { id: 'auth', icon: <Shield size={20} />, color: 'amber', title: 'Система аккаунтов', subtitle: 'Многоуровневая авторизация и роли', items: ['Регистрация по email + пароль (bcryptjs, стойкость 12)', 'Вход через Telegram Login Widget (NEXT_PUBLIC_TELEGRAM_BOT_NAME)', 'OAuth Яндекс (authorization code flow)', 'Сессии: подписанные JWT, httpOnly cookie, 30 дней', '5 ролей: Гость → Посетитель → VIP → Модератор → Администратор', 'Дополнительный титул по статистике (Легенда экрана, Мастер кадров...)', 'Защита маршрутов: requireAuth на клиенте, проверка роли на сервере', 'Telegram ID привязывается к аккаунту без email'] },
-    { id: 'profile', icon: <Users size={20} />, color: 'blue', title: 'Личный кабинет', subtitle: 'Кастомизируемый профиль с прогрессией', items: ['5 уникальных шаблонов шапки профиля', '4 рамки аватара: Золото (500 XP), Неон (1500 XP), Аметист (2500 XP)', '4 рамки шапки профиля с теми же условиями', 'Загрузка аватара: JPG, PNG, WebP до 4 МБ', 'Перетаскиваемые живые виджеты (drag and drop)', '5 виджетов: Статистика, Категории, История, Достижения, Друзья', 'XP-система: 500 XP = 1 уровень', 'Начисление XP: просмотр +35, оценка +10, комментарий +15, игра до +100', 'Прогресс-бар уровня в профиле', 'Отображение стрика активных дней'] },
-    { id: 'social', icon: <Users size={20} />, color: 'green', title: 'Социальные функции', subtitle: 'Сообщество, дружба и общение', items: ['Система друзей: заявки, принятие, отклонение', 'Личный чат: переписка между друзьями в реальном времени', 'Опрос чата каждые 4 секунды для живого обновления', 'Поделиться фильмом в чате (прикреплённая карточка)', 'Плавающий Chat Drawer из любого места сайта', 'Страница сравнения /compare/:id — «Кино-Баттл»', 'Просмотр публичных профилей: /user/:id', 'Процент кино-совместимости (алгоритм: просмотры + оценки + жанры)', 'Уведомления: ответ на комментарий, лайк, заявка в друзья, рекомендация', 'Рекомендация фильма другу из карточки или чата', 'Счётчик непрочитанных сообщений в навигации'] },
+    { id: 'profile', icon: <Users size={20} />, color: 'blue', title: 'Личный кабинет', subtitle: 'Кастомизируемый профиль с прогрессией', items: ['5 уникальных шаблонов шапки профиля', '4 рамки аватара: Золото (500 XP), Неон (1500 XP), Аметист (2500 XP)', '4 рамки шапки профиля с теми же условиями', 'Загрузка аватара: JPG, PNG, WebP до 4 МБ', 'Перетаскиваемые живые виджеты (drag and drop)', '5 виджетов: Статистика, Категории, История, Достижения, Друзья', 'XP-система: 500 XP = 1 уровень', 'Начисление XP: просмотр +35, оценка +10, комментарий +15; игры — тренировочные, без XP', 'Прогресс-бар уровня в профиле', 'Отображение стрика активных дней'] },
+    { id: 'social', icon: <Users size={20} />, color: 'green', title: 'Социальные функции', subtitle: 'Сообщество, дружба и общение', items: ['Система друзей: заявки, принятие, отклонение', 'Личный чат: переписка между друзьями в реальном времени', 'SSE-инвалидации для обновления переписки', 'Поделиться фильмом в чате (прикреплённая карточка)', 'Плавающий Chat Drawer из любого места сайта', 'Страница сравнения /compare/:id — «Кино-Баттл»', 'Просмотр публичных профилей: /user/:id', 'Процент кино-совместимости (алгоритм: просмотры + оценки + жанры)', 'Уведомления: ответ на комментарий, лайк, заявка в друзья, рекомендация', 'Рекомендация фильма другу из карточки или чата', 'Счётчик непрочитанных сообщений в навигации'] },
     { id: 'stats', icon: <BarChart3 size={20} />, color: 'pink', title: 'Статистика и аналитика', subtitle: 'Детальная картина активности', items: ['Общее количество просмотров, уникальных историй, часов', 'Разбивка по 6 категориям материалов с минутами', 'Топ-жанры пользователя с прогресс-барами', 'История просмотров с датами и деталями', 'Лидерборд: 6 метрик (часы, просмотры, стрик, XP, оценки, игры)', 'Пьедестал почёта с визуализацией трёх лидеров', 'Статистика активности друзей в профиле', 'Общие фильмы с конкретным другом', 'Сравнение оценок: споры и совпадения', 'Итоги месяца (Monthly Wrap-Up)', 'Итоги года moviemovie Wrapped (5 слайдов)'] },
-    { id: 'games', icon: <Gamepad2 size={20} />, color: 'violet', title: 'Мини-игры', subtitle: '16 режимов в тематике кино', items: ['Угадай по сюжету — описание → название', 'Год премьеры — выбор из 4 вариантов', 'Кто режиссёр — режиссёр фильма', 'Жанровый детектив — жанр по названию', 'Угадай по постеру — название по обложке', 'Хронометраж — длительность фильма', 'Карта кино — страна производства', 'Оригинальное название — перевод названия', 'Тип истории — категория материала', 'Рейтинговая битва — у кого оценка выше', '🟩 Кино-Вордли — угадай по подсказкам', '🔡 Поле Чудес — по буквам', '🔀 Анаграмма — собери буквы', '🤥 Две правды, одна ложь — найди фальшивый факт', '⏳ Хроно-Слайдер — хронология фильмов', '🧩 Кино-Связи — группы по признаку', '5 вопросов за сессию, результат → XP'] },
+    { id: 'games', icon: <Gamepad2 size={20} />, color: 'violet', title: 'Мини-игры', subtitle: '16 режимов в тематике кино', items: ['Угадай по сюжету — описание → название', 'Год премьеры — выбор из 4 вариантов', 'Кто режиссёр — режиссёр фильма', 'Жанровый детектив — жанр по названию', 'Угадай по постеру — название по обложке', 'Хронометраж — длительность фильма', 'Карта кино — страна производства', 'Оригинальное название — перевод названия', 'Тип истории — категория материала', 'Рейтинговая битва — у кого оценка выше', '🟩 Кино-Вордли — угадай по подсказкам', '🔡 Поле Чудес — по буквам', '🔀 Анаграмма — собери буквы', '🤥 Две правды, одна ложь — найди фальшивый факт', '⏳ Хроно-Слайдер — хронология фильмов', '🧩 Кино-Связи — группы по признаку', '5 вопросов за сессию, история тренировок без XP'] },
     { id: 'gamification', icon: <Trophy size={20} />, color: 'amber', title: 'Геймификация', subtitle: 'Достижения, челленджи, прогрессия', items: ['33 достижения: Бронза, Серебро, Золото и Платина', 'Тиры открываются прогрессивно по порогу прогресса', 'Ежемесячные челленджи — по 3–5 на каждый месяц года', 'Разнообразие: жанровые, категорийные, социальные, ночные, скоростные', 'Прогресс-бар челленджа с процентом выполнения', 'Страница /challenges с навигацией по всем 12 месяцам', 'Сводная панель: выполнено / XP заработано / всего закрыто', 'Season Pass с миссиями', 'Коллаборативные подборки с голосованием'] },
     { id: 'discovery', icon: <Compass size={20} />, color: 'blue', title: 'Виджеты и контент', subtitle: 'Умные рекомендации и память', items: ['Кино-День: тематический фильтр по дате календаря', '«В этот день» — ретроспектива просмотров и юбилеев фильмов', 'Виджет «Капсула времени» — случайный день из истории', 'Итоги прошлого месяца в профиле', 'Рулетка материалов — анимированный выбор случайного фильма', 'Пульс недели: лучший, худший, новинка, высокий рейтинг', 'Лента «Что сейчас смотрят» по просмотрам', 'Лента «Свежие находки» по году', 'Похожие фильмы на странице материала по жанру', 'Виджет челленджей на главной', 'Сезонный Pass-виджет'] },
-    { id: 'tech', icon: <BarChart3 size={20} />, color: 'green', title: 'Техническая архитектура', subtitle: 'Стек и устройство системы', items: ['Next.js 16 App Router — SSR + клиентские компоненты', 'PostgreSQL + Drizzle ORM — типобезопасные запросы', '16 таблиц БД: users, movies, watches, ratings, comments, reactions, bookmarks, friendships, notifications, messages, challenges...', 'JWT-сессии: jose + httpOnly cookie', 'bcryptjs для паролей (стойкость 12)', 'Единый компонент movie-go-app.tsx', 'REST API: /api/auth, /api/data, /api/action, /api/chat, /api/profile, /api/upload, /api/visit, /api/oauth', 'Загрузка файлов: Base64 Data URI через /api/upload', 'Подсчёт совместимости: взвешенный алгоритм (40% просмотры + 30% рейтинги + 30% жанры)', 'Polling чата каждые 4с через setInterval'] },
+    { id: 'tech', icon: <BarChart3 size={20} />, color: 'green', title: 'Техническая архитектура', subtitle: 'Стек и устройство системы', items: ['Next.js 16 App Router — SSR + клиентские компоненты', 'PostgreSQL + Drizzle ORM — типобезопасные запросы', '31 таблица БД: users, movies, watches, ratings, comments, reactions, bookmarks, friendships, notifications, messages, challenges...', 'JWT-сессии: jose + httpOnly cookie', 'bcryptjs для паролей (стойкость 12)', 'Единый компонент movie-go-app.tsx', 'REST API: /api/auth, /api/data, /api/action, /api/chat, /api/profile, /api/upload, /api/visit, /api/oauth', 'Загрузка изображений в Supabase Storage; в PostgreSQL только URL', 'Подсчёт совместимости: взвешенный алгоритм (40% просмотры + 30% рейтинги + 30% жанры)', 'SSE: приватные события чата/друзей и обновления Кинопульса, восстановление соединения'] },
     { id: 'design', icon: <Sparkles size={20} />, color: 'pink', title: 'Дизайн-система', subtitle: 'Glassmorphism + 5 тем + адаптив', items: ['Шрифт Inter (Google Fonts): 400–900', 'Glassmorphism: backdrop-filter blur(40px) saturate(1.5) на всех поверхностях', 'CSS-переменные: --bg, --surface, --surface2, --surface3, --border, --accent...', '5 тем: Тёмная, Светлая, Розовая, Фиолетовая, Жёлтая', 'Акцент сохраняется в localStorage + синхронизируется с профилем', 'CSS-анимации: pulse-glow, toast-in, orbit-spin, flyUp, loading', 'Адаптивность: 4 брейкпоинта (1300/1050/760/520px)', 'Компактный сайдбар на планшете (68px), drawer на мобиле', 'Стили рейтинга: золото/бирюза/синий/красный на рамках постеров', 'Рамки аватара с box-shadow свечением', 'Drag & drop для виджетов профиля (native HTML5)'] },
   ];
 
@@ -4978,7 +5094,7 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
     { label: 'Database', value: 'PostgreSQL 16', sub: 'Drizzle ORM 0.45' },
     { label: 'Auth', value: 'JWT + bcryptjs', sub: 'jose, Telegram, Яндекс OAuth' },
     { label: 'Styling', value: 'Custom CSS + Tailwind', sub: 'Inter + glassmorphism' },
-    { label: 'Storage', value: 'Base64 Data URI', sub: '/api/upload' },
+    { label: 'Storage', value: 'Supabase Storage', sub: 'В БД только URL' },
     { label: 'State', value: 'React useState + REST', sub: 'Polling interval 4s' }
   ];
 
@@ -5109,9 +5225,9 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
             onClick={() => {
               if (!selected) return;
               const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-              const url = window.location.origin + '/room/' + code;
+              const url = window.location.origin + '/room/' + code + '?movie=' + selected.id;
               setRoomLink(url);
-              navigator.clipboard.writeText(url).catch(() => {});
+              void copyText(url);
               go(`/room/${code}?movie=${selected.id}`);
             }}
             disabled={!selected}
@@ -5119,14 +5235,14 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
             <Tv2 size={18} />{selected ? `Открыть зал «${selected.title.slice(0, 20)}...»` : 'Сначала выбери фильм'}
           </button>
 
-          {roomLink && <div className="wrc-link-box"><Link2 size={15} /><span>{roomLink}</span><button onClick={() => navigator.clipboard.writeText(roomLink).then(() => {})}><Copy size={14} /></button></div>}
-          <p className="wrc-hint">Ссылка скопирована в буфер — отправь другу в чат 🍿</p>
+          {roomLink && <div className="wrc-link-box"><Link2 size={15} /><span>{roomLink}</span><button onClick={() => copyText(roomLink)}><Copy size={14} /></button></div>}
+          <p className="wrc-hint">Локальный предпросмотр не синхронизирует видео и сообщения. Ссылка сохраняет выбранный фильм.</p>
         </div>
 
         <div className="watchroom-join-card">
           <div className="wrc-header"><span className="wrc-icon join-icon"><UsersRound size={22} /></span><div><h3>Войти в комнату</h3><p>Введи код комнаты от друга</p></div></div>
           <div className="wrc-join-form">
-            <label>Код комнаты<input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="XXXXXX" maxLength={6} /></label>
+            <label>Код комнаты<input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))} placeholder="XXXXXX" maxLength={6} /></label>
             <button className="primary-btn" disabled={joinCode.length < 4} onClick={() => go('/room/' + joinCode + '?movie=1')}><ArrowRight size={17} /> Войти в зал</button>
           </div>
 
@@ -5135,8 +5251,8 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
             <div className="wrc-steps">
               <div><span>1</span><p>Один создаёт комнату и выбирает фильм</p></div>
               <div><span>2</span><p>Копирует ссылку и отправляет другу</p></div>
-              <div><span>3</span><p>Все жмут «Старт» — таймер запускается синхронно</p></div>
-              <div><span>4</span><p>Обсуждаете в чате и кидаете реакции 🍿😱🤯</p></div>
+              <div><span>3</span><p>Плеер работает локально; общий таймер пока недоступен</p></div>
+              <div><span>4</span><p>Для общей переписки используйте раздел «Чат»</p></div>
             </div>
           </div>
 
@@ -5229,4 +5345,10 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
       </div>
     </>
   );
+}
+
+function CinemaAtmosphere({ film }: { film?: FilmType }) {
+  const source = film?.backdrop || film?.poster;
+  if (!source || !/^(https?:\/\/|\/(?!\/))/.test(source)) return null;
+  return <div className="cinema-atmosphere" aria-hidden="true"><div style={{ backgroundImage: `url(${JSON.stringify(source)})` }} /><span /></div>;
 }

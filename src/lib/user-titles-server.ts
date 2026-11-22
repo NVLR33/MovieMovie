@@ -5,13 +5,12 @@ import { calculateUserTitleProgress, titleCollection, type UserTitleCollection }
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function loadUserTitles(tx: Transaction, userId: number, equipped: string | null): Promise<UserTitleCollection> {
-  const [films, watched, rated, reviews, awards] = await Promise.all([
-    tx.select({ id: movies.id, category: movies.category, franchise: movies.franchise, festivalRecognized: movies.festivalRecognized }).from(movies),
-    tx.select({ movieId: watches.movieId }).from(watches).where(eq(watches.userId, userId)),
-    tx.select({ movieId: ratings.movieId, value: ratings.value }).from(ratings).where(eq(ratings.userId, userId)),
-    tx.select({ movieId: comments.movieId, body: comments.body, parentId: comments.parentId, spoiler: comments.spoiler }).from(comments).where(eq(comments.userId, userId)),
-    tx.select({ titleId: userTitleAwards.titleId }).from(userTitleAwards).where(eq(userTitleAwards.userId, userId)),
-  ]);
+  // A transaction uses one pg connection: do not enqueue concurrent client.query calls.
+  const films = await tx.select({ id: movies.id, category: movies.category, franchise: movies.franchise, festivalRecognized: movies.festivalRecognized }).from(movies);
+  const watched = await tx.select({ movieId: watches.movieId }).from(watches).where(eq(watches.userId, userId));
+  const rated = await tx.select({ movieId: ratings.movieId, value: ratings.value }).from(ratings).where(eq(ratings.userId, userId));
+  const reviews = await tx.select({ movieId: comments.movieId, body: comments.body, parentId: comments.parentId, spoiler: comments.spoiler }).from(comments).where(eq(comments.userId, userId));
+  const awards = await tx.select({ titleId: userTitleAwards.titleId }).from(userTitleAwards).where(eq(userTitleAwards.userId, userId));
   return titleCollection(calculateUserTitleProgress({ films, watches: watched, ratings: rated, comments: reviews }), awards.map(award => award.titleId), equipped);
 }
 
