@@ -1,7 +1,12 @@
+import { calculateUserTitleProgress, titleCollection } from '@/lib/user-titles';
+import { visibleHiddenTrophies } from '@/lib/hidden-achievements';
+import { buildCommunityCollectibles } from '@/lib/community-collectibles';
 import { NextResponse } from 'next/server';
 import { eq, and, or, sql } from 'drizzle-orm';
 import { getUser, publicUser } from '@/lib/auth';
 import {
+  hiddenAchievementAwards,
+  userTitleAwards,
   collabLists,
   collabItems,
   movieClub,
@@ -344,6 +349,7 @@ export async function GET() {
   try {
     const films = await getOverview();
     const me = await getUser();
+    const collectibleYear = new Date().getUTCFullYear();
 
     const [
       people,
@@ -359,10 +365,17 @@ export async function GET() {
       allCollabItems,
       activeClubs,
       allChallenges,
-      allChallengeProgress
+      allChallengeProgress,
+      bookmarkCounts,
+      recommendationCounts,
+      messageCounts,
+      acceptedFriendships,
+      myHiddenAwards,
+      hiddenOwnerCounts,
+      titleAwards
     ] = await Promise.all([
       db.select({ id: users.id, username: users.username, avatar: users.avatar,
-        role: users.role, xp: users.xp, createdAt: users.createdAt }).from(users),
+        role: users.role, xp: users.xp, equippedTitle: users.equippedTitle, createdAt: users.createdAt }).from(users),
 
       db.select()
         .from(watches)
@@ -399,8 +412,28 @@ export async function GET() {
 
       db.select().from(challenges),
 
-      db.select().from(challengeProgress).where(eq(challengeProgress.userId, me?.id ?? -1))
+      db.select().from(challengeProgress).where(eq(challengeProgress.year, collectibleYear)),
+      db.select({ userId: bookmarks.userId, count: sql<number>`count(*)::int` })
+        .from(bookmarks).groupBy(bookmarks.userId),
+      db.select({ userId: notifications.actorId, count: sql<number>`count(*)::int` })
+        .from(notifications).where(sql`${notifications.message} like '%рекомендует%'`).groupBy(notifications.actorId),
+      db.select({ userId: messages.fromId, count: sql<number>`count(*)::int` })
+        .from(messages).groupBy(messages.fromId),
+      db.select({ fromId: friendships.fromId, toId: friendships.toId })
+        .from(friendships).where(eq(friendships.status, 'accepted')),
+      db.select().from(hiddenAchievementAwards).where(eq(hiddenAchievementAwards.userId, me?.id ?? -1))
+        .orderBy(desc(hiddenAchievementAwards.unlockedAt)),
+      db.select({ achievementId: hiddenAchievementAwards.achievementId, count: sql<number>`count(*)::int` })
+        .from(hiddenAchievementAwards).groupBy(hiddenAchievementAwards.achievementId),
+      db.select({ userId: userTitleAwards.userId, titleId: userTitleAwards.titleId }).from(userTitleAwards)
     ]);
+
+    const collectibles = buildCommunityCollectibles({
+      people, films, watches: allWatches, ratings: allRatings, comments: allComments,
+      scores: allScores, bookmarkCounts, recommendationCounts, messageCounts,
+      acceptedFriendships, challengeProgress: allChallengeProgress,
+      challengeIds: allChallenges.map(challenge => challenge.id), year: collectibleYear,
+    });
 
     const filmsById = new Map(films.map(film => [film.id, film]));
     const watchesByUser = new Map<number, typeof allWatches>();
@@ -414,12 +447,29 @@ export async function GET() {
     for (const rating of allRatings) ratingCounts.set(rating.userId, (ratingCounts.get(rating.userId) || 0) + 1);
     for (const score of allScores) gameTotals.set(score.userId, (gameTotals.get(score.userId) || 0) + score.score);
 
+    const groupActivity = <T extends { userId: number }>(rows: T[]) => {
+      const groups = new Map<number, T[]>();
+      for (const row of rows) {
+        const group = groups.get(row.userId);
+        if (group) group.push(row); else groups.set(row.userId, [row]);
+      }
+      return groups;
+    };
+    const ratingsForTitles = groupActivity(allRatings);
+    const commentsForTitles = groupActivity(allComments);
+    const earnedTitles = groupActivity(titleAwards);
+    const titleCollections = new Map(people.map(person => [person.id, titleCollection(
+      calculateUserTitleProgress({ films, watches: watchesByUser.get(person.id) || [], ratings: ratingsForTitles.get(person.id) || [], comments: commentsForTitles.get(person.id) || [] }),
+      (earnedTitles.get(person.id) || []).map(award => award.titleId), person.equippedTitle,
+    )]));
+
     const names = Object.fromEntries(
       people.map(p => [
         p.id,
         {
           id: p.id,
           username: p.username,
+          displayTitle: titleCollections.get(p.id)?.active || null,
           avatar: p.avatar,
           role: p.role,
           xp: p.xp,
@@ -453,23 +503,17 @@ export async function GET() {
       achievements: number;
     } | null = null;
 
-const currentMonth = new Date().getMonth() + 1;
+const currentMonth = new Date().getUTCMonth() + 1;
 
 const myChallenges = allChallenges
   .map(c => {
-    const prog = me
-      ? allChallengeProgress.find(
-          p =>
-            p.challengeId === c.id &&
-            p.userId === me.id &&
-            p.year === new Date().getUTCFullYear()
-        )
-      : null;
-
+    const progressRows = me ? allChallengeProgress.filter(p => p.challengeId === c.id && p.userId === me.id) : [];
     return {
       ...c,
-      progress: prog?.progress || 0,
-      completed: prog?.completed || false,
+      progress: progressRows.reduce((max, row) => Math.max(max, row.progress || 0), 0),
+      completed: progressRows.some(row => row.completed || row.rewardClaimed),
+      community: collectibles.challengeStats[c.id],
+      year: collectibleYear,
       current: c.month === currentMonth
     };
   })
@@ -734,7 +778,8 @@ const pendingSuggestionsCount = suggestions.filter(
     return NextResponse.json({
       films,
 
-      user: publicUser(me),
+      user: me ? { ...publicUser(me), displayTitle: titleCollections.get(me.id)?.active || null } : null,
+      titles: me ? titleCollections.get(me.id) : null,
 
       people: Object.values(names),
 
@@ -851,6 +896,10 @@ pendingSuggestionsCount,
       onThisDay,
       cineDay,
       monthlySummary,
+      hiddenAchievements: visibleHiddenTrophies(myHiddenAwards, hiddenOwnerCounts, people.length),
+      achievementProgress: me ? collectibles.progressByUser.get(me.id) || {} : {},
+      achievementStats: collectibles.achievementStats,
+      collectibleYear,
       challenges: myChallenges,
       season
     });

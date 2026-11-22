@@ -1,7 +1,8 @@
+import { calculateUserTitleProgress, titleCollection } from '@/lib/user-titles';
 import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { users, watches, ratings, comments, bookmarks, movies, friendships } from '@/db/schema';
+import { users, watches, ratings, comments, bookmarks, movies, friendships, userTitleAwards } from '@/db/schema';
 import { getUser } from '@/lib/auth';
 import { getTitleMinutes } from '@/lib/data';
 
@@ -14,12 +15,13 @@ export async function GET(req: NextRequest) {
   const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!target) return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
 
-  const [userWatches, userRatings, userComments, userBookmarks, allFilms] = await Promise.all([
+  const [userWatches, userRatings, userComments, userBookmarks, allFilms, titleAwards] = await Promise.all([
     db.select().from(watches).where(eq(watches.userId, userId)),
     db.select().from(ratings).where(eq(ratings.userId, userId)),
     db.select().from(comments).where(eq(comments.userId, userId)),
     db.select().from(bookmarks).where(eq(bookmarks.userId, userId)),
     db.select().from(movies),
+    db.select({ titleId: userTitleAwards.titleId }).from(userTitleAwards).where(eq(userTitleAwards.userId, userId)),
   ]);
 
   // Check friendship status
@@ -131,6 +133,7 @@ export async function GET(req: NextRequest) {
     profile: {
       id: target.id,
       username: target.username,
+      displayTitle: titleCollection(calculateUserTitleProgress({ films: allFilms, watches: userWatches, ratings: userRatings, comments: userComments }), titleAwards.map(award => award.titleId), target.equippedTitle).active,
       avatar: target.avatar,
       bio: target.bio,
       role: target.role,

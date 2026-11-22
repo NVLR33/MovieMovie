@@ -1,8 +1,11 @@
+import { syncUserTitles, equipUserTitle } from '@/lib/user-titles-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq, sql, ne, inArray } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
 import { collabLists, collabItems } from '@/db/schema';
+import { awardHiddenTrophy, recordTrophyWatch } from '@/lib/hidden-achievements';
+import { validTrophyTimeZone, qualifiesForCounterCurrent } from '@/lib/hidden-achievement-rules';
 import { syncChallengeProgress } from '@/lib/challenges';
 import {
   users,
@@ -37,6 +40,8 @@ export async function POST(req: NextRequest) {
     const action = String(body.action || '');
     const movieId = Number(body.movieId);
     let result: unknown = { ok: true };
+    const unlockedTrophies: { id: string; name: string; icon: string; description: string }[] = [];
+    const trophyTimeZone = validTrophyTimeZone(body.timeZone);
 
     // действия, которым нужен валидный фильм
     const filmActions = ['watch', 'unwatch', 'rate', 'bookmark', 'favorite', 'unfavorite', 'comment'];
@@ -59,6 +64,7 @@ export async function POST(req: NextRequest) {
             .where(and(eq(watches.userId, user.id), eq(watches.movieId, movieId))).limit(1);
           if (!existing) {
             await tx.insert(watches).values({ userId: user.id, movieId });
+            unlockedTrophies.push(...await recordTrophyWatch(tx, user.id, movieId, new Date(), trophyTimeZone));
             await tx.update(users).set({ xp: sql`coalesce(${users.xp}, 0) + 35` })
               .where(eq(users.id, user.id));
           }
@@ -74,6 +80,7 @@ export async function POST(req: NextRequest) {
         }
         await tx.delete(bookmarks)
           .where(and(eq(bookmarks.userId, user.id), eq(bookmarks.movieId, movieId)));
+        await syncUserTitles(tx, user.id);
       });
       await syncChallengeProgress(user.id);
       result = { ok: true, watched: action === 'watch', removedFromWatchlist: true };
@@ -83,6 +90,14 @@ export async function POST(req: NextRequest) {
         throw Error('Оценка должна быть от 0.5 до 10 с шагом 0.5');
       }
       await db.transaction(async tx => {
+        // Consistent user -> movie lock order. Serialize same-film rating snapshots before the upsert.
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        await tx.select({ id: movies.id }).from(movies).where(eq(movies.id, movieId)).for('update');
+        const [previous] = await tx.select({ value: ratings.value }).from(ratings)
+          .where(and(eq(ratings.userId, user.id), eq(ratings.movieId, movieId))).limit(1);
+        const [others] = await tx.select({ count: sql<number>`count(*)::int`, average: sql<number | null>`avg(${ratings.value})::float8` })
+          .from(ratings).where(and(eq(ratings.movieId, movieId), ne(ratings.userId, user.id)));
+        const qualifies = qualifiesForCounterCurrent(value, others, previous?.value);
         const inserted = await tx.insert(ratings)
           .values({ userId: user.id, movieId, value })
           .onConflictDoNothing({ target: [ratings.userId, ratings.movieId] })
@@ -94,6 +109,11 @@ export async function POST(req: NextRequest) {
           await tx.update(ratings).set({ value })
             .where(and(eq(ratings.userId, user.id), eq(ratings.movieId, movieId)));
         }
+        if (qualifies) {
+          const award = await awardHiddenTrophy(tx, user.id, 'against_the_current', new Date(), trophyTimeZone);
+          if (award) unlockedTrophies.push(award);
+        }
+        await syncUserTitles(tx, user.id);
       });
     } else if (action === 'bookmark') {
   const [watchedAlready] = await db
@@ -166,6 +186,7 @@ if (watchedAlready) {
       if (text.length < 2) throw Error('Напишите комментарий');
 
       let parentId: number | null = null;
+      let parentUserId: number | null = null;
       if (body.parentId) {
         const [parent] = await db
           .select()
@@ -175,21 +196,16 @@ if (watchedAlready) {
         if (!parent || parent.movieId !== movieId) throw Error('Комментарий не найден');
         parentId = parent.id;
 
-        if (parent.userId !== user.id) {
-          await db.insert(notifications).values({
-            userId: parent.userId,
-            actorId: user.id,
-            message: `${user.username} ответил(а) на ваш комментарий`,
-            link: `/movie/${movieId}`
-          });
-        }
+        parentUserId = parent.userId;
       }
 
-      await db.insert(comments).values({ userId: user.id, movieId, parentId, body: text });
-      await db
-        .update(users)
-        .set({ xp: sql`coalesce(${users.xp}, 0) + 15` })
-        .where(eq(users.id, user.id));
+      await db.transaction(async tx => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        await tx.insert(comments).values({ userId: user.id, movieId, parentId, body: text, spoiler: body.spoiler === true });
+        await tx.update(users).set({ xp: sql`coalesce(${users.xp}, 0) + 15` }).where(eq(users.id, user.id));
+        await syncUserTitles(tx, user.id);
+        if (parentUserId && parentUserId !== user.id) await tx.insert(notifications).values({ userId: parentUserId, actorId: user.id, message: `${user.username} ответил(а) на ваш комментарий`, link: `/movie/${movieId}` });
+      });
 
     } else if (action === 'commentEdit') {
       // [ACTION:COMMENT_EDIT]
@@ -223,19 +239,34 @@ if (watchedAlready) {
         );
       }
 
-      await db
-        .update(comments)
-        .set({
-          body: text,
-          editedAt: new Date()
-        })
-        .where(eq(comments.id, commentId));
+      await db.transaction(async tx => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        const changed = await tx.update(comments).set({ body: text, editedAt: new Date(),
+          ...(typeof body.spoiler === 'boolean' ? { spoiler: body.spoiler } : {})
+        }).where(and(eq(comments.id, commentId), eq(comments.userId, user.id))).returning({ id: comments.id });
+        if (!changed.length) throw Error('Комментарий не найден');
+        await syncUserTitles(tx, user.id);
+      });
 
       result = {
         ok: true,
         edited: true
       };
 
+    } else if (action === 'commentSpoiler') {
+      if (!['admin', 'moderator'].includes(user.role)) throw Error('Недостаточно прав');
+      const commentId = Number(body.commentId);
+      if (!Number.isSafeInteger(commentId) || commentId < 1 || typeof body.spoiler !== 'boolean') throw Error('Некорректный тег спойлера');
+      const [target] = await db.select({ userId: comments.userId }).from(comments).where(eq(comments.id, commentId));
+      if (!target) throw Error('Комментарий не найден');
+      await db.transaction(async tx => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, target.userId)).for('update');
+        const changed = await tx.update(comments).set({ spoiler: body.spoiler }).where(eq(comments.id, commentId)).returning({ id: comments.id });
+        if (!changed.length) throw Error('Комментарий не найден');
+        await syncUserTitles(tx, target.userId);
+      });
+    } else if (action === 'titleEquip') {
+      await equipUserTitle(user.id, body.titleId);
     } else if (action === 'commentDelete') {
       // [ACTION:COMMENT_DELETE]
       // Автор удаляет своё, модератор — любое
@@ -777,6 +808,8 @@ if (endYear !== null) {
         category,
         genre: String(body.genre || ''),
         studio: String(body.studio || ''),
+        ...(typeof body.franchise === 'string' ? { franchise: body.franchise.trim().slice(0, 150) } : {}),
+        ...(typeof body.festivalRecognized === 'boolean' ? { festivalRecognized: body.festivalRecognized } : {}),
         year: startYear,
         endYear,
         ongoing,
@@ -788,6 +821,7 @@ if (endYear !== null) {
         backdrop: String(body.backdrop || ''),
         watchUrl: String(body.watchUrl || ''),
         director: String(body.director || ''),
+        ...(typeof body.cast === 'string' ? { cast: body.cast.trim().slice(0, 4000) } : {}),
         country: String(body.country || '')
       };
 
@@ -869,7 +903,7 @@ if (body.id) {
       throw Error('Неизвестное действие');
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(unlockedTrophies.length ? { ...(result as Record<string, unknown>), unlockedTrophies } : result);
   } catch (e) {
     console.error(e);
     return NextResponse.json(

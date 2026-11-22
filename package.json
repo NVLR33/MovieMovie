@@ -7,7 +7,10 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "db:bundle": "tsx scripts/generate-supabase.ts",
+    "db:migrate": "tsx scripts/migrate-db.ts",
+    "db:status": "tsx scripts/migrate-db.ts --status"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

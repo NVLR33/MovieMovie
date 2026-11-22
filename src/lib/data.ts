@@ -46,6 +46,9 @@ export type Film = {
   backdrop: string | null;
   watchUrl: string | null;
   director: string | null;
+  cast?: string | null;
+  franchise?: string;
+  festivalRecognized?: boolean;
   country: string | null;
   featured: boolean | null;
   views: number | null;

@@ -20,6 +20,14 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
 
+  if (slug?.[0] === 'top') {
+    return {
+      title: 'Лучшие материалы — топ-10, 50 и 100 | moviemovie',
+      description: 'Лучшие фильмы, сериалы, мультфильмы и аниме по оценкам пользователей и числу просмотров на moviemovie.',
+      alternates: { canonical: `${SITE_URL}/top` },
+    };
+  }
+
   // Только страницы /movie/{id}
   if (slug?.[0] !== 'movie' || !slug[1]) {
     return {

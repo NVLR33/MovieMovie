@@ -1,0 +1,35 @@
+name: Apply Supabase migrations
+
+# Deliberately manual: code pushes do not mutate a production database.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Validate migration inventory
+        run: npm run db:migrate -- --dry-run
+      - name: Apply pending migrations atomically
+        run: npm run db:migrate
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      - name: Report applied migration status
+        run: npm run db:status
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
