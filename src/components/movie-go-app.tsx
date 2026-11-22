@@ -17,13 +17,32 @@ import type { Film as FilmType } from '@/lib/data';
 import WrappedExperience from './wrapped-experience';
 import WrappedShare from './wrapped-share';
 import type { WrappedData } from './wrapped-experience';
+import {
+  LEADERBOARD_LIMITS,
+  LEADERBOARD_METRICS,
+  getTopLeaders,
+  getLeaderboardPodium,
+  type LeaderboardLimit,
+  type LeaderboardMetric,
+} from '@/lib/leaderboard';
 import BrandLogo from './brand-logo';
-import { AnimatedNumber } from '@/components/animated-number';
+import { achievementDefs } from '@/lib/achievements';
+import type { AchievementProgress, AchievementId } from '@/lib/achievements';
+import type { OwnershipStats } from '@/lib/ownership';
+import OwnershipBadge from './ownership-badge';
+import HeaderStats from './header-stats';
+import TopMaterials from './top-materials';
+import CinemaCardStudio from './cinema-card-studio';
+import HiddenTrophies from './hidden-trophies';
+import UserTitleStudio, { UserTitleBadge } from './user-titles';
+import { progressionTitle, type UserTitleCollection, type UserTitleDisplay } from '@/lib/user-titles';
+import type { UnlockedHiddenAchievement } from '@/lib/hidden-achievement-types';
 import { useJsonResource } from './use-json-resource';
 import ShareCenter, { type ShareContent } from './share-modal';
 
 // --- Types ---
 type User = {
+  displayTitle?: UserTitleDisplay | null;
   id: number; email: string; username: string; role: string; bio: string | null; avatar: string | null;
   theme: string | null; language: string | null; headerStyle: number | null; headerImage: string | null;
   avatarFrame: string | null; headerFrame: string | null; profileEffect: string | null; nameEffect: string | null;
@@ -41,15 +60,17 @@ type Comment = {
 
   // Дата редактирования комментария
   editedAt?: string | null;
+  spoiler?: boolean;
 
   author: {
+    displayTitle?: UserTitleDisplay | null;
     id: number;
     username: string;
     avatar: string | null;
     role: string;
   };
 };
-type Person = { id: number; username: string; avatar: string | null; role: string; xp: number | null; };
+type Person = { displayTitle?: UserTitleDisplay | null; id: number; username: string; avatar: string | null; role: string; xp: number | null; };
 type Friend = { id: number; fromId: number; toId: number; status: string; };
 // [TYPE:MOVIE_SUGGESTION] Предложения пользователей
 type MovieSuggestion = {
@@ -130,6 +151,10 @@ type Data = {
     achievements: number;
   } | null;
 
+  titles?: UserTitleCollection | null;
+  hiddenAchievements: UnlockedHiddenAchievement[];
+  achievementProgress: Partial<AchievementProgress>;
+  achievementStats: Partial<Record<AchievementId, OwnershipStats[]>>;
   challenges: any[];
   season: any;
 };
@@ -166,6 +191,9 @@ const blank: Data = {
   onThisDay: [],
   cineDay: { label: '', icon: '🎬' },
   monthlySummary: null,
+  hiddenAchievements: [],
+  achievementProgress: {},
+  achievementStats: {},
   challenges: [],
   season: null
 };
@@ -176,10 +204,7 @@ const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
 function initials(s: string) { return s.slice(0, 2).toUpperCase(); }
 function titleFor(user: User | null, watches: number) {
   if (!user) return 'Гость';
-  if (watches >= 30) return 'Легенда экрана';
-  if (watches >= 15) return 'Мастер кадров';
-  if (watches >= 5) return 'Киноискатель';
-  return 'Начинающий зритель';
+  return user.displayTitle?.name || progressionTitle(watches);
 }
 
 // --- WatchedIds global context ---
@@ -486,7 +511,7 @@ useEffect(() => {
       const r = await fetch('/api/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })
       });
       const d = await r.json();
       if (!r.ok) {
@@ -495,7 +520,8 @@ useEffect(() => {
         return false;
       }
       await refresh();
-      if (success) notify(success);
+      if (d.unlockedTrophies?.length) notify(d.unlockedTrophies.map((trophy: { icon: string; name: string }) => `${trophy.icon} Скрытый трофей: ${trophy.name}!`).join(' · '));
+      else if (success) notify(success);
       return true;
     } catch {
       notify('Ошибка соединения');
@@ -551,6 +577,7 @@ useEffect(() => {
 const nav = [
   { id: 'home', label: words.home, icon: Home, url: '/' },
   { id: 'catalog', label: words.catalog, icon: Compass, url: '/catalog' },
+  { id: 'top', label: en ? 'Best titles' : 'Лучшие материалы', icon: Crown, url: '/top' },
   { id: 'watchlist', label: words.watchlist, icon: Bookmark, url: '/watchlist' },
   { id: 'favorites', label: en ? 'Favorites' : 'Любимое', icon: Heart, url: '/favorites' },
   { id: 'collab', label: en ? 'Lists' : 'Подборки', icon: Layers3, url: '/collab' },
@@ -631,7 +658,7 @@ return (
           <div className="side-scroll">
             <div className="nav-group-label">{en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ'}</div>
             <nav className="nav-list">
-              {nav.slice(0, 5).map(n => (
+              {nav.slice(0, 6).map(n => (
                 <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
                   <n.icon size={19} />
                   <span>{n.label}</span>
@@ -642,7 +669,7 @@ return (
 
             <div className="nav-group-label section-gap">{en ? 'COMMUNITY' : 'СООБЩЕСТВО'}</div>
             <nav className="nav-list">
-              {nav.slice(5).map(n => (
+              {nav.slice(6).map(n => (
                 <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
                   <n.icon size={19} />
                   <span>{n.label}</span>
@@ -744,6 +771,13 @@ return (
                 </div>
               )}
             </div>
+
+            <HeaderStats
+              films={data.films}
+              peopleCount={data.people.length}
+              watchesCount={data.user ? data.watches.length : null}
+              en={en}
+            />
 
             <div className="top-actions">
               <div className="language-switch" onClick={changeLang}>
@@ -899,6 +933,7 @@ return (
           <main className="content" key={path}>
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
               : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
+              : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} />
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} />)
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
@@ -1138,9 +1173,9 @@ return (
 )}
 
 {toast && (
-  <div className="toast">
+  <div className="toast" role="status" aria-live="polite">
     <Sparkles size={16} />
-    {toast}
+    <span>{toast}</span>
     <button onClick={() => setToast('')}>
       <X size={14} />
     </button>
@@ -1354,7 +1389,13 @@ const ageTone =
       role="button"
       tabIndex={0}
       onClick={() => go('/movie/' + film.id)}
-      onKeyDown={e => { if (e.key === 'Enter') go('/movie/' + film.id); }}
+      onKeyDown={e => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          go('/movie/' + film.id);
+        }
+      }}
     >
       <div className="poster-wrap">
         <img src={image(film)} alt={film.title} />
@@ -1369,7 +1410,6 @@ const ageTone =
           {ageRating}
         </span>
       )}
-        <span className="card-play"><Play size={19} fill="currentColor" /></span>
         {isWatched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
         <button
           type="button"
@@ -1483,7 +1523,7 @@ function CollapsibleText({
 
 function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; }) {
   const featured = useMemo(() => films.find(f => (f as any).featured) || films[0], [films]);
-  const trending = useMemo(() => [...films].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5), [films]);
+  const homeWatchedIds = useMemo(() => new Set(data.watches.map(watch => watch.movieId)), [data.watches]);
 
   const [capsuleMovie, setCapsuleMovie] = useState<{
   id: number;
@@ -1560,60 +1600,6 @@ const rating = data.ratings.find(x => x.movieId === f.id);
         <div className="hero-corner">moviemovie ORIGINAL SELECTION <span>↗</span></div>
       </div>
 
-      <div className="quick-stats">
-        {/* 1. Историй в каталоге */}
-        <div className="quick-stat">
-          <span className="quick-icon violet"><Clapperboard size={19} /></span>
-          <div>
-            <b><AnimatedNumber value={films.length} duration={1000} /></b>
-            <small>{en ? 'stories in the library' : 'историй в каталоге'}</small>
-          </div>
-        </div>
-
-        {/* 2. Средний рейтинг (1 знак после запятой) */}
-        <div className="quick-stat">
-          <span className="quick-icon amber"><Star size={19} /></span>
-          <div>
-            <b>
-              <AnimatedNumber 
-                value={films.length ? (films.reduce((n, f) => n + f.rating, 0) / films.length) : 0} 
-                decimals={1} 
-                duration={1200} 
-              />
-            </b>
-            <small>{en ? 'average rating' : 'средний рейтинг'}</small>
-          </div>
-        </div>
-
-        {/* 3. Кинолюбителей (плавно наберет от 0 до 7 при загрузке) */}
-        <div className="quick-stat">
-          <span className="quick-icon blue"><Users size={19} /></span>
-          <div>
-            <b><AnimatedNumber value={data.people.length} duration={1500} /></b>
-            <small>{en ? 'movie lovers' : 'кинолюбителей'}</small>
-          </div>
-        </div>
-
-        {/* 4. Впечатлений впереди / Мои просмотры */}
-        <div className="quick-stat">
-          <span className="quick-icon green"><Sparkles size={19} /></span>
-          <div>
-            <b>
-              {data.user ? (
-                <AnimatedNumber value={data.watches.length} duration={1000} />
-              ) : (
-                '∞'
-              )}
-            </b>
-            <small>
-              {data.user 
-                ? (en ? 'your watches' : 'твоих просмотров') 
-                : (en ? 'moments ahead' : 'впечатлений впереди')}
-            </small>
-          </div>
-        </div>
-      </div>
-
       {data.cineDay?.label && (
         <div className="cine-day-banner">
           <span className="cine-day-icon">{data.cineDay.icon}</span>
@@ -1635,7 +1621,7 @@ const rating = data.ratings.find(x => x.movieId === f.id);
             .map((c: any) => (
               <div className={`challenge-pill ${c.completed ? 'done' : ''}`} key={c.id}>
                 <span>{c.icon}</span>
-                <div><b>{c.title}</b><small>{c.progress}/{c.target}</small><div className="bar-track"><i style={{ width: `${Math.min(100, (c.progress / c.target) * 100)}%` }} /></div></div>
+                <div><b>{c.title}</b><small>{c.progress}/{c.target}</small><div className="bar-track"><i style={{ width: `${Math.min(100, (c.progress / c.target) * 100)}%` }} /></div><OwnershipBadge stats={c.community} compact completed /></div>
                 {c.completed && <Check size={15} />}
               </div>
             ))}
@@ -1663,12 +1649,7 @@ const rating = data.ratings.find(x => x.movieId === f.id);
         </div>
       )}
 
-      <section className="home-section">
-        <SectionTitle kicker={en ? 'WHAT EVERYONE IS WATCHING' : 'ТО, ЧТО СЕЙЧАС СМОТРЯТ'} title={en ? 'In the spotlight' : 'В центре внимания'} link={en ? 'Full catalog' : 'Весь каталог'} onClick={() => go('/catalog')} />
-        <div className="featured-grid">
-          {trending.map((f, i) => <FilmCard key={f.id} film={f} go={go} rank={i + 1} />)}
-        </div>
-      </section>
+      <TopMaterials films={films} go={go} compact en={en} watchedIds={homeWatchedIds} />
 
       {data.user && data.onThisDay.length > 0 && (
         <div className="otd-section">
@@ -1907,7 +1888,7 @@ function Catalog({
   const [watchFilter, setWatchFilter] = useState('all');
 
   const filtered = useMemo(() => films.filter(f =>
-    (!query || [f.title, f.originalTitle, f.genre, f.director, f.description, f.category, f.studio || ''].join(' ').toLowerCase().includes(query.toLowerCase())) &&
+    (!query || [f.title, f.originalTitle, f.genre, f.director, f.description, f.category, f.studio || '', f.cast || ''].join(' ').toLowerCase().includes(query.toLowerCase())) &&
     (category === 'Все' || f.category === category) &&
     (genre === 'Все жанры' || f.genre.includes(genre)) &&
     (studio === 'Все студии' || (f.studio || '') === studio) &&
@@ -1918,7 +1899,7 @@ function Catalog({
 
   return (
     <>
-      <div className="page-heading">
+      <div className="page-heading catalog-heading">
         <div>
           <span className="eyebrow">{en ? 'THE STORY LIBRARY' : 'БИБЛИОТЕКА ВПЕЧАТЛЕНИЙ'}</span>
           <h1>{en ? 'Explore the' : 'Исследуй'} <em>{en ? 'cinematic universe.' : 'киновселенную.'}</em></h1>
@@ -1942,6 +1923,8 @@ function Catalog({
 )}
       </div>
 
+      <button type="button" className="catalog-top-entry" onClick={() => go('/top')}><Crown size={18} /><span>{en ? 'Looking for the best? Explore the top 10, 50 and 100.' : 'Ищешь лучшее? Открой топ-10, 50 и 100 материалов.'}</span><ArrowRight size={16} /></button>
+
       <div className="catalog-search">
         <Search size={20} />
         <input value={query} onChange={e => setQuery(e.target.value)} placeholder={en ? 'Title, genre, director or keyword...' : 'Название, жанр, режиссёр или ключевое слово...'} />
@@ -1949,37 +1932,37 @@ function Catalog({
         <span>ENTER ↵</span>
       </div>
 
-      <div className="category-tabs">
+      <div className="category-tabs catalog-categories">
         {categories.map(c => <button key={c} className={category === c ? 'selected' : ''} onClick={() => setCategory(c)}>{c}</button>)}
       </div>
 
-      <div className="filter-bar">
+      <div className="filter-bar catalog-filters">
         <span><SlidersHorizontal size={17} /> {en ? 'Filters' : 'Фильтры'}</span>
-        <select value={genre} onChange={e => setGenre(e.target.value)}>
+        <select className="catalog-genre-filter" aria-label={en ? 'Genre' : 'Жанр'} value={genre} onChange={e => setGenre(e.target.value)}>
           {genres.map(g => <option key={g}>{g}</option>)}
         </select>
-        <select value={studio} onChange={e => setStudio(e.target.value)}>
+        <select className="catalog-studio-filter" aria-label={en ? 'Studio' : 'Студия'} value={studio} onChange={e => setStudio(e.target.value)}>
           <option>Все студии</option>
           {[...new Set(films.map(f => f.studio).filter(Boolean) as string[])].sort().map(st => <option key={st}>{st}</option>)}
         </select>
-        <select value={year} onChange={e => setYear(e.target.value)}>
+        <select aria-label={en ? 'Year' : 'Год'} value={year} onChange={e => setYear(e.target.value)}>
           <option>Любой год</option>
           {[...new Set(films.map(f => f.year))].sort((a, b) => b - a).map(y => <option key={y}>{y}</option>)}
         </select>
-        <select value={minRating} onChange={e => setMinRating(e.target.value)}>
+        <select aria-label={en ? 'Minimum rating' : 'Минимальный рейтинг'} value={minRating} onChange={e => setMinRating(e.target.value)}>
           <option value="0">Любой рейтинг</option>
           <option value="7">От 7.0</option>
           <option value="8">От 8.0</option>
           <option value="9">От 9.0</option>
         </select>
-        <select value={watchFilter} onChange={e => setWatchFilter(e.target.value)}>
+        <select aria-label={en ? 'Watch status' : 'Статус просмотра'} value={watchFilter} onChange={e => setWatchFilter(e.target.value)}>
           <option value="all">Все материалы</option>
           <option value="watched">✓ Просмотренные</option>
           <option value="unwatched">○ Непросмотренные</option>
         </select>
         <span className="filter-spacer" />
         <span className="result-count">{en ? 'Found' : 'Найдено'}: {filtered.length}</span>
-        <select value={sort} onChange={e => setSort(e.target.value)}>
+        <select aria-label={en ? 'Sort order' : 'Сортировка'} value={sort} onChange={e => setSort(e.target.value)}>
           <option value="popular">Популярные</option>
           <option value="rating">По рейтингу</option>
           <option value="new">Сначала новые</option>
@@ -2028,6 +2011,7 @@ function MovieDetailContent({
   edit: (f: FilmType) => void;
 }) {
   const [comment, setComment] = useState('');
+  const [commentSpoiler, setCommentSpoiler] = useState(false);
   const [reply, setReply] = useState<number | null>(null);
   const [hover, setHover] = useState(0);
 
@@ -2055,8 +2039,9 @@ function MovieDetailContent({
 
   const submit = async () => {
     if (!comment.trim()) return;
-    if (await action({ action: 'comment', movieId: film.id, text: comment, parentId: reply }, 'Комментарий опубликован')) {
+    if (await action({ action: 'comment', movieId: film.id, text: comment, parentId: reply, spoiler: commentSpoiler }, 'Комментарий опубликован')) {
       setComment('');
+      setCommentSpoiler(false);
       setReply(null);
     }
   };
@@ -2076,13 +2061,17 @@ function MovieDetailContent({
           <p className="original-title">{film.originalTitle}</p>
 
           <div className="detail-rating">
-            <span className="big-rating"><Star size={22} fill="currentColor" />{film.rating.toFixed(1)}</span>
-            <span className="rating-of">/ 10<br /><small>рейтинг сообщества</small></span>
-            <span className="detail-views"><Eye size={17} />{fmt(film.views || 0)} просмотров</span>
-            <span className="detail-views" title="Сколько пользователей добавили материал в любимое">
-              <Heart size={17} fill="#fb7185" color="#fb7185" />
-              {fmt(data.favoriteCounts?.[film.id] || 0)} в любимом
-            </span>
+            <div className="detail-community-rating">
+              <span className="big-rating"><Star size={22} fill="currentColor" />{film.rating.toFixed(1)}</span>
+              <span className="rating-of">/ 10<br /><small>рейтинг сообщества</small></span>
+            </div>
+            <div className="detail-statistics">
+              <span className="detail-views"><Eye size={17} /><span>{fmt(film.views || 0)} просмотров</span></span>
+              <span className="detail-views" title="Сколько пользователей добавили материал в любимое">
+                <Heart size={17} fill="#fb7185" color="#fb7185" />
+                <span>{fmt(data.favoriteCounts?.[film.id] || 0)} в любимом</span>
+              </span>
+            </div>
           </div>
 
           <CollapsibleText
@@ -2226,6 +2215,7 @@ function MovieDetailContent({
                     <button key={e} type="button" onClick={() => setComment(prev => prev + e)}>{e}</button>
                   ))}
                 </div>
+                <label className="comment-spoiler-toggle"><input type="checkbox" checked={commentSpoiler} onChange={e => setCommentSpoiler(e.target.checked)} />Содержит спойлер — скрыть текст до нажатия</label>
                 <div className="compose-footer">
                   <span>
                     {reply ? `Ответ на комментарий #${reply}` : 'Будь добрым к другим зрителям ✨'}
@@ -2307,6 +2297,10 @@ function MovieDetailContent({
                 </div>
               </div>
         
+              {film.franchise && <div className="info-item"><span className="info-icon"><Layers3 size={15} /></span><div><small>Франшиза</small><b>{film.franchise}</b></div></div>}
+              {film.festivalRecognized && <div className="info-item"><span className="info-icon"><Award size={15} /></span><div><small>Отметка редакции</small><b>Фестивальное кино</b></div></div>}
+              {film.cast && <div className="info-item"><span className="info-icon"><UsersRound size={15} /></span><div><small>В ролях</small><InfoInlineLinks value={film.cast.replace(/[;\n\r]+/g, ', ')} go={go} /></div></div>}
+
               {/* Год выпуска */}
               <div className="info-item">
                 <span className="info-icon">
@@ -2432,6 +2426,8 @@ function CommentRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(c.body);
+  const [spoiler, setSpoiler] = useState(!!c.spoiler);
+  const [revealedBody, setRevealedBody] = useState('');
   const [busy, setBusy] = useState(false);
 
   const isOwner = currentUser?.id === c.author?.id;
@@ -2454,6 +2450,7 @@ function CommentRow({
         action: 'commentEdit',
         commentId: c.id,
         text: value,
+        spoiler,
       },
       'Комментарий изменён'
     );
@@ -2508,6 +2505,7 @@ function CommentRow({
       <div className="comment-content">
         <div className="comment-by">
           <b>{c.author?.username || 'Зритель'}</b>
+          <UserTitleBadge title={c.author?.displayTitle} />
 
           <span>
             {new Date(c.createdAt).toLocaleDateString('ru-RU')}
@@ -2529,6 +2527,7 @@ function CommentRow({
               rows={3}
             />
 
+            <label className="comment-spoiler-toggle"><input type="checkbox" checked={spoiler} onChange={e => setSpoiler(e.target.checked)} />Содержит спойлер</label>
             <div className="comment-edit-actions">
               <button
                 className="primary-btn small"
@@ -2552,7 +2551,7 @@ function CommentRow({
             </div>
           </div>
         ) : (
-          <p>{c.body}</p>
+          c.spoiler && revealedBody !== c.body ? <button type="button" className="comment-spoiler-cover" onClick={() => setRevealedBody(c.body)}><Eye size={17} /><b>В отзыве есть спойлер</b><span>Нажми, чтобы прочитать</span></button> : <div className="comment-visible-body">{c.spoiler && <button type="button" className="comment-spoiler-hide" onClick={() => setRevealedBody('')}>Скрыть спойлер</button>}<p>{c.body}</p></div>
         )}
 
         {!editing && (
@@ -2571,6 +2570,7 @@ function CommentRow({
               <button
                 onClick={() => {
                   setText(c.body);
+                  setSpoiler(!!c.spoiler);
                   setEditing(true);
                 }}
               >
@@ -2578,6 +2578,8 @@ function CommentRow({
                 Изменить
               </button>
             )}
+
+            {isModerator && <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await action({ action: 'commentSpoiler', commentId: c.id, spoiler: !c.spoiler }, c.spoiler ? 'Тег спойлера снят' : 'Отзыв скрыт под спойлером'); } finally { setBusy(false); } }}><Eye size={14} />{c.spoiler ? 'Снять тег спойлера' : 'Отметить спойлер'}</button>}
 
             {canDelete && (
               <button
@@ -2612,7 +2614,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
   const minutes = watched.reduce((n, w) => n + (w.film ? titleMinutes(w.film) : 0), 0);
   const level = Math.floor((u.xp || 0) / 500) + 1;
   const progress = ((u.xp || 0) % 500) / 5;
-  const achieved = achievementDefs.filter(a => a.progress(data) >= a.targets[0]).length;
+  const achieved = achievementDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length + (data.hiddenAchievements?.length || 0);
   const categoryCounts = categories.slice(1).map(c => ({
     name: c,
     count: watched.filter(w => w.film?.category === c).length,
@@ -2695,11 +2697,13 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         <div className="tile-heading"><span><Trophy size={18} /> Достижения</span>{editing && <GripVertical size={18} />}</div>
         <div className="profile-badges">
           {achievementDefs.slice(0, 4).map(a => (
-            <div key={a.id} className={a.progress(data) >= a.targets[0] ? 'earned' : ''}>
-              <span>{a.icon}</span><b>{a.name}</b><small>{a.progress(data) >= a.targets[0] ? 'Открыто' : 'Не открыто'}</small>
+            <div key={a.id} className={(data.achievementProgress[a.id] ?? 0) >= a.targets[0] ? 'earned' : ''}>
+              <span>{a.icon}</span><b>{a.name}</b><small>{(data.achievementProgress[a.id] ?? 0) >= a.targets[0] ? 'Открыто' : 'Не открыто'}</small>
+              <OwnershipBadge stats={data.achievementStats[a.id]?.[0]} tier={1} compact />
             </div>
           ))}
         </div>
+        <HiddenTrophies awards={data.hiddenAchievements || []} compact />
         <button className="tile-link" onClick={() => go('/achievements')}>Смотреть все достижения <ArrowRight size={15} /></button>
       </div>
     ),
@@ -2740,7 +2744,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
           <div className="cover-main">
             <div className="cover-badges">
               <span className="role-badge">{u.role === 'admin' ? 'АДМИНИСТРАТОР' : u.role === 'moderator' ? 'МОДЕРАТОР' : u.role === 'vip' ? 'VIP УЧАСТНИК' : 'УЧАСТНИК'}</span>
-              <span className="title-badge">✦ {titleFor(u, watched.length)}</span>
+              {u.displayTitle ? <UserTitleBadge title={u.displayTitle} /> : u.displayTitle !== null && <span className="title-badge">✦ {titleFor(u, watched.length)}</span>}
             </div>
             <h1 className={`profile-name name-fx-${u.nameEffect || 'none'} name-clr-${u.nameColor || 'default'}`}>{u.username}<span className="verified">✦</span></h1>
             <p>{u.bio}</p>
@@ -2759,11 +2763,15 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         </div>
       </div>
 
+      <CinemaCardStudio user={u} films={data.films} watches={data.watches} progress={data.achievementProgress} ownership={data.achievementStats} hiddenAchievements={data.hiddenAchievements} go={go} />
+
+      <UserTitleStudio collection={data.titles} username={u.username} action={action} />
+
       <div className="profile-level-row">
         <div className="level-card">
           <div className="level-emblem"><Zap size={23} fill="currentColor" /></div>
           <div>
-            <span>УРОВЕНЬ {level} · {titleFor(u, watched.length)}</span>
+            <span>УРОВЕНЬ {level} · {progressionTitle(new Set(watched.map(watch => watch.movieId)).size)}</span>
             <div className="level-track"><i style={{ width: `${progress}%` }} /></div>
             <small>{(u.xp || 0) % 500} / 500 XP до следующего уровня</small>
           </div>
@@ -2954,34 +2962,51 @@ function Watchlist({ data, go, auth }: { data: Data; go: (s: string) => void; au
 }
 
 function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
-  const [metric, setMetric] = useState<'minutes' | 'watches' | 'streak' | 'xp' | 'ratings' | 'gameScore'>('minutes');
-  const labels = { minutes: 'Часы просмотра', watches: 'Просмотры', streak: 'Активные дни', xp: 'Опыт XP', ratings: 'Оценки', gameScore: 'Игровые очки' };
-  const sorted = useMemo(() => [...data.leaderboard].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0)), [data.leaderboard, metric]);
+  const [metric, setMetric] = useState<LeaderboardMetric>('minutes');
+  const [limit, setLimit] = useState<LeaderboardLimit>(100);
+  const labels = LEADERBOARD_METRICS;
+  const leaders = useMemo(() => getTopLeaders(data.leaderboard, metric, limit), [data.leaderboard, metric, limit]);
+  const podium = getLeaderboardPodium(leaders);
   const value = (p: Leader) => metric === 'minutes' ? `${Math.floor(p.minutes / 60)} ч ${p.minutes % 60} мин` : fmt(Number(p[metric] || 0));
 
   return (
     <>
       <div className="page-heading">
         <div><span className="eyebrow">ЛУЧШИЕ ИЗ ЛУЧШИХ</span><h1>Зал <em>славы.</em></h1><p>Каждый час просмотра — новая строчка в истории сообщества.</p></div>
-        <div className="heading-count"><Trophy size={18} />{sorted.length} участников</div>
+        <div className="heading-count"><Trophy size={18} />{data.leaderboard.length} участников</div>
       </div>
-      <div className="leader-filters">
-        {(Object.keys(labels) as (keyof typeof labels)[]).map(k => <button key={k} className={metric === k ? 'selected' : ''} onClick={() => setMetric(k)}>{labels[k]}</button>)}
-      </div>
-      <div className="podium">
-        {[sorted[1], sorted[0], sorted[2]].map((p, i) => p && (
-          <div key={p.id} className={`podium-person podium-${i}`}>
-            <span className="podium-crown">{i === 1 ? <Crown size={22} fill="currentColor" /> : <Trophy size={18} />}</span>
-            <Avatar name={p.username} src={p.avatar} size={i === 1 ? 76 : 62} frame={i === 1 ? 'gold' : 'none'} />
-            <b>{p.username}</b><small>{titleFor({ xp: p.xp } as User, p.watches)}</small>
-            <strong>{value(p)}</strong>
-            <span className="podium-place">#{i === 1 ? 1 : i === 0 ? 2 : 3}</span>
+      <div className="leader-controls">
+        <div className="leader-filters" role="group" aria-label="Показатель рейтинга">
+          {(Object.keys(labels) as LeaderboardMetric[]).map(k => (
+            <button type="button" key={k} className={metric === k ? 'selected' : ''} aria-pressed={metric === k} onClick={() => setMetric(k)}>{labels[k]}</button>
+          ))}
+        </div>
+        <div className="leader-limit-row">
+          <span className="leader-limit-label">Размер топа</span>
+          <div className="leader-filters leader-limit-filters" role="group" aria-label="Размер топа">
+            {LEADERBOARD_LIMITS.map(size => (
+              <button type="button" key={size} className={limit === size ? 'selected' : ''} aria-pressed={limit === size} onClick={() => setLimit(size)}>Топ-{size}</button>
+            ))}
           </div>
-        ))}
+        </div>
+        <p className="leader-result-count" role="status">Топ-{limit} · Показано {leaders.length} из {data.leaderboard.length}</p>
       </div>
-      <div className="rank-list">
+      {podium.length > 0 && (
+        <div className={`podium ${podium.length === 1 ? 'podium-single' : ''}`}>
+          {podium.map(({ person: p, place }) => (
+            <div key={p.id} className={`podium-person podium-${place === 1 ? 1 : place === 2 ? 0 : 2}`}>
+              <span className="podium-crown">{place === 1 ? <Crown size={22} fill="currentColor" /> : <Trophy size={18} />}</span>
+              <Avatar name={p.username} src={p.avatar} size={place === 1 ? 76 : 62} frame={place === 1 ? 'gold' : 'none'} />
+              <b>{p.username}</b><small>{titleFor({ xp: p.xp } as User, p.watches)}</small>
+              <strong>{value(p)}</strong>
+              <span className="podium-place">#{place}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="rank-list leaderboard-rank-list">
         <div className="rank-header"><span>МЕСТО / УЧАСТНИК</span><span>{labels[metric].toUpperCase()}</span></div>
-        {sorted.map((p, i) => (
+        {leaders.map((p, i) => (
           <div className={`rank-row ${p.id === data.user?.id ? 'is-me' : ''}`} key={p.id}>
             <span className="rank-position">{String(i + 1).padStart(2, '0')}</span>
             <Avatar name={p.username} src={p.avatar} size={40} />
@@ -2989,51 +3014,20 @@ function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
             <strong>{value(p)}</strong>
           </div>
         ))}
+        {leaders.length === 0 && <div className="empty-state"><Trophy size={32} /><h3>Рейтинг пока пуст</h3><p>Участники появятся здесь после регистрации.</p></div>}
       </div>
     </>
   );
 }
 
-const achievementDefs = [
-  { id: 'watch', icon: '🎬', name: 'Первый кадр', description: 'Отмечай просмотренные истории', targets: [1, 10, 30], unit: 'просмотров', progress: (d: Data) => d.watches.length, category: 'Просмотры' },
-  { id: 'hundred', icon: '💯', name: 'Сотня историй', description: 'Посмотри 100 материалов', targets: [25, 50, 100], unit: 'просмотров', progress: (d: Data) => d.watches.length, category: 'Просмотры' },
-  { id: 'binge', icon: '🔁', name: 'Марафонец', description: 'Смотри кино каждый день', targets: [2, 7, 30], unit: 'дней подряд', progress: (d: Data) => new Set(d.watches.map(w => new Date(w.watchedAt).toDateString())).size, category: 'Просмотры' },
-  { id: 'night', icon: '🌙', name: 'Ночной сеанс', description: 'Смотри истории после 20:00', targets: [1, 5, 20], unit: 'ночных сеансов', progress: (d: Data) => d.watches.filter(w => new Date(w.watchedAt).getHours() >= 20).length, category: 'Просмотры' },
-  { id: 'hours', icon: '⏳', name: 'Повелитель времени', description: 'Проводи часы в другом мире', targets: [3, 25, 100], unit: 'часов', progress: (d: Data) => Math.floor(d.watches.reduce((n, w) => n + (d.films.find(f => f.id === w.movieId)?.duration || 0), 0) / 60), category: 'Просмотры' },
-  { id: 'weekend', icon: '📅', name: 'Уикенд-синефил', description: 'Посмотри 5 фильмов за выходные', targets: [1, 5, 20], unit: 'выходных сеансов', progress: (d: Data) => d.watches.filter(w => { const day = new Date(w.watchedAt).getDay(); return day === 0 || day === 6; }).length, category: 'Просмотры' },
-  { id: 'explorer', icon: '🪐', name: 'Исследователь', description: 'Открывай уникальные истории', targets: [3, 15, 40], unit: 'уникальных историй', progress: (d: Data) => new Set(d.watches.map(w => w.movieId)).size, category: 'Просмотры' },
-  { id: 'speed', icon: '⚡', name: 'Скоростной просмотр', description: 'Посмотри 3 материала за один день', targets: [1, 5, 15], unit: 'таких дней', progress: (d: Data) => { const byDay: Record<string, number> = {}; d.watches.forEach(w => { const k = new Date(w.watchedAt).toDateString(); byDay[k] = (byDay[k] || 0) + 1; }); return Object.values(byDay).filter(v => v >= 3).length; }, category: 'Просмотры' },
-  { id: 'anime', icon: '🌸', name: 'Путь аниме', description: 'Открывай мир японской анимации', targets: [1, 10, 30], unit: 'аниме', progress: (d: Data) => d.watches.filter(w => d.films.find(f => f.id === w.movieId)?.category.includes('Аниме')).length, category: 'Жанры' },
-  { id: 'cartoon', icon: '🎨', name: 'Мультяшник', description: 'Смотри мультфильмы и мультсериалы', targets: [1, 5, 20], unit: 'мультфильмов', progress: (d: Data) => d.watches.filter(w => d.films.find(f => f.id === w.movieId)?.category.includes('Мульт')).length, category: 'Жанры' },
-  { id: 'series', icon: '📺', name: 'Сериальный маньяк', description: 'Смотри сериалы', targets: [1, 5, 15], unit: 'сериалов', progress: (d: Data) => d.watches.filter(w => d.films.find(f => f.id === w.movieId)?.category === 'Сериал').length, category: 'Жанры' },
-  { id: 'genre_all', icon: '🎭', name: 'Всеядный зритель', description: 'Посмотри что-то из каждой категории', targets: [2, 4, 6], unit: 'категорий', progress: (d: Data) => new Set(d.watches.map(w => d.films.find(f => f.id === w.movieId)?.category).filter(Boolean)).size, category: 'Жанры' },
-  { id: 'thriller', icon: '😱', name: 'Адреналиновый наркоман', description: 'Смотри триллеры и хорроры', targets: [1, 5, 15], unit: 'триллеров', progress: (d: Data) => d.watches.filter(w => d.films.find(f => f.id === w.movieId)?.genre.toLowerCase().includes('триллер') || d.films.find(f => f.id === w.movieId)?.genre.toLowerCase().includes('ужас')).length, category: 'Жанры' },
-  { id: 'scifi', icon: '🚀', name: 'Космический путешественник', description: 'Открывай фантастические миры', targets: [1, 5, 15], unit: 'фантастик', progress: (d: Data) => d.watches.filter(w => d.films.find(f => f.id === w.movieId)?.genre.toLowerCase().includes('фантастика')).length, category: 'Жанры' },
-  { id: 'drama', icon: '🎭', name: 'Чувствительная душа', description: 'Переживай драматические истории', targets: [1, 5, 20], unit: 'драм', progress: (d: Data) => d.watches.filter(w => d.films.find(f => f.id === w.movieId)?.genre.toLowerCase().includes('драма')).length, category: 'Жанры' },
-  { id: 'action', icon: '💥', name: 'Экшен-машина', description: 'Смотри боевики и экшены', targets: [1, 5, 15], unit: 'боевиков', progress: (d: Data) => d.watches.filter(w => d.films.find(f => f.id === w.movieId)?.genre.toLowerCase().includes('боевик') || d.films.find(f => f.id === w.movieId)?.genre.toLowerCase().includes('экшен')).length, category: 'Жанры' },
-  { id: 'ratings', icon: '⭐', name: 'Кинокритик', description: 'Делись своими оценками', targets: [1, 10, 30], unit: 'оценок', progress: (d: Data) => d.ratings.length, category: 'Критика' },
-  { id: 'perfectionist', icon: '🏆', name: 'Перфекционист', description: 'Поставь несколько оценок 10/10', targets: [1, 3, 10], unit: 'оценок 10/10', progress: (d: Data) => d.ratings.filter(r => r.value === 10).length, category: 'Критика' },
-  { id: 'harsh', icon: '🔥', name: 'Суровый критик', description: 'Поставь низкую оценку — быть честным важно', targets: [1, 3, 10], unit: 'низких оценок', progress: (d: Data) => d.ratings.filter(r => r.value <= 4).length, category: 'Критика' },
-  { id: 'voice', icon: '💬', name: 'Голос зала', description: 'Оставляй комментарии и отзывы', targets: [1, 10, 30], unit: 'комментариев', progress: (d: Data) => d.comments.filter(c => c.author?.id === d.user?.id).length, category: 'Критика' },
-  { id: 'popular_comment', icon: '❤️', name: 'Народный любимец', description: 'Получи лайки на комментарии', targets: [1, 10, 50], unit: 'лайков', progress: (d: Data) => d.comments.filter(c => c.author?.id === d.user?.id).reduce((n, c) => n + (c.likes || 0), 0), category: 'Критика' },
-  { id: 'social', icon: '🤝', name: 'Душа компании', description: 'Заводи новых друзей', targets: [1, 5, 20], unit: 'друзей', progress: (d: Data) => d.friends.filter(f => f.status === 'accepted').length, category: 'Социальное' },
-  { id: 'collector', icon: '💎', name: 'Коллекционер желаемого', description: 'Добавляй истории, которые хочешь посмотреть позже', targets: [1, 10, 30], unit: 'в желаемом', progress: (d: Data) => d.bookmarks.length, category: 'Социальное' },
-  { id: 'ambassador', icon: '📢', name: 'Посол кино', description: 'Делись рекомендациями с друзьями', targets: [1, 5, 20], unit: 'рекомендаций', progress: (d: Data) => d.notifications.filter(n => n.message?.includes('рекомендует')).length, category: 'Социальное' },
-  { id: 'chatty', icon: '💌', name: 'Болтун', description: 'Общайся с друзьями в чате', targets: [5, 25, 100], unit: 'сообщений', progress: (d: Data) => d.scores.filter(s => s.game === 'chat').reduce((n, s) => n + s.score, 0) || 0, category: 'Социальное' },
-  { id: 'player', icon: '🎮', name: 'Игрок', description: 'Играй в кино-игры', targets: [1, 10, 50], unit: 'игр', progress: (d: Data) => d.scores.length, category: 'Игры' },
-  { id: 'champion', icon: '🥇', name: 'Чемпион', description: 'Набирай высокие очки в играх', targets: [1, 5, 20], unit: 'игр с 5/5', progress: (d: Data) => d.scores.filter(s => s.score >= 5).length, category: 'Игры' },
-  { id: 'allgames', icon: '🎯', name: 'Коллекционер игр', description: 'Попробуй все игровые режимы', targets: [4, 8, 16], unit: 'режимов', progress: (d: Data) => new Set(d.scores.map(s => s.game)).size, category: 'Игры' },
-  { id: 'master', icon: '👑', name: 'Легенда экрана', description: 'Зарабатывай XP в киновселенной', targets: [500, 2000, 5000], unit: 'XP', progress: (d: Data) => d.user?.xp || 0, category: 'Прогрессия' },
-  { id: 'level10', icon: '🔟', name: 'Ветеран', description: 'Достигни 10 уровня', targets: [5, 10, 20], unit: 'уровень', progress: (d: Data) => Math.floor((d.user?.xp || 0) / 500) + 1, category: 'Прогрессия' },
-  { id: 'challenges_done', icon: '🎯', name: 'Мастер испытаний', description: 'Выполни ежемесячные челленджи', targets: [1, 5, 15], unit: 'челленджей', progress: (d: Data) => d.challenges.filter((c: any) => c.completed).length, category: 'Прогрессия' },
-];
 
 function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s: string) => void; }) {
   const [expandedAch, setExpandedAch] = useState<string | null>(null);
   if (!data.user) return <Gate title="Собирай свою историю" description="Открывай достижения, улучшай их до новых тиров и получай награды." auth={auth} />;
 
-  const unlocked = achievementDefs.filter(a => a.progress(data) >= a.targets[0]).length;
-  const total = achievementDefs.length;
+  const hiddenAwards = data.hiddenAchievements || [];
+  const unlocked = hiddenAwards.length + achievementDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length;
+  const total = achievementDefs.length + hiddenAwards.length;
   const pct = Math.round(unlocked / total * 100);
   const cats = [...new Set(achievementDefs.map(a => (a as any).category || 'Прочее'))];
 
@@ -3046,28 +3040,35 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
 
       <div className="achievement-summary">
         <span className="achievement-summary-icon">✦</span>
-        <div><h3>Твоя коллекция растёт</h3><p>Каждое из {total} достижений имеет 3 тира. Исследуй все категории кино, чтобы собрать коллекцию полностью.</p></div>
+        <div><h3>Твоя коллекция растёт</h3><p>Каждое из {achievementDefs.length} обычных достижений имеет 3 тира. Редкость каждого тира зависит от доли владельцев среди всех зарегистрированных пользователей.</p></div>
         <strong>{pct}%</strong>
       </div>
+
+      <div className="rarity-guide">
+        <span>Обычная ≥50%</span><span>Необычная ≥20%</span><span>Редкая ≥10%</span><span>Эпическая ≥3%</span><span>Легендарная &lt;3%</span>
+      </div>
+      <p className="collectible-note">Показана доля владельцев открытого тира, а для закрытого достижения — тира I. Статистика обычных достижений пересчитывается по текущему прогрессу; их календарные условия считаются по UTC.</p>
 
       <div className="ach-progress-outer"><div className="ach-progress-inner" style={{ width: pct + '%' }} /></div>
 
       <div className="ach-cats-row">
         {cats.map(cat => {
           const catDefs = achievementDefs.filter(a => (a as any).category === cat);
-          const catUnlocked = catDefs.filter(a => a.progress(data) >= a.targets[0]).length;
+          const catUnlocked = catDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length;
           return <div key={cat} className="ach-cat-pill"><span>{cat}</span><b>{catUnlocked}/{catDefs.length}</b></div>;
         })}
       </div>
+
+      <HiddenTrophies awards={hiddenAwards} />
 
       {cats.map(cat => {
         const catDefs = achievementDefs.filter(a => (a as any).category === cat);
         return (
           <div key={cat} className="ach-category-section">
-            <div className="ach-category-header"><h3>{cat}</h3><span>{catDefs.filter(a => a.progress(data) >= a.targets[0]).length}/{catDefs.length}</span></div>
+            <div className="ach-category-header"><h3>{cat}</h3><span>{catDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length}/{catDefs.length}</span></div>
             <div className="achievement-grid">
               {catDefs.map(a => {
-                const value = a.progress(data);
+                const value = (data.achievementProgress[a.id] ?? 0);
                 const tier = a.targets.filter(t => value >= t).length;
                 const next = a.targets[Math.min(tier, 2)];
                 const pctBar = Math.min(100, (value / next) * 100);
@@ -3083,6 +3084,7 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
                       <span className="achievement-tier">{tier === 3 ? '✦ МАКС' : tier ? `ТИР ${['', 'I', 'II', 'III'][tier]}` : 'ЗАКРЫТО'}</span>
                     </div>
                     <h3>{a.name}</h3><p>{a.description}</p>
+                    <OwnershipBadge stats={data.achievementStats[a.id]?.[Math.max(0, tier - 1)]} tier={Math.max(1, tier)} />
 
                     <div className="achievement-progress">
                       <div><span>{Math.min(value, next)} / {next} {a.unit}</span><b>{tier === 3 ? 'Максимальный тир' : `До тира ${['I', 'II', 'III'][Math.min(tier, 2)]}`}</b></div>
@@ -3098,6 +3100,7 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
                             <div key={i} className={`ach-tier-row ${value >= t ? 'done' : ''}`}>
                               <span>Тир {['I', 'II', 'III'][i]}</span><b>{t} {a.unit}</b>
                               {value >= t ? <Check size={14} /> : <small>{Math.max(0, t - value)} осталось</small>}
+                              <OwnershipBadge stats={data.achievementStats[a.id]?.[i]} tier={i + 1} compact />
                             </div>
                           ))}
                         </div>
@@ -3802,6 +3805,9 @@ function MovieForm({
     backdrop: (film as any)?.backdrop || '',
     watchUrl: (film as any)?.watchUrl || '',
     director: (film as any)?.director || '',
+    cast: film?.cast || '',
+    franchise: film?.franchise || '',
+    festivalRecognized: film?.festivalRecognized || false,
     country: (film as any)?.country || ''
   });
 
@@ -4118,6 +4124,17 @@ function MovieForm({
           </div>
 
           <div className="form-two">
+            <label>Франшиза<input value={form.franchise} maxLength={150} onChange={e => field('franchise', e.target.value)} placeholder="Marvel" /><small>Точное название. Для «Адвоката Marvel» укажи Marvel.</small></label>
+            <label className="movie-festival-toggle"><input type="checkbox" checked={form.festivalRecognized} onChange={e => field('festivalRecognized', e.target.checked)} />Фестивальное кино<small>Редакционная отметка об участии или наградах на фестивалях.</small></label>
+          </div>
+
+          <label>
+            Актёры
+            <textarea value={form.cast} maxLength={4000} onChange={e => field('cast', e.target.value)} placeholder="Том Харди, Киллиан Мёрфи, Эмили Блант" />
+            <small>Имена через запятую или с новой строки. Используются для кино-визиток.</small>
+          </label>
+
+          <div className="form-two">
             <label>
               Ссылка на просмотр
               <input
@@ -4232,7 +4249,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
           <div className="cover-identity">
             <div className="cover-badges">
               <span className="role-badge">{p.role === 'admin' ? 'АДМИНИСТРАТОР' : p.role === 'moderator' ? 'МОДЕРАТОР' : p.role === 'vip' ? 'VIP УЧАСТНИК' : 'УЧАСТНИК'}</span>
-              <span className="title-badge">✦ {titleFor({ xp: p.xp } as User, s.totalWatches)}</span>
+              {p.displayTitle ? <UserTitleBadge title={p.displayTitle} /> : p.displayTitle !== null && <span className="title-badge">✦ {progressionTitle(s.uniqueFilms)}</span>}
             </div>
             <h1 className={`profile-name name-fx-${p.nameEffect || 'none'} name-clr-${p.nameColor || 'default'}`}>{p.username}</h1>
             <p>{p.bio}</p>
@@ -4259,7 +4276,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
         <div className="level-card">
           <div className="level-emblem"><Zap size={23} fill="currentColor" /></div>
           <div>
-            <span>УРОВЕНЬ {level} · {titleFor({ xp: p.xp } as User, s.totalWatches)}</span>
+            <span>УРОВЕНЬ {level} · {progressionTitle(s.uniqueFilms)}</span>
             <div className="level-track"><i style={{ width: `${((p.xp || 0) % 500) / 5}%` }} /></div>
             <small>{fmt(p.xp || 0)} XP</small>
           </div>
@@ -5051,9 +5068,9 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
 }
 
 function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; auth: () => void; }) {
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getUTCMonth() + 1);
   const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-  const currentMonth = new Date().getMonth() + 1;
+  const currentMonth = new Date().getUTCMonth() + 1;
 
   if (!data.user) return <Gate title="Испытания ждут" description="Войди, чтобы принять вызов и заработать XP за каждый челлендж." auth={auth} />;
 
@@ -5076,6 +5093,8 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
         <div className="challenge-overview-card"><span className="challenge-ov-icon">📅</span><div><b>{data.challenges.length}</b><small>доступно за весь год</small></div></div>
       </div>
 
+      <p className="collectible-note">Редкость и процент выполнения рассчитаны среди всех зарегистрированных пользователей за {data.challenges[0]?.year || new Date().getUTCFullYear()} год. Повторные записи одного участника не увеличивают процент.</p>
+
       <div className="challenge-month-tabs">
         {months.map((m, i) => (
           <button key={i} className={`challenge-month-tab ${selectedMonth === i + 1 ? 'active' : ''} ${i + 1 === currentMonth ? 'current' : ''}`} onClick={() => setSelectedMonth(i + 1)}>
@@ -5094,6 +5113,7 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
                 <div className="challenge-card-reward"><Zap size={13} /> +{c.xpReward} XP</div>
               </div>
               <h3>{c.title}</h3><p>{c.description}</p>
+              <OwnershipBadge stats={c.community} completed />
               {(c.filterGenre || c.filterCategory) && (
                 <div className="challenge-req-hint"><b>Смотреть:</b> {c.filterGenre ? `Жанр «${c.filterGenre}»` : ''}{c.filterGenre && c.filterCategory ? ' или ' : ''}{c.filterCategory ? `Категория «${c.filterCategory}»` : ''}</div>
               )}

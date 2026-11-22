@@ -1,12 +1,12 @@
-import { pgTable, serial, text, integer, timestamp, real, boolean, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, real, boolean, uniqueIndex, index } from 'drizzle-orm/pg-core';
 
 // [DB:USERS] Account, roles, profile customization and progression.
 export const users = pgTable('mg_users', {
-  id: serial('id').primaryKey(), email: text('email').notNull().unique(), username: text('username').notNull().unique(), passwordHash: text('password_hash'), provider: text('provider').default('email'), providerId: text('provider_id'), role: text('role').notNull().default('visitor'), bio: text('bio').default('Кино — это больше, чем история.'), avatar: text('avatar'), theme: text('theme').default('dark'), language: text('language').default('ru'), headerStyle: integer('header_style').default(1), headerImage: text('header_image'), avatarFrame: text('avatar_frame').default('none'), headerFrame: text('header_frame').default('none'), profileEffect: text('profile_effect').default('none'), nameEffect: text('name_effect').default('none'), nameColor: text('name_color').default('default'), tileOrder: text('tile_order').default('stats,genres,history,achievements,friends'), xp: integer('xp').default(0), quests: text('quests').default('{}'), lastQuestDate: text('last_quest_date'), telegramId: text('telegram_id'), createdAt: timestamp('created_at').defaultNow().notNull()
+  id: serial('id').primaryKey(), email: text('email').notNull().unique(), username: text('username').notNull().unique(), passwordHash: text('password_hash'), provider: text('provider').default('email'), providerId: text('provider_id'), role: text('role').notNull().default('visitor'), bio: text('bio').default('Кино — это больше, чем история.'), avatar: text('avatar'), theme: text('theme').default('dark'), language: text('language').default('ru'), headerStyle: integer('header_style').default(1), headerImage: text('header_image'), avatarFrame: text('avatar_frame').default('none'), headerFrame: text('header_frame').default('none'), profileEffect: text('profile_effect').default('none'), nameEffect: text('name_effect').default('none'), nameColor: text('name_color').default('default'), tileOrder: text('tile_order').default('stats,genres,history,achievements,friends'), xp: integer('xp').default(0), equippedTitle: text('equipped_title'), quests: text('quests').default('{}'), lastQuestDate: text('last_quest_date'), telegramId: text('telegram_id'), createdAt: timestamp('created_at').defaultNow().notNull()
 });
 // [DB:MOVIES] Curated media library and watch destinations.
 export const movies = pgTable('mg_movies', {
-  id: serial('id').primaryKey(), title: text('title').notNull(), originalTitle: text('original_title'), description: text('description').notNull(), category: text('category').notNull(), genre: text('genre').notNull(), studio: text('studio'), year: integer('year').notNull(), ageRating: text('age_rating'), endYear: integer('end_year'), ongoing: boolean('ongoing').default(false), duration: integer('duration').notNull(), episodes: integer('episodes'), mood: text('mood').default(''), poster: text('poster').notNull(), backdrop: text('backdrop'), watchUrl: text('watch_url'), director: text('director'), country: text('country'), featured: boolean('featured').default(false), views: integer('views').default(0), createdAt: timestamp('created_at').defaultNow().notNull()
+  id: serial('id').primaryKey(), title: text('title').notNull(), originalTitle: text('original_title'), description: text('description').notNull(), category: text('category').notNull(), genre: text('genre').notNull(), studio: text('studio'), year: integer('year').notNull(), ageRating: text('age_rating'), endYear: integer('end_year'), ongoing: boolean('ongoing').default(false), duration: integer('duration').notNull(), episodes: integer('episodes'), mood: text('mood').default(''), poster: text('poster').notNull(), backdrop: text('backdrop'), watchUrl: text('watch_url'), director: text('director'), cast: text('cast').notNull().default(''), franchise: text('franchise').notNull().default(''), festivalRecognized: boolean('festival_recognized').notNull().default(false), country: text('country'), featured: boolean('featured').default(false), views: integer('views').default(0), createdAt: timestamp('created_at').defaultNow().notNull()
 });
 // [DB:WATCHES] One viewing entry per session allows meaningful history and streaks.
 export const watches = pgTable('mg_watches', { id: serial('id').primaryKey(), userId: integer('user_id').notNull().references(() => users.id), movieId: integer('movie_id').notNull().references(() => movies.id), watchedAt: timestamp('watched_at').defaultNow().notNull() });
@@ -28,6 +28,7 @@ export const comments = pgTable('mg_comments', {
   parentId: integer('parent_id'),
 
   body: text('body').notNull(),
+  spoiler: boolean('spoiler').notNull().default(false),
 
   likes: integer('likes').default(0),
 
@@ -146,3 +147,33 @@ export const movieSuggestions = pgTable(
     reviewedAt: timestamp('reviewed_at'),
   }
 );
+
+// Event-time trophies are immutable. No movie FK: deleting a title must not erase earned history.
+export const hiddenAchievementEvents = pgTable('mg_hidden_achievement_events', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  movieId: integer('movie_id').notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  timeZone: text('time_zone').notNull(),
+  weekKey: text('week_key').notNull(),
+}, table => [
+  uniqueIndex('mg_hidden_event_unique').on(table.userId, table.kind, table.movieId),
+  index('mg_hidden_event_week').on(table.userId, table.kind, table.weekKey),
+]).enableRLS();
+
+export const hiddenAchievementAwards = pgTable('mg_hidden_achievement_awards', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  achievementId: text('achievement_id').notNull(),
+  unlockedAt: timestamp('unlocked_at', { withTimezone: true }).notNull().defaultNow(),
+  timeZone: text('time_zone').notNull(),
+}, table => [uniqueIndex('mg_hidden_award_unique').on(table.userId, table.achievementId)]).enableRLS();
+
+// Earned titles are permanent; the equipped choice remains separate from unlocks.
+export const userTitleAwards = pgTable('mg_user_title_awards', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  titleId: text('title_id').notNull(),
+  unlockedAt: timestamp('unlocked_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('mg_user_title_unique').on(table.userId, table.titleId)]).enableRLS();
