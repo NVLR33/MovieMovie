@@ -310,7 +310,10 @@ export default function WrappedExperience({
     new Date().getUTCFullYear()
   );
 
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [availableYears] = useState(() => {
+    const current = new Date().getUTCFullYear();
+    return Array.from({ length: Math.max(0, current - 2019) }, (_, i) => current - i);
+  });
 
   const touchStart = useRef<number | null>(null);
 
@@ -378,18 +381,6 @@ export default function WrappedExperience({
   /* ============================================
      YEARS
   ============================================ */
-
-  useEffect(() => {
-    const current = new Date().getUTCFullYear();
-
-    const years: number[] = [];
-
-    for (let y = current; y >= 2020; y--) {
-      years.push(y);
-    }
-
-    setAvailableYears(years);
-  }, []);
 
   /* ============================================
      NAVIGATION

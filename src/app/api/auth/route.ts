@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyTelegramLogin } from '@/lib/auth-validation';
 import bcrypt from 'bcryptjs';
 import { db } from '@/db';
 import { users } from '@/db/schema';
@@ -32,15 +33,17 @@ export async function POST(req: NextRequest) {
 
     // [AUTH:TELEGRAM]
     if (action === 'telegram') {
-      if (!telegramData || !telegramData.id) {
-        return NextResponse.json({ error: 'Нет данных Telegram' }, { status: 400 });
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) return NextResponse.json({ error: 'Вход через Telegram не настроен' }, { status: 503 });
+      if (!verifyTelegramLogin(telegramData, botToken)) {
+        return NextResponse.json({ error: 'Недействительные данные Telegram' }, { status: 401 });
       }
 
       const telegramId = String(telegramData.id);
       let [u] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
 
       if (!u) {
-        const baseName = (telegramData.username || telegramData.first_name || 'tg_user')
+        const baseName = String(telegramData.username || telegramData.first_name || 'tg_user')
           .toLowerCase()
           .replace(/[^a-z0-9_а-яё]/gi, '')
           .slice(0, 18) || 'tg_user';
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
             telegramId,
             email: `${telegramId}@telegram.local`,
             username: generatedUsername,
-            avatar: telegramData.photo_url || null,
+            avatar: typeof telegramData.photo_url === 'string' && telegramData.photo_url.startsWith('https://') ? telegramData.photo_url : null,
             provider: 'telegram',
             providerId: telegramId,
           })
@@ -63,15 +66,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ user: publicUser(u) });
     }
 
+    if (action !== 'register' && action !== 'login') {
+      return NextResponse.json({ error: 'Неизвестное действие' }, { status: 400 });
+    }
+
     // [AUTH:CREDENTIALS]
     if (typeof email !== 'string' || typeof password !== 'string') {
       return NextResponse.json({ error: 'Укажите почту и пароль' }, { status: 400 });
     }
 
     const mail = email.trim().toLowerCase();
+    if (mail.length > 254 || Buffer.byteLength(password, 'utf8') > 72) {
+      return NextResponse.json({ error: 'Слишком длинная почта или пароль (максимум 72 байта)' }, { status: 400 });
+    }
 
     if (action === 'register') {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail) || password.length < 8 || !username?.trim() || username.length > 24) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail) || password.length < 8 || Buffer.byteLength(password, 'utf8') > 72 || typeof username !== 'string' || username.trim().length < 3 || username.trim().length > 24) {
         return NextResponse.json({ error: 'Проверьте данные: email, пароль от 8 символов, имя от 3 до 24 символов' }, { status: 400 });
       }
 

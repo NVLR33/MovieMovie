@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq, sql, ne } from 'drizzle-orm';
+import { and, eq, sql, ne, inArray } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
 import { collabLists, collabItems } from '@/db/schema';
@@ -16,7 +16,10 @@ import {
   friendships,
   notifications,
   movieSuggestions,
-  gameScores
+  gameScores,
+  messages,
+  watchRooms,
+  movieClub
 } from '@/db/schema';
 
 // [API:ACTIONS] Authenticated mutations with role and ownership checks.
@@ -38,6 +41,7 @@ export async function POST(req: NextRequest) {
     // действия, которым нужен валидный фильм
     const filmActions = ['watch', 'unwatch', 'rate', 'bookmark', 'favorite', 'unfavorite', 'comment'];
     if (filmActions.includes(action)) {
+      if (!Number.isSafeInteger(movieId) || movieId < 1) throw Error('Неверный ID материала');
       const [film] = await db
         .select({ id: movies.id })
         .from(movies)
@@ -46,96 +50,51 @@ export async function POST(req: NextRequest) {
 
       if (!film) throw Error('Материал не найден');
     }
-if (action === 'watch') {
-  // Проверяем, не был ли материал уже просмотрен
-  const [existing] = await db
-    .select({ id: watches.id })
-    .from(watches)
-    .where(
-      and(
-        eq(watches.userId, user.id),
-        eq(watches.movieId, movieId)
-      )
-    )
-    .limit(1);
-
-  if (!existing) {
-    // Добавляем просмотр
-    await db.insert(watches).values({
-      userId: user.id,
-      movieId
-    });
-
-    // Начисляем XP только за первый просмотр
-    await db
-      .update(users)
-      .set({
-        xp: sql`coalesce(${users.xp}, 0) + 35`
-      })
-      .where(eq(users.id, user.id));
-  }
-
-  // 🔖 Удаляем материал из «Буду смотреть»
-  await db
-    .delete(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.userId, user.id),
-        eq(bookmarks.movieId, movieId)
-      )
-    );
-
-  await syncChallengeProgress(user.id);
-  
-  result = {
-    ok: true,
-    watched: true,
-    removedFromWatchlist: true
-  };
-} else if (action === 'unwatch') {
-  // Снимаем отметку просмотра
-  await db
-    .delete(watches)
-    .where(
-      and(
-        eq(watches.userId, user.id),
-        eq(watches.movieId, movieId)
-      )
-    );
-
-  // На всякий случай удаляем материал из «Буду смотреть»,
-  // чтобы он не возвращался туда автоматически
-  await db
-    .delete(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.userId, user.id),
-        eq(bookmarks.movieId, movieId)
-      )
-    );
-
-  await syncChallengeProgress(user.id);
-  
-  result = {
-    ok: true,
-    watched: false
-  };
+    if (action === 'watch' || action === 'unwatch') {
+      await db.transaction(async tx => {
+        // Serialize this user's watch mutations, including the first insert with no row yet.
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        if (action === 'watch') {
+          const [existing] = await tx.select({ id: watches.id }).from(watches)
+            .where(and(eq(watches.userId, user.id), eq(watches.movieId, movieId))).limit(1);
+          if (!existing) {
+            await tx.insert(watches).values({ userId: user.id, movieId });
+            await tx.update(users).set({ xp: sql`coalesce(${users.xp}, 0) + 35` })
+              .where(eq(users.id, user.id));
+          }
+        } else {
+          const removed = await tx.delete(watches)
+            .where(and(eq(watches.userId, user.id), eq(watches.movieId, movieId)))
+            .returning({ id: watches.id });
+          // Undo the original reward so toggling watched cannot farm XP.
+          if (removed.length) {
+            await tx.update(users).set({ xp: sql`greatest(0, coalesce(${users.xp}, 0) - 35)` })
+              .where(eq(users.id, user.id));
+          }
+        }
+        await tx.delete(bookmarks)
+          .where(and(eq(bookmarks.userId, user.id), eq(bookmarks.movieId, movieId)));
+      });
+      await syncChallengeProgress(user.id);
+      result = { ok: true, watched: action === 'watch', removedFromWatchlist: true };
     } else if (action === 'rate') {
       const value = Number(body.value);
       if (!Number.isFinite(value) || value < 0.5 || value > 10 || (value * 2) % 1 !== 0) {
         throw Error('Оценка должна быть от 0.5 до 10 с шагом 0.5');
       }
-      await db
-        .insert(ratings)
-        .values({ userId: user.id, movieId, value })
-        .onConflictDoUpdate({
-          target: [ratings.userId, ratings.movieId],
-          set: { value }
-        });
-      await db
-        .update(users)
-        .set({ xp: sql`coalesce(${users.xp}, 0) + 10` })
-        .where(eq(users.id, user.id));
+      await db.transaction(async tx => {
+        const inserted = await tx.insert(ratings)
+          .values({ userId: user.id, movieId, value })
+          .onConflictDoNothing({ target: [ratings.userId, ratings.movieId] })
+          .returning({ id: ratings.id });
+        if (inserted.length) {
+          await tx.update(users).set({ xp: sql`coalesce(${users.xp}, 0) + 10` })
+            .where(eq(users.id, user.id));
+        } else {
+          await tx.update(ratings).set({ value })
+            .where(and(eq(ratings.userId, user.id), eq(ratings.movieId, movieId)));
+        }
+      });
     } else if (action === 'bookmark') {
   const [watchedAlready] = await db
   .select({ id: watches.id })
@@ -856,28 +815,8 @@ if (body.id) {
   };
 }
     } else if (action === 'questComplete') {
-      const questId = String(body.questId);
-      const xpReward = Number(body.xp);
-
-      let quests: Record<string, boolean> = {};
-      try {
-        quests = JSON.parse(user.quests || '{}');
-      } catch {}
-
-      const today = new Date().toISOString().slice(0, 10);
-      if (user.lastQuestDate !== today) quests = {};
-
-      if (!quests[questId]) {
-        quests[questId] = true;
-        await db
-          .update(users)
-          .set({
-            quests: JSON.stringify(quests),
-            lastQuestDate: today,
-            xp: sql`coalesce(${users.xp}, 0) + ${xpReward}`
-          })
-          .where(eq(users.id, user.id));
-      }
+      // No server-defined daily quests exist: never accept XP rewards from the client.
+      throw Error('Ежедневные задания пока недоступны');
     } else if (action === 'createList') {
       const title = String(body.title).trim();
       if (title) await db.insert(collabLists).values({ title, ownerId: user.id });
@@ -900,14 +839,22 @@ if (body.id) {
 
       const id = Number(body.id);
 
-      const movieComments = await db.select({ id: comments.id }).from(comments).where(eq(comments.movieId, id));
-      for (const c of movieComments) await db.delete(reactions).where(eq(reactions.commentId, c.id));
-
-      await db.delete(comments).where(eq(comments.movieId, id));
-      await db.delete(ratings).where(eq(ratings.movieId, id));
-      await db.delete(watches).where(eq(watches.movieId, id));
-      await db.delete(bookmarks).where(eq(bookmarks.movieId, id));
-      await db.delete(movies).where(eq(movies.id, id));
+      if (!Number.isSafeInteger(id) || id < 1) throw Error('Неверный ID материала');
+      await db.transaction(async tx => {
+        const commentIds = tx.select({ id: comments.id }).from(comments).where(eq(comments.movieId, id));
+        await tx.delete(reactions).where(inArray(reactions.commentId, commentIds));
+        await tx.delete(comments).where(eq(comments.movieId, id));
+        await tx.delete(ratings).where(eq(ratings.movieId, id));
+        await tx.delete(watches).where(eq(watches.movieId, id));
+        await tx.delete(bookmarks).where(eq(bookmarks.movieId, id));
+        await tx.delete(favorites).where(eq(favorites.movieId, id));
+        await tx.delete(collabItems).where(eq(collabItems.movieId, id));
+        await tx.delete(watchRooms).where(eq(watchRooms.movieId, id));
+        await tx.delete(movieClub).where(eq(movieClub.movieId, id));
+        await tx.update(messages).set({ movieId: null }).where(eq(messages.movieId, id));
+        await tx.update(movieSuggestions).set({ movieId: null }).where(eq(movieSuggestions.movieId, id));
+        await tx.delete(movies).where(eq(movies.id, id));
+      });
     } else if (action === 'role') {
       if (user.role !== 'admin') {
         return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
