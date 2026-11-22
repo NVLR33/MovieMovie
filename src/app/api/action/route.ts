@@ -1,3 +1,5 @@
+import { awardPetActivity } from '@/lib/cinema-pet-server';
+import { recordFirstViewer, recordPioneerActivity } from '@/lib/pioneer';
 import { syncUserTitles, equipUserTitle } from '@/lib/user-titles-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq, sql, ne, inArray } from 'drizzle-orm';
@@ -59,11 +61,15 @@ export async function POST(req: NextRequest) {
       await db.transaction(async tx => {
         // Serialize this user's watch mutations, including the first insert with no row yet.
         await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        await tx.select({ id: movies.id }).from(movies).where(eq(movies.id, movieId)).for('update');
         if (action === 'watch') {
           const [existing] = await tx.select({ id: watches.id }).from(watches)
             .where(and(eq(watches.userId, user.id), eq(watches.movieId, movieId))).limit(1);
           if (!existing) {
+            const [watchedFilm] = await tx.select({ category: movies.category }).from(movies).where(eq(movies.id, movieId));
+            if (watchedFilm?.category === 'Фильм') await recordFirstViewer(tx, user.id, movieId);
             await tx.insert(watches).values({ userId: user.id, movieId });
+            await awardPetActivity(tx, user.id, 'watch', movieId);
             unlockedTrophies.push(...await recordTrophyWatch(tx, user.id, movieId, new Date(), trophyTimeZone));
             await tx.update(users).set({ xp: sql`coalesce(${users.xp}, 0) + 35` })
               .where(eq(users.id, user.id));
@@ -103,12 +109,15 @@ export async function POST(req: NextRequest) {
           .onConflictDoNothing({ target: [ratings.userId, ratings.movieId] })
           .returning({ id: ratings.id });
         if (inserted.length) {
+          await awardPetActivity(tx, user.id, 'rate', movieId);
           await tx.update(users).set({ xp: sql`coalesce(${users.xp}, 0) + 10` })
             .where(eq(users.id, user.id));
         } else {
           await tx.update(ratings).set({ value })
             .where(and(eq(ratings.userId, user.id), eq(ratings.movieId, movieId)));
         }
+        const pioneerAward = await recordPioneerActivity(tx, user.id, movieId, 'rated', trophyTimeZone);
+        if (pioneerAward) unlockedTrophies.push(pioneerAward);
         if (qualifies) {
           const award = await awardHiddenTrophy(tx, user.id, 'against_the_current', new Date(), trophyTimeZone);
           if (award) unlockedTrophies.push(award);
@@ -201,7 +210,13 @@ if (watchedAlready) {
 
       await db.transaction(async tx => {
         await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        await tx.select({ id: movies.id }).from(movies).where(eq(movies.id, movieId)).for('update');
         await tx.insert(comments).values({ userId: user.id, movieId, parentId, body: text, spoiler: body.spoiler === true });
+        if (!parentId && [...text].length >= 80) {
+          await awardPetActivity(tx, user.id, 'review', movieId);
+          const award = await recordPioneerActivity(tx, user.id, movieId, 'reviewed', trophyTimeZone);
+          if (award) unlockedTrophies.push(award);
+        }
         await tx.update(users).set({ xp: sql`coalesce(${users.xp}, 0) + 15` }).where(eq(users.id, user.id));
         await syncUserTitles(tx, user.id);
         if (parentUserId && parentUserId !== user.id) await tx.insert(notifications).values({ userId: parentUserId, actorId: user.id, message: `${user.username} ответил(а) на ваш комментарий`, link: `/movie/${movieId}` });
@@ -241,10 +256,16 @@ if (watchedAlready) {
 
       await db.transaction(async tx => {
         await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        await tx.select({ id: movies.id }).from(movies).where(eq(movies.id, existing.movieId)).for('update');
         const changed = await tx.update(comments).set({ body: text, editedAt: new Date(),
           ...(typeof body.spoiler === 'boolean' ? { spoiler: body.spoiler } : {})
         }).where(and(eq(comments.id, commentId), eq(comments.userId, user.id))).returning({ id: comments.id });
         if (!changed.length) throw Error('Комментарий не найден');
+        if (!existing.parentId && [...text].length >= 80) {
+          await awardPetActivity(tx, user.id, 'review', existing.movieId);
+          const award = await recordPioneerActivity(tx, user.id, existing.movieId, 'reviewed', trophyTimeZone);
+          if (award) unlockedTrophies.push(award);
+        }
         await syncUserTitles(tx, user.id);
       });
 
@@ -692,7 +713,23 @@ if (watchedAlready) {
         suggestionId: suggestion.id
       };
 
-          } else if (action === 'rejectSuggestion') {
+          } else if (action === 'approveSuggestion') {
+      if (!['admin', 'moderator'].includes(user.role)) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
+      const id = Number(body.id), targetMovie = Number(body.movieId);
+      if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(targetMovie) || targetMovie < 1) throw Error('Неверный ID');
+      const [proposed] = await db.select().from(movieSuggestions).where(eq(movieSuggestions.id, id));
+      if (!proposed) throw Error('Предложение не найдено');
+      await db.transaction(async tx => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, proposed.userId)).for('update');
+        const [suggestion] = await tx.select().from(movieSuggestions).where(eq(movieSuggestions.id, id)).for('update');
+        const [film] = await tx.select().from(movies).where(eq(movies.id, targetMovie));
+        if (!suggestion || suggestion.status !== 'pending') throw Error('Предложение уже рассмотрено');
+        if (!film || film.year !== suggestion.year || film.title.trim().toLowerCase() !== suggestion.title.trim().toLowerCase()) throw Error('Материал должен совпадать с предложением по названию и году');
+        await tx.update(movieSuggestions).set({ status: 'approved', movieId: targetMovie, reviewedBy: user.id, reviewedAt: new Date() }).where(eq(movieSuggestions.id, id));
+        await awardPetActivity(tx, suggestion.userId, 'catalog', targetMovie);
+        await tx.insert(notifications).values({ userId: suggestion.userId, actorId: user.id, message: `🎬 Предложение «${suggestion.title}» принято в каталог. Попкорн начислен в пределах дневного лимита!`, link: `/movie/${targetMovie}` });
+      });
+    } else if (action === 'rejectSuggestion') {
       // [ACTION:REJECT_SUGGESTION]
 
       if (!['admin', 'moderator'].includes(user.role)) {

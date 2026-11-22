@@ -4,6 +4,7 @@ import { useMemo, useState, type MouseEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, CheckCircle2, Crown, Eye, Film as FilmIcon, Star, Trophy } from 'lucide-react';
 import type { Film } from '@/lib/data';
+import { formatFilmRating } from '@/lib/rating-display';
 import {
   MATERIAL_CATEGORIES, MATERIAL_TOP_LIMITS, materialTopUrl, parseMaterialTopOptions, rankMaterials,
   type MaterialTopOptions,
@@ -83,12 +84,13 @@ export default function TopMaterials({ films, go, compact = false, en = false, w
         {visible.map((film, index) => <li key={film.id} className={`material-rank-item ${index < 3 ? 'material-medalist' : ''}`} data-place={index + 1}>
           <a className="material-rank-card" href={`/movie/${film.id}`} onClick={e => navigate(e, `/movie/${film.id}`)}>
             <span className="material-place" aria-label={`${en ? 'Place' : 'Место'} ${index + 1}`}>{index === 0 && <Crown size={13} />}<b>{String(index + 1).padStart(2, '0')}</b></span>
-            <span className="material-poster">{film.poster ? <img src={film.poster} alt={film.title} loading="lazy" /> : <FilmIcon size={24} aria-label={en ? 'No poster' : 'Без постера'} />}{watchedIds?.has(film.id) && <span className="material-watched" title={en ? 'Watched' : 'Просмотрено'}><CheckCircle2 size={14} /></span>}</span>
-            <span className="material-info"><strong>{film.title}</strong><span className="material-subtitle">{film.year} · {en ? (categoryNames[film.category] || film.category) : film.category}</span><span className="material-genre">{film.genre}</span></span>
+            <span className="material-poster">{film.poster ? <img src={film.poster} alt={film.title} loading="lazy" /> : <FilmIcon size={24} aria-label={en ? 'No poster' : 'Без постера'} />}{!compact && watchedIds?.has(film.id) && <span className="material-watched" title={en ? 'Watched' : 'Просмотрено'}><CheckCircle2 size={14} /></span>}</span>
+            <span className="material-info"><strong>{film.title}</strong><span className="material-subtitle">{film.year} · {en ? (categoryNames[film.category] || film.category) : film.category}</span>{!compact && <span className="material-genre">{film.genre}</span>}</span>
             <span className="material-score">
-              <span title={en ? 'Average user rating' : 'Средняя оценка пользователей'} className={metric === 'rating' ? 'material-score-primary' : 'material-score-secondary'}><Star size={13} fill={metric === 'rating' ? 'currentColor' : 'none'} />{film.ratingCount > 0 ? film.rating.toFixed(1) : '—'}</span>
-              {metric === 'rating' && <small>{number(film.ratingCount)} {en ? 'votes' : 'оценок'}</small>}
-              <span title={en ? 'Total views' : 'Всего просмотров'} className={metric === 'views' ? 'material-score-primary' : 'material-score-secondary'}><Eye size={13} />{number(film.views || 0)}</span>
+              <span title={en ? 'Average user rating' : 'Средняя оценка пользователей'} className={compact || metric === 'rating' ? 'material-score-primary' : 'material-score-secondary'}><Star size={13} fill={metric === 'rating' ? 'currentColor' : 'none'} />{formatFilmRating(film)}</span>
+              {!compact && metric === 'rating' && <small>{number(film.ratingCount)} {en ? 'votes' : 'оценок'}</small>}
+              {compact && film.ageRating && <span className="material-age" title={en ? 'Age rating' : 'Возрастное ограничение'}>{film.ageRating}</span>}
+              {!compact && <span title={en ? 'Total views' : 'Всего просмотров'} className={metric === 'views' ? 'material-score-primary' : 'material-score-secondary'}><Eye size={13} />{number(film.views || 0)}</span>}
             </span>
           </a>
         </li>)}

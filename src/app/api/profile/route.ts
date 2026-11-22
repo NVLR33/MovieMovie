@@ -122,8 +122,7 @@ export async function GET(req: NextRequest) {
       compatibility = 0;
     }
     
-    // Boost base compatibility a bit for visual effect
-    if (compatibility > 0) compatibility = Math.min(100, compatibility + 25);
+    // Never inflate taste similarity for visual effect.
   }
 
   // Active days

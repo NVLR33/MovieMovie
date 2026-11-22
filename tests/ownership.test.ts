@@ -33,9 +33,9 @@ const emptyActivity: AchievementActivity = {
   bookmarkCount: 0, recommendationCount: 0, messageCount: 0, completedChallenges: 0,
 };
 
-test('one evaluator covers all 31 achievement ids with tier-compatible numeric progress', () => {
+test('one evaluator covers all 33 achievement ids with tier-compatible numeric progress', () => {
   const progress = calculateAchievementProgress(emptyActivity, new Map());
-  assert.equal(achievementDefs.length, 31);
+  assert.equal(achievementDefs.length, 33);
   assert.deepEqual(Object.keys(progress).sort(), achievementDefs.map(def => def.id).sort());
   assert.equal(progress.level10, 1);
   for (const def of achievementDefs) {
@@ -110,8 +110,8 @@ function community() {
 test('uses every registered user, including inactive users, and counts each tier separately', () => {
   const result = community();
   assert.equal(result.totalUsers, 4);
-  assert.deepEqual(result.achievementStats.watch.map(stat => stat.percentage), [25, 25, 0]);
-  assert.deepEqual(result.achievementStats.hundred.map(stat => stat.earnedUsers), [0, 0, 0]);
+  assert.deepEqual(result.achievementStats.watch.map(stat => stat.percentage), [25, 25, 0, 0]);
+  assert.deepEqual(result.achievementStats.hundred.map(stat => stat.earnedUsers), [0, 0, 0, 0]);
   assert.equal(result.achievementStats.ratings[0].percentage, 25);
   assert.equal(result.progressByUser.get(1)?.social, 1);
   assert.equal(result.progressByUser.get(2)?.social, 1);

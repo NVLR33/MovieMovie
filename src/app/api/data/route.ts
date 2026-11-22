@@ -1,3 +1,5 @@
+import { createDailyGame } from '@/lib/daily-game';
+import { getWeeklyLeaders } from '@/lib/weekly-leaderboard';
 import { calculateUserTitleProgress, titleCollection } from '@/lib/user-titles';
 import { visibleHiddenTrophies } from '@/lib/hidden-achievements';
 import { buildCommunityCollectibles } from '@/lib/community-collectibles';
@@ -6,6 +8,7 @@ import { eq, and, or, sql } from 'drizzle-orm';
 import { getUser, publicUser } from '@/lib/auth';
 import {
   hiddenAchievementAwards,
+  seriesCompletions,
   userTitleAwards,
   collabLists,
   collabItems,
@@ -372,7 +375,8 @@ export async function GET() {
       acceptedFriendships,
       myHiddenAwards,
       hiddenOwnerCounts,
-      titleAwards
+      titleAwards,
+      seriesCompletionCounts
     ] = await Promise.all([
       db.select({ id: users.id, username: users.username, avatar: users.avatar,
         role: users.role, xp: users.xp, equippedTitle: users.equippedTitle, createdAt: users.createdAt }).from(users),
@@ -425,10 +429,12 @@ export async function GET() {
         .orderBy(desc(hiddenAchievementAwards.unlockedAt)),
       db.select({ achievementId: hiddenAchievementAwards.achievementId, count: sql<number>`count(*)::int` })
         .from(hiddenAchievementAwards).groupBy(hiddenAchievementAwards.achievementId),
-      db.select({ userId: userTitleAwards.userId, titleId: userTitleAwards.titleId }).from(userTitleAwards)
+      db.select({ userId: userTitleAwards.userId, titleId: userTitleAwards.titleId }).from(userTitleAwards),
+      db.select({ userId: seriesCompletions.userId, count: sql<number>`count(*)::int` }).from(seriesCompletions).groupBy(seriesCompletions.userId)
     ]);
 
     const collectibles = buildCommunityCollectibles({
+      seriesCompletionCounts,
       people, films, watches: allWatches, ratings: allRatings, comments: allComments,
       scores: allScores, bookmarkCounts, recommendationCounts, messageCounts,
       acceptedFriendships, challengeProgress: allChallengeProgress,
@@ -833,6 +839,9 @@ pendingSuggestionsCount,
             s => s.userId === me.id
           )
         : [],
+
+      dailyGame: createDailyGame(films),
+      weeklyLeaders: getWeeklyLeaders(people, allWatches),
 
       leaderboard: people.map(p => {
         const userWatches =

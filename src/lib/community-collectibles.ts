@@ -30,6 +30,7 @@ export function buildCommunityCollectibles(input: {
   challengeProgress: readonly ProgressRow[];
   challengeIds: readonly number[];
   year: number;
+  seriesCompletionCounts?: readonly CountByUser[];
 }) {
   const films = new Map(input.films.map(film => [film.id, film]));
   const watches = groupByUser(input.watches);
@@ -37,6 +38,7 @@ export function buildCommunityCollectibles(input: {
   const comments = groupByUser(input.comments);
   const scores = groupByUser(input.scores);
   const counts = (rows: readonly CountByUser[]) => new Map(rows.map(row => [row.userId, row.count]));
+  const completedSeries = counts(input.seriesCompletionCounts || []);
   const bookmarks = counts(input.bookmarkCounts);
   const recommendations = counts(input.recommendationCounts);
   const messages = counts(input.messageCounts);
@@ -61,10 +63,11 @@ export function buildCommunityCollectibles(input: {
     completedByUser.get(row.userId)!.add(row.challengeId);
   }
   const progressByUser = new Map<number, AchievementProgress>();
-  const ownerCounts = Object.fromEntries(achievementDefs.map(def => [def.id, [0, 0, 0]])) as Record<AchievementId, number[]>;
+  const ownerCounts = Object.fromEntries(achievementDefs.map(def => [def.id, def.targets.map(() => 0)])) as Record<AchievementId, number[]>;
   for (const person of input.people) {
     const progress = calculateAchievementProgress({
       xp: person.xp || 0,
+      completedSeries: completedSeries.get(person.id) || 0,
       watches: watches.get(person.id) || [],
       ratings: ratings.get(person.id) || [],
       comments: comments.get(person.id) || [],

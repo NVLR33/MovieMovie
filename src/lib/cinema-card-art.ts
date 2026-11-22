@@ -1,3 +1,4 @@
+import { ACHIEVEMENT_TIERS } from '@/lib/achievements';
 import type { CinemaCardData } from './cinema-card';
 import { formatOwnershipPercentage, RARITIES } from './ownership';
 
@@ -92,7 +93,7 @@ export function renderCinemaCardSvg(card: CinemaCardData, options: {
       ${crown(90, crownY + 31, 1.1)}
       ${label('КОРОННАЯ АЧИВКА', 135, crownY + 51)}
       ${text(c ? short(c.name, 34) : 'Твоя легенда начинается', 90, crownY + (story ? 142 : 106), story ? 47 : 37, theme.ink, 800)}
-      ${text(c ? `${crownRarity} · ${c.hidden ? 'Скрытый трофей' : `Тир ${['I', 'II', 'III'][c.tier - 1]}`} · ${formatOwnershipPercentage(c.stats.percentage)} пользователей` : 'Открой достижение — и оно появится здесь', 90, crownY + (story ? 200 : 147), story ? 27 : 22, theme.accent, 600)}
+      ${text(c ? `${crownRarity} · ${c.hidden ? 'Скрытый трофей' : ACHIEVEMENT_TIERS[c.tier - 1]} · ${formatOwnershipPercentage(c.stats.percentage)} пользователей` : 'Открой достижение — и оно появится здесь', 90, crownY + (story ? 200 : 147), story ? 27 : 22, theme.accent, 600)}
       ${story ? text('Мой вкус. Мои истории. Моя киновселенная.', 90, crownY + 289, 25, theme.muted) : ''}
       <rect x="60" y="${height - 83}" width="960" height="2" fill="url(#line)" opacity=".5"/>
       ${text(short(profile, 65), 60, height - 37, 18, theme.muted)}

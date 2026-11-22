@@ -40,6 +40,7 @@ export type Film = {
   studio: string | null;
   mood: string | null;
   year: number;
+  ageRating?: string | null;
   duration: number;
   episodes: number | null;
   poster: string;

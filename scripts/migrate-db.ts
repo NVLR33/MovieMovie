@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { resolve } from 'node:path';
 import { Client } from 'pg';
+import { checkDatabase } from './database-checks';
 import { MIGRATION_LOCK, MIGRATION_PREFLIGHT, MIGRATION_SETUP, planMigrations, readMigrations } from './migration-utils';
 
 async function main() {
@@ -37,7 +38,9 @@ async function main() {
         await client.query(file.sql);
         await client.query('INSERT INTO moviemovie_migrations.history(name, checksum) VALUES ($1,$2)', [file.name, file.checksum]);
       }
+      const checks = await checkDatabase(sql => client.query(sql));
       await client.query('COMMIT');
+      console.log(`Verified ${checks} schema/readiness checks before commit.`);
       console.log(pending.length ? `Committed ${pending.length} migrations: ${pending.map(file => file.name).join(', ')}` : 'Database is up to date. No migrations applied.');
     } catch (error) {
       await client.query('ROLLBACK');
@@ -46,7 +49,7 @@ async function main() {
   } catch (error) {
     // Connection errors can contain credentials/hostnames; never echo the connection string or raw error.
     const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
-    if (error instanceof Error && (error.message.startsWith('Checksum mismatch') || error.message.startsWith('MovieMovie baseline'))) throw error;
+    if (error instanceof Error && (error.message.startsWith('Checksum mismatch') || error.message.startsWith('MovieMovie baseline') || error.message.startsWith('Database verification'))) throw error;
     throw new Error(`Database migration failed${code ? ` (${code})` : ''}. No uncommitted migrations were retained. Check connectivity, permissions and schema using the Supabase SQL Editor.`);
   } finally {
     await client.end();

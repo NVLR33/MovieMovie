@@ -5,12 +5,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildSupabaseBundle, planMigrations, readMigrations } from '../scripts/migration-utils';
 
+const audit = readFileSync(resolve('scripts/supabase/03-schema-audit.sql'), 'utf8');
 const files = readMigrations(resolve('scripts/migrations'));
 
-test('migration inventory has the four additive upgrades in deterministic order', () => {
+test('migration inventory has the additive upgrades in deterministic order', () => {
   assert.deepEqual(files.map(file => file.name), [
     '20261122-custom-titles.sql', '20261122-hidden-achievements.sql',
     '20261122-movie-cast.sql', '20261122-private-rewards.sql',
+    '20261122-series-achievements.sql', '20261122-virtual-pet.sql', '20261122-wallet-economy.sql', '20261122-z-system-indexes.sql',
   ]);
   for (const file of files) {
     assert.equal(file.checksum, createHash('sha256').update(file.sql).digest('hex'));
@@ -34,11 +36,11 @@ test('editing an applied migration fails closed instead of silently skipping it'
 });
 
 test('committed SQL Editor bundle exactly matches the migration source files', () => {
-  assert.equal(readFileSync(resolve('scripts/supabase/01-upgrade.sql'), 'utf8'), buildSupabaseBundle(files));
+  assert.equal(readFileSync(resolve('scripts/supabase/01-upgrade.sql'), 'utf8'), buildSupabaseBundle(files, audit));
 });
 
 test('bundle guards the existing schema, serializes concurrent runs and commits atomically', () => {
-  const sql = buildSupabaseBundle(files);
+  const sql = buildSupabaseBundle(files, audit);
   assert.match(sql, /BEGIN;/);
   assert.match(sql, /COMMIT;/);
   assert.match(sql, /pg_advisory_xact_lock/);
@@ -48,7 +50,7 @@ test('bundle guards the existing schema, serializes concurrent runs and commits 
 });
 
 test('reward tables and sequences are protected from Supabase browser API roles', () => {
-  const sql = files.at(-1)!.sql;
+  const sql = files.find(file => file.name === '20261122-private-rewards.sql')!.sql;
   assert.equal((sql.match(/ENABLE ROW LEVEL SECURITY/g) || []).length, 3);
   assert.match(sql, /FROM PUBLIC/);
   assert.match(sql, /\['anon', 'authenticated'\]/);
@@ -62,4 +64,45 @@ test('CI migrations are manual, not triggered by pushes or untrusted PRs', () =>
   assert.match(workflow, /environment: production/);
   assert.equal(/^\s*(push|pull_request|pull_request_target):/m.test(workflow), false);
   assert.match(workflow, /secrets.SUPABASE_DB_URL/);
+});
+
+
+test('series catalog, ratings and permanent discoveries are private and constrained', () => {
+  const sql = files.find(file => file.name === '20261122-series-achievements.sql')!.sql;
+  assert.equal((sql.match(/ENABLE ROW LEVEL SECURITY/g) || []).length, 6);
+  assert.match(sql, /REVOKE ALL ON SEQUENCE/);
+  assert.match(sql, /value BETWEEN 0.5 AND 10/);
+  assert.match(sql, /mg_series_completion_unique/);
+  assert.match(sql, /ON CONFLICT \(movie_id\) DO NOTHING/);
+  assert.equal(/CREATE POLICY/i.test(sql), false);
+});
+
+
+test('pet economy is constrained, private, deduplicated and does not mint retrospective currency', () => {
+  const sql = files.find(file => file.name === '20261122-virtual-pet.sql')!.sql;
+  assert.match(sql, /CHECK\(balance >= 0\)/);
+  assert.match(sql, /mg_popcorn_source_unique/);
+  assert.match(sql, /'baseline', 0/);
+  assert.match(sql, /ON CONFLICT \(user_id,source_key\) DO NOTHING/);
+  assert.equal((sql.match(/ENABLE ROW LEVEL SECURITY/g) || []).length, 2);
+  assert.match(sql, /REVOKE ALL ON SEQUENCE/);
+  assert.equal(/CREATE POLICY/i.test(sql), false);
+});
+
+
+test('wallet upgrade preserves existing balances and constrains fractional production', () => {
+  const sql = files.find(file => file.name === '20261122-wallet-economy.sql')!.sql;
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS production_carry integer NOT NULL DEFAULT 0/);
+  assert.match(sql, /production_carry BETWEEN 0 AND 3599999/);
+  assert.equal(/UPDATE\s+mg_cinema_pets/i.test(sql), false);
+  assert.equal(/DELETE|TRUNCATE|DROP/i.test(sql), false);
+});
+
+
+test('SQL Editor bundle skips applied files and verifies the whole schema before commit', () => {
+  const sql = buildSupabaseBundle(files, audit);
+  assert.match(sql, /IF NOT EXISTS \(SELECT 1 FROM moviemovie_migrations.history WHERE name/);
+  assert.match(sql, /EXECUTE \$file_/);
+  assert.match(sql, /DO \$verify_schema\$/);
+  assert(sql.indexOf('DO $verify_schema$') < sql.indexOf('COMMIT;'));
 });
