@@ -23,10 +23,16 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Test migration sources and wallet integrity locally
+        run: npm test && npm run test:wallet
       - name: Validate migration inventory
         run: npm run db:migrate -- --dry-run
       - name: Apply pending migrations atomically
         run: npm run db:migrate
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      - name: Verify full schema and readiness
+        run: npm run db:verify
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
       - name: Report applied migration status

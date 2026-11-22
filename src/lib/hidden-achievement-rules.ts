@@ -2,6 +2,7 @@
 import type { HiddenAchievementId } from './hidden-achievement-types';
 
 export const hiddenAchievementDefinitions = {
+  pioneer: { name: 'Первопроходец', icon: '🧭', description: 'Первым отметь фильм просмотренным, затем поставь оценку и оставь отдельный отзыв минимум из 80 символов. Первенство фиксируется навсегда.' },
   night_watch: { name: 'Ночной дозор', icon: '🦉', description: 'Отметь материал просмотренным с 03:00 до 05:00 по своему часовому поясу.' },
   against_the_current: { name: 'Против течения', icon: '🌊', description: 'Поставь 10/10, когда средняя оценка остальных пользователей ниже 4/10.' },
   steady_week: { name: 'Стабильность', icon: '🗓️', description: 'Отметь 7 разных материалов просмотренными за календарную неделю — с понедельника по воскресенье.' },

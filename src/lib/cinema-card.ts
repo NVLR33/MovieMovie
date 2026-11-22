@@ -1,3 +1,4 @@
+import { ACHIEVEMENT_TIERS } from '@/lib/achievements';
 import type { HiddenAchievementId, UnlockedHiddenAchievement } from './hidden-achievement-types';
 import { achievementDefs, type AchievementId, type AchievementProgress } from './achievements';
 import type { OwnershipStats } from './ownership';
@@ -105,6 +106,6 @@ export function cinemaCardShareText(card: CinemaCardData) {
     `В кино: ${Math.floor(card.totalMinutes / 60)} ч ${card.totalMinutes % 60} мин · ${card.uniqueTitles} историй`,
     card.topGenres.length ? `Мои жанры: ${card.topGenres.map(genre => genre.name).join(', ')}` : '',
     card.topActor ? `Мой актёр: ${card.topActor.name}` : '',
-    card.crown ? `Коронная ачивка: ${card.crown.name} · ${card.crown.hidden ? 'скрытый трофей' : `тир ${card.crown.tier}`}` : '',
+    card.crown ? `Коронная ачивка: ${card.crown.name} · ${card.crown.hidden ? 'скрытый трофей' : ACHIEVEMENT_TIERS[card.crown.tier - 1]}` : '',
   ].filter(Boolean).join('\n');
 }

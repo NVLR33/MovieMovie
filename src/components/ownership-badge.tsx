@@ -1,3 +1,4 @@
+import { ACHIEVEMENT_TIERS } from '@/lib/achievements';
 import { formatOwnershipPercentage, RARITIES, type OwnershipStats } from '@/lib/ownership';
 
 export default function OwnershipBadge({
@@ -15,7 +16,7 @@ export default function OwnershipBadge({
     return <span className="ownership-meta ownership-pending">Статистика пока недоступна</span>;
   }
   const percentage = formatOwnershipPercentage(stats.percentage);
-  const tierLabel = tier ? `Тир ${['I', 'II', 'III'][tier - 1]}` : '';
+  const tierLabel = tier ? ACHIEVEMENT_TIERS[tier - 1] : '';
   const title = `${tierLabel ? tierLabel + '. ' : ''}${completed ? 'Выполнили' : 'Получили'} ${stats.earnedUsers} из ${stats.totalUsers} зарегистрированных пользователей (${percentage}). Редкость определяется долей владельцев.`;
 
   return (

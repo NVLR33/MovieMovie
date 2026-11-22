@@ -20,6 +20,8 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
 
+  if (slug?.[0] === 'world') return { title: 'Кино-карта мира | moviemovie', description: 'Исследуй кино по странам производства. Цветная карта каталога и личная география просмотров.', alternates: { canonical: `${SITE_URL}/world` } };
+
   if (slug?.[0] === 'top') {
     return {
       title: 'Лучшие материалы — топ-10, 50 и 100 | moviemovie',

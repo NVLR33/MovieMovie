@@ -1,6 +1,6 @@
 import type { AchievementProgress } from './achievements';
 
-export type AchievementFilm = { id: number; duration: number; category: string; genre: string };
+export type AchievementFilm = { id: number; duration: number; category: string; genre: string; year?: number };
 export type AchievementWatch = { movieId: number; watchedAt: Date | string };
 export type AchievementActivity = {
   xp: number;
@@ -13,6 +13,7 @@ export type AchievementActivity = {
   recommendationCount: number;
   messageCount: number;
   completedChallenges: number;
+  completedSeries?: number;
 };
 
 /** One pass over a user's activity. All calendar-based rules use UTC on the server. */
@@ -73,5 +74,10 @@ export function calculateAchievementProgress(
     master: activity.xp,
     level10: Math.floor(activity.xp / 500) + 1,
     challenges_done: activity.completedChallenges,
+    archaeologist: [...uniqueFilms].filter(id => {
+      const film = films.get(id);
+      return film?.category === 'Фильм' && Number.isInteger(film.year) && film.year! >= 1888 && film.year! < 1960;
+    }).length,
+    serial_completion: activity.completedSeries || 0,
   };
 }
