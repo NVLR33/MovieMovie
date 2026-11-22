@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Clapperboard, Sparkles, Star, Users } from 'lucide-react';
 import { AnimatedNumber } from './animated-number';
 
-export default function HeaderStats({
+export default function HeroStats({
   films,
   peopleCount,
   watchesCount,
@@ -27,11 +27,11 @@ export default function HeaderStats({
   ];
 
   return (
-    <dl className="header-stats" aria-label={en ? 'MovieMovie statistics' : 'Статистика moviemovie'}>
+    <dl className="hero-stats" aria-label={en ? 'MovieMovie statistics' : 'Статистика moviemovie'}>
       {stats.map(({ key, icon: Icon, label, title, value, decimals }) => (
-        <div className={`header-stat header-stat--${key}`} key={key} title={title}>
+        <div className={`hero-stat hero-stat--${key}`} key={key} title={title}>
           <dt>
-            <span className="header-stat-icon" aria-hidden="true"><Icon size={15} /></span>
+            <span className="hero-stat-icon" aria-hidden="true"><Icon size={15} /></span>
             {label}
           </dt>
           <dd>{value === null ? '∞' : <AnimatedNumber value={value} decimals={decimals} duration={1000} />}</dd>
