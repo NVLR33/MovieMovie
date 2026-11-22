@@ -30,7 +30,7 @@ import { achievementDefs } from '@/lib/achievements';
 import type { AchievementProgress, AchievementId } from '@/lib/achievements';
 import type { OwnershipStats } from '@/lib/ownership';
 import OwnershipBadge from './ownership-badge';
-import HeaderStats from './header-stats';
+import HeroStats from './hero-stats';
 import TopMaterials from './top-materials';
 import CinemaCardStudio from './cinema-card-studio';
 import HiddenTrophies from './hidden-trophies';
@@ -771,13 +771,6 @@ return (
                 </div>
               )}
             </div>
-
-            <HeaderStats
-              films={data.films}
-              peopleCount={data.people.length}
-              watchesCount={data.user ? data.watches.length : null}
-              en={en}
-            />
 
             <div className="top-actions">
               <div className="language-switch" onClick={changeLang}>
@@ -1597,6 +1590,12 @@ const rating = data.ratings.find(x => x.movieId === f.id);
             </div>
           </div>
         </div>
+        <HeroStats
+          films={films}
+          peopleCount={data.people.length}
+          watchesCount={data.user ? data.watches.length : null}
+          en={en}
+        />
         <div className="hero-corner">moviemovie ORIGINAL SELECTION <span>↗</span></div>
       </div>
 
