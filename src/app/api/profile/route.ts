@@ -1,3 +1,4 @@
+import { databaseId, requestFailure } from '@/lib/request-validation';
 import { calculateUserTitleProgress, titleCollection } from '@/lib/user-titles';
 import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
@@ -8,7 +9,8 @@ import { getTitleMinutes } from '@/lib/data';
 
 // [API:PROFILE] Public profile data for viewing friend or community member profiles.
 export async function GET(req: NextRequest) {
-  const userId = Number(req.nextUrl.searchParams.get('id'));
+  try {
+  const userId = databaseId(req.nextUrl.searchParams.get('id'));
   if (!Number.isInteger(userId) || userId < 1) return NextResponse.json({ error: 'Неверный ID' }, { status: 400 });
 
   const me = await getUser();
@@ -159,5 +161,6 @@ export async function GET(req: NextRequest) {
     ratings: userRatingsWithFilm,
     friendship: { status: friendStatus, id: friendshipId },
     isSelf: me?.id === userId, compatibility,
-  });
+  }, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) { return requestFailure(error, 'Не удалось загрузить профиль'); }
 }

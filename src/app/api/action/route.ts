@@ -1,8 +1,10 @@
+import { readJsonObject, RequestError, requestFailure, databaseId, isDatabaseFailure } from '@/lib/request-validation';
+import { imageUrl } from '@/lib/image-storage';
 import { awardPetActivity } from '@/lib/cinema-pet-server';
 import { recordFirstViewer, recordPioneerActivity } from '@/lib/pioneer';
 import { syncUserTitles, equipUserTitle } from '@/lib/user-titles-server';
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq, sql, ne, inArray } from 'drizzle-orm';
+import { and, eq, sql, ne, inArray, or, asc } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { db } from '@/db';
 import { collabLists, collabItems } from '@/db/schema';
@@ -38,15 +40,24 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
+    const body = await readJsonObject(req);
     const action = String(body.action || '');
+    for (const key of ['movieId', 'commentId', 'parentId', 'userId', 'listId', 'itemId', 'id']) {
+      if (body[key] !== undefined && body[key] !== null && body[key] !== '') body[key] = databaseId(body[key]);
+    }
+    const requiredIds: Record<string, string[]> = {
+      commentEdit: ['commentId'], commentDelete: ['commentId'], commentSpoiler: ['commentId'], react: ['commentId'],
+      friend: ['userId'], share: ['userId'], role: ['userId'], friendAccept: ['id'], approveSuggestion: ['id'], rejectSuggestion: ['id'], movieDelete: ['id'], addToList: ['listId'], voteList: ['itemId'],
+    };
+    for (const key of requiredIds[action] || []) body[key] = databaseId(body[key]);
+    if (body.saved !== undefined && typeof body.saved !== 'boolean') throw new RequestError('Укажите состояние saved');
     const movieId = Number(body.movieId);
     let result: unknown = { ok: true };
     const unlockedTrophies: { id: string; name: string; icon: string; description: string }[] = [];
     const trophyTimeZone = validTrophyTimeZone(body.timeZone);
 
     // действия, которым нужен валидный фильм
-    const filmActions = ['watch', 'unwatch', 'rate', 'bookmark', 'favorite', 'unfavorite', 'comment'];
+    const filmActions = ['watch', 'unwatch', 'rate', 'bookmark', 'favorite', 'unfavorite', 'comment', 'share', 'addToList'];
     if (filmActions.includes(action)) {
       if (!Number.isSafeInteger(movieId) || movieId < 1) throw Error('Неверный ID материала');
       const [film] = await db
@@ -125,39 +136,18 @@ export async function POST(req: NextRequest) {
         await syncUserTitles(tx, user.id);
       });
     } else if (action === 'bookmark') {
-  const [watchedAlready] = await db
-  .select({ id: watches.id })
-  .from(watches)
-  .where(
-    and(
-      eq(watches.userId, user.id),
-      eq(watches.movieId, movieId)
-    )
-  )
-  .limit(1);
-
-if (watchedAlready) {
-  throw Error('Этот материал уже просмотрен');
-}
-      const [saved] = await db
-        .select()
-        .from(bookmarks)
-        .where(
-          and(
-            eq(bookmarks.userId, user.id),
-            eq(bookmarks.movieId, movieId)
-          )
-        );
-
-      if (saved) {
-        await db.delete(bookmarks)
-          .where(eq(bookmarks.id, saved.id));
-      } else {
-        await db.insert(bookmarks)
-          .values({ userId: user.id, movieId });
-      }
-
-      result = { ok: true, saved: !saved };
+      const saved = await db.transaction(async tx => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        const [existing] = await tx.select().from(bookmarks).where(and(eq(bookmarks.userId, user.id), eq(bookmarks.movieId, movieId))).limit(1);
+        const desired = typeof body.saved === 'boolean' ? body.saved : !existing;
+        if (desired) {
+          const [watched] = await tx.select({ id: watches.id }).from(watches).where(and(eq(watches.userId, user.id), eq(watches.movieId, movieId))).limit(1);
+          if (watched) throw Error('Этот материал уже просмотрен');
+          await tx.insert(bookmarks).values({ userId: user.id, movieId }).onConflictDoNothing();
+        } else await tx.delete(bookmarks).where(and(eq(bookmarks.userId, user.id), eq(bookmarks.movieId, movieId)));
+        return desired;
+      });
+      result = { ok: true, saved };
 
     } else if (action === 'favorite') {
       const [existing] = await db
@@ -203,7 +193,16 @@ if (watchedAlready) {
           .where(eq(comments.id, Number(body.parentId)));
 
         if (!parent || parent.movieId !== movieId) throw Error('Комментарий не найден');
-        parentId = parent.id;
+        let root = parent;
+        const seen = new Set<number>();
+        while (root.parentId) {
+          if (seen.has(root.id)) throw Error('Повреждённая ветка комментариев');
+          seen.add(root.id);
+          const [ancestor] = await db.select().from(comments).where(eq(comments.id, root.parentId));
+          if (!ancestor || ancestor.movieId !== movieId) throw Error('Комментарий не найден');
+          root = ancestor;
+        }
+        parentId = root.id;
 
         parentUserId = parent.userId;
       }
@@ -319,43 +318,14 @@ if (watchedAlready) {
         );
       }
 
-      // Находим ответы на комментарий
-      const replies = await db
-        .select({ id: comments.id })
-        .from(comments)
-        .where(eq(comments.parentId, commentId));
-
-      // Удаляем реакции с ответов
-      for (const reply of replies) {
-        await db
-          .delete(reactions)
-          .where(eq(reactions.commentId, reply.id));
-      }
-
-      // Удаляем ответы
-      await db
-        .delete(comments)
-        .where(eq(comments.parentId, commentId));
-
-      // Удаляем реакции основного комментария
-      await db
-        .delete(reactions)
-        .where(eq(reactions.commentId, commentId));
-
-      // Удаляем сам комментарий
-      await db
-        .delete(comments)
-        .where(eq(comments.id, commentId));
-
-      // Уведомляем автора, если комментарий удалил модератор
-      if (!isOwner && isModerator) {
-        await db.insert(notifications).values({
-          userId: existing.userId,
-          actorId: user.id,
-          message: `🛡️ Ваш комментарий удалён модератором${reason ? ': ' + reason : ''}`,
-          link: `/movie/${existing.movieId}`
-        });
-      }
+      await db.transaction(async tx => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        await tx.select({ id: movies.id }).from(movies).where(eq(movies.id, existing.movieId)).for('update');
+        const descendants = sql`WITH RECURSIVE thread AS (SELECT id FROM ${comments} WHERE id=${commentId} UNION SELECT child.id FROM ${comments} child JOIN thread ON child.parent_id=thread.id) SELECT id FROM thread`;
+        await tx.delete(reactions).where(sql`${reactions.commentId} IN (${descendants})`);
+        await tx.delete(comments).where(sql`${comments.id} IN (${descendants})`);
+        if (!isOwner && isModerator) await tx.insert(notifications).values({ userId: existing.userId, actorId: user.id, message: `🛡️ Ваш комментарий удалён модератором${reason ? ': ' + reason : ''}`, link: `/movie/${existing.movieId}` });
+      });
 
       result = {
         ok: true,
@@ -364,67 +334,38 @@ if (watchedAlready) {
   
   
     } else if (action === 'react') {
-      const commentId = Number(body.commentId);
-      const [comment] = await db.select().from(comments).where(eq(comments.id, commentId));
-      if (!comment) throw Error('Комментарий не найден');
-
-      const [existing] = await db
-        .select()
-        .from(reactions)
-        .where(and(eq(reactions.commentId, commentId), eq(reactions.userId, user.id)));
-
-      if (existing) {
-        await db.delete(reactions).where(eq(reactions.id, existing.id));
-        await db
-          .update(comments)
-          .set({ likes: sql`greatest(0, ${comments.likes} - 1)` })
-          .where(eq(comments.id, commentId));
-      } else {
-        await db.insert(reactions).values({ userId: user.id, commentId });
-        await db
-          .update(comments)
-          .set({ likes: sql`${comments.likes} + 1` })
-          .where(eq(comments.id, commentId));
-
-        if (comment.userId !== user.id) {
-          await db.insert(notifications).values({
-            userId: comment.userId,
-            actorId: user.id,
-            message: `${user.username} понравился ваш комментарий`,
-            link: `/movie/${comment.movieId}`
-          });
-        }
-      }
+      const commentId = databaseId(body.commentId);
+      await db.transaction(async tx => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+        const [comment] = await tx.select().from(comments).where(eq(comments.id, commentId));
+        if (!comment) throw Error('Комментарий не найден');
+        await tx.select({ id: movies.id }).from(movies).where(eq(movies.id, comment.movieId)).for('update');
+        const [existing] = await tx.select().from(reactions).where(and(eq(reactions.commentId, commentId), eq(reactions.userId, user.id)));
+        if (existing) await tx.delete(reactions).where(eq(reactions.id, existing.id));
+        else await tx.insert(reactions).values({ userId: user.id, commentId }).onConflictDoNothing();
+        await tx.update(comments).set({ likes: sql`(SELECT count(*)::int FROM ${reactions} WHERE ${reactions.commentId}=${commentId})` }).where(eq(comments.id, commentId));
+        if (!existing && comment.userId !== user.id) await tx.insert(notifications).values({ userId: comment.userId, actorId: user.id, message: `${user.username} понравился ваш комментарий`, link: `/movie/${comment.movieId}` });
+      });
     } else if (action === 'friend') {
-      const target = Number(body.userId);
+      const target = databaseId(body.userId);
       if (target === user.id) throw Error('Нельзя добавить себя');
-
-      const [other] = await db.select().from(users).where(eq(users.id, target));
-      if (!other) throw Error('Пользователь не найден');
-
-      const [existing] = await db
-        .select()
-        .from(friendships)
-        .where(and(eq(friendships.fromId, user.id), eq(friendships.toId, target)));
-      if (existing) throw Error('Заявка уже отправлена');
-
-      await db.insert(friendships).values({ fromId: user.id, toId: target, status: 'pending' });
-      await db.insert(notifications).values({
-        userId: target,
-        actorId: user.id,
-        message: `${user.username} приглашает вас в друзья`,
-        link: '/friends'
+      await db.transaction(async tx => {
+        const people = await tx.select({ id: users.id }).from(users).where(inArray(users.id, [user.id, target])).orderBy(asc(users.id)).for('update');
+        if (people.length !== 2) throw Error('Пользователь не найден');
+        const [existing] = await tx.select().from(friendships).where(or(and(eq(friendships.fromId, user.id), eq(friendships.toId, target)), and(eq(friendships.fromId, target), eq(friendships.toId, user.id))));
+        if (existing) throw Error(existing.status === 'accepted' ? 'Вы уже друзья' : 'Заявка уже существует: проверьте входящие');
+        await tx.insert(friendships).values({ fromId: user.id, toId: target, status: 'pending' });
+        await tx.insert(notifications).values({ userId: target, actorId: user.id, message: `${user.username} приглашает вас в друзья`, link: '/friends' });
       });
     } else if (action === 'friendAccept') {
-      const [request] = await db.select().from(friendships).where(eq(friendships.id, Number(body.id)));
-      if (!request || request.toId !== user.id) throw Error('Заявка не найдена');
-
-      await db.update(friendships).set({ status: 'accepted' }).where(eq(friendships.id, request.id));
-      await db.insert(notifications).values({
-        userId: request.fromId,
-        actorId: user.id,
-        message: `${user.username} принял(а) вашу заявку`,
-        link: '/friends'
+      await db.transaction(async tx => {
+        const [request] = await tx.update(friendships).set({ status: 'accepted' }).where(and(eq(friendships.id, body.id), eq(friendships.toId, user.id), eq(friendships.status, 'pending'))).returning();
+        if (!request) {
+          const [existing] = await tx.select().from(friendships).where(and(eq(friendships.id, body.id), eq(friendships.toId, user.id), eq(friendships.status, 'accepted')));
+          if (!existing) throw Error('Заявка не найдена');
+          return;
+        }
+        await tx.insert(notifications).values({ userId: request.fromId, actorId: user.id, message: `${user.username} принял(а) вашу заявку`, link: '/friends' });
       });
     } else if (action === 'notifyRead') {
       await db.update(notifications).set({ read: true }).where(eq(notifications.userId, user.id));
@@ -443,11 +384,11 @@ if (watchedAlready) {
         patch.username = name;
       }
 
-      if (typeof body.headerImage === 'string') patch.headerImage = body.headerImage;
+      if (typeof body.headerImage === 'string') patch.headerImage = imageUrl(body.headerImage);
       if (['dark', 'light', 'pink', 'purple', 'yellow'].includes(body.theme)) patch.theme = body.theme;
       if (['ru', 'en'].includes(body.language)) patch.language = body.language;
 
-      if (Number(body.headerStyle) >= 1 && Number(body.headerStyle) <= 5) {
+      if (Number.isInteger(Number(body.headerStyle)) && Number(body.headerStyle) >= 1 && Number(body.headerStyle) <= 5) {
         const style = Number(body.headerStyle);
         if ((style === 4 && (user.xp || 0) < 1000) || (style === 5 && (user.xp || 0) < 2000)) {
           throw Error('Этот стиль откроется с новым уровнем');
@@ -566,17 +507,16 @@ if (watchedAlready) {
 
       if (typeof body.tileOrder === 'string') patch.tileOrder = body.tileOrder.slice(0, 150);
 
+      if (!Object.keys(patch).length) throw Error('Нет настроек для сохранения');
       await db.update(users).set(patch).where(eq(users.id, user.id));
     } else if (action === 'game') {
       const score = Number(body.score);
       const game = String(body.game || '').slice(0, 50);
-      if (!Number.isInteger(score) || score < 0 || score > 100 || !game) throw Error('Некорректный результат');
+      if (!Number.isInteger(score) || score < 0 || score > 5 || !['story','year','director','genre','poster','duration','country','original','category','higher','wordle','hangman','anagram','truths','chrono','connections'].includes(game)) throw Error('Некорректный результат');
 
+      // Scores are currently calculated by the browser. Keep practice history, but
+      // never turn an unverified/replayable client assertion into profile currency.
       await db.insert(gameScores).values({ userId: user.id, game, score });
-      await db
-        .update(users)
-        .set({ xp: sql`coalesce(${users.xp}, 0) + ${Math.min(score * 10, 100)}` })
-        .where(eq(users.id, user.id));
     } else if (action === 'share') {
       const target = Number(body.userId);
 
@@ -585,6 +525,11 @@ if (watchedAlready) {
 
       const [friend] = await db.select().from(users).where(eq(users.id, target));
       if (!friend) throw Error('Пользователь не найден');
+      const [friendship] = await db.select({ id: friendships.id }).from(friendships).where(and(
+        eq(friendships.status, 'accepted'),
+        or(and(eq(friendships.fromId, user.id), eq(friendships.toId, target)), and(eq(friendships.fromId, target), eq(friendships.toId, user.id)))
+      )).limit(1);
+      if (!friendship) return NextResponse.json({ error: 'Рекомендовать можно только друзьям' }, { status: 403 });
 
       await db.insert(notifications).values({
         userId: target,
@@ -791,7 +736,14 @@ if (watchedAlready) {
 const category = String(body.category || '');
 const isSeries = category.toLowerCase().includes('сериал');
 
-const startYear = Number(body.year) || 2026;
+const startYear = Number(body.year);
+if (!Number.isInteger(startYear) || startYear < 1888 || startYear > 2100) throw Error('Укажите корректный год выпуска');
+if (!['Фильм','Сериал','Мультфильм','Мультсериал','Аниме-сериал','Аниме-фильм'].includes(category)) throw Error('Неизвестная категория');
+const duration = body.duration === undefined || body.duration === '' ? 90 : Number(body.duration);
+const episodes = body.episodes === undefined || body.episodes === null || body.episodes === '' ? null : Number(body.episodes);
+if (!Number.isInteger(duration) || duration < 1 || duration > 10000 || (episodes !== null && (!Number.isInteger(episodes) || episodes < 1 || episodes > 100000))) throw Error('Некорректная длительность или количество серий');
+const watchUrl = String(body.watchUrl || '').trim();
+if (watchUrl && !/^https?:\/\//i.test(watchUrl)) throw Error('Ссылка просмотра должна начинаться с HTTP(S)');
 const ongoing = isSeries && body.ongoing === true;
 
 const endYear =
@@ -851,23 +803,24 @@ if (endYear !== null) {
         endYear,
         ongoing,
         ageRating: ageRating || null,
-        duration: Number(body.duration) || 90,
-        episodes: Number(body.episodes) || null,
+        duration,
+        episodes,
         mood: String(body.mood || ''),
-        poster: String(body.poster),
-        backdrop: String(body.backdrop || ''),
-        watchUrl: String(body.watchUrl || ''),
+        poster: imageUrl(body.poster, true),
+        backdrop: imageUrl(body.backdrop),
+        watchUrl,
         director: String(body.director || ''),
         ...(typeof body.cast === 'string' ? { cast: body.cast.trim().slice(0, 4000) } : {}),
         country: String(body.country || '')
       };
 
 if (body.id) {
-  await db
+  const updated = await db
     .update(movies)
     .set(input)
-    .where(eq(movies.id, Number(body.id)));
+    .where(eq(movies.id, Number(body.id))).returning({ id: movies.id });
 
+  if (!updated.length) throw new RequestError('Материал не найден', 404);
   result = {
     ok: true,
     movieId: Number(body.id),
@@ -889,10 +842,13 @@ if (body.id) {
       // No server-defined daily quests exist: never accept XP rewards from the client.
       throw Error('Ежедневные задания пока недоступны');
     } else if (action === 'createList') {
-      const title = String(body.title).trim();
-      if (title) await db.insert(collabLists).values({ title, ownerId: user.id });
+      const title = typeof body.title === 'string' ? body.title.trim().slice(0,150) : '';
+      if (!title) throw Error('Укажите название подборки');
+      await db.insert(collabLists).values({ title, ownerId: user.id });
     } else if (action === 'addToList') {
-      const listId = Number(body.listId);
+      const listId = databaseId(body.listId);
+      const [list] = await db.select({ id: collabLists.id }).from(collabLists).where(eq(collabLists.id, listId));
+      if (!list) throw new RequestError('Подборка не найдена',404);
 
       const [existing] = await db
         .select()
@@ -902,7 +858,8 @@ if (body.id) {
       if (!existing) await db.insert(collabItems).values({ listId, movieId, addedById: user.id });
     } else if (action === 'voteList') {
       const itemId = Number(body.itemId);
-      await db.update(collabItems).set({ votes: sql`${collabItems.votes} + 1` }).where(eq(collabItems.id, itemId));
+      const changed = await db.update(collabItems).set({ votes: sql`coalesce(${collabItems.votes},0) + 1` }).where(eq(collabItems.id, itemId)).returning({ id: collabItems.id });
+      if (!changed.length) throw new RequestError('Материал подборки не найден',404);
     } else if (action === 'movieDelete') {
       if (user.role !== 'admin') {
         return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
@@ -935,13 +892,15 @@ if (body.id) {
       if (!['visitor', 'vip', 'moderator', 'admin'].includes(role)) throw Error('Неверная роль');
       if (Number(body.userId) === user.id) throw Error('Нельзя изменить свою роль');
 
-      await db.update(users).set({ role }).where(eq(users.id, Number(body.userId)));
+      const changed = await db.update(users).set({ role }).where(eq(users.id, Number(body.userId))).returning({ id: users.id });
+      if (!changed.length) throw new RequestError('Пользователь не найден',404);
     } else {
       throw Error('Неизвестное действие');
     }
 
     return NextResponse.json(unlockedTrophies.length ? { ...(result as Record<string, unknown>), unlockedTrophies } : result);
   } catch (e) {
+    if (e instanceof RequestError || isDatabaseFailure(e)) return requestFailure(e);
     console.error(e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Ошибка сервера' },

@@ -2,6 +2,10 @@
 -- This does not display passwords, emails, comments or personal watch history.
 WITH checks(name, ok) AS (
   VALUES
+    ('Image URL guard triggers installed', (SELECT count(*)=2 AND bool_and(t.tgenabled<>'D') FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND ((c.relname='mg_movies' AND t.tgname='mg_movie_image_urls') OR (c.relname='mg_users' AND t.tgname='mg_user_image_urls')))),
+    ('Realtime revision table RLS', EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname='mg_realtime_versions' AND c.relrowsecurity)),
+    ('Realtime triggers installed', (SELECT count(*)=9 AND bool_and(t.tgenabled<>'D') FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND t.tgname='mg_realtime_invalidate' AND c.relname IN ('mg_messages','mg_friendships','mg_notifications','mg_movies','mg_users','mg_watches','mg_ratings','mg_comments','mg_favorites'))),
+    ('No browser realtime table grants', NOT EXISTS(SELECT 1 FROM pg_roles r CROSS JOIN pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE r.rolname IN ('anon','authenticated') AND n.nspname='public' AND c.relname='mg_realtime_versions' AND has_table_privilege(r.oid,c.oid,'SELECT,INSERT,UPDATE,DELETE'))),
     ('Fractional projector wallet upgrade', EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='mg_cinema_pets' AND column_name='production_carry') AND EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.mg_cinema_pets') AND conname='mg_pet_carry_valid')),
     ('Cinema pet and popcorn ledger', to_regclass('public.mg_cinema_pets') IS NOT NULL AND to_regclass('public.mg_popcorn_ledger') IS NOT NULL),
     ('Pet economy duplicate protection', (SELECT count(*)=2 FROM pg_indexes WHERE schemaname='public' AND indexname IN ('mg_cinema_pets_pkey','mg_popcorn_source_unique'))),

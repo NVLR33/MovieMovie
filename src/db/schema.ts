@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, real, boolean, uniqueIndex, index, check } from 'drizzle-orm/pg-core';
+import { pgTable, bigint, serial, text, integer, timestamp, real, boolean, uniqueIndex, index, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // [DB:USERS] Account, roles, profile customization and progression.
@@ -255,3 +255,9 @@ export const popcornLedger = pgTable('mg_popcorn_ledger', {
   experienceDelta: integer('experience_delta').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [uniqueIndex('mg_popcorn_source_unique').on(t.userId, t.sourceKey), index('mg_popcorn_user_day').on(t.userId, t.createdAt), index('mg_popcorn_user_history').on(t.userId, t.id)]).enableRLS();
+
+// One revision per audience (0 = public); no message bodies or replay log to retain.
+export const realtimeVersions = pgTable('mg_realtime_versions', {
+  audienceId: integer('audience_id').primaryKey(),
+  revision: bigint('revision', { mode: 'bigint' }).notNull().default(sql`1`),
+}, t => [check('mg_realtime_audience_valid', sql`${t.audienceId} >= 0`), check('mg_realtime_revision_valid', sql`${t.revision} > 0`)]).enableRLS();

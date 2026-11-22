@@ -285,7 +285,7 @@ export async function GET(request: NextRequest) {
       posters,
 
       hasData: watched.length > 0,
-    });
+    }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     console.error('Wrapped API error:', error);
 

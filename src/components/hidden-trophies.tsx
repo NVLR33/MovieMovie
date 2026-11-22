@@ -1,8 +1,9 @@
 import { CheckCircle2, Sparkles } from 'lucide-react';
 import type { UnlockedHiddenAchievement } from '@/lib/hidden-achievement-types';
 import OwnershipBadge from './ownership-badge';
+import { AchievementReveal } from './cinema-interactions';
 
-export default function HiddenTrophies({ awards, compact = false }: { awards: readonly UnlockedHiddenAchievement[]; compact?: boolean }) {
+export default function HiddenTrophies({ awards, compact = false, revealUserId }: { revealUserId?: number; awards: readonly UnlockedHiddenAchievement[]; compact?: boolean }) {
   if (!awards.length) return null;
   return (
     <section className={`hidden-trophies ${compact ? 'hidden-trophies-compact' : ''}`} aria-label="Открытые скрытые трофеи">
@@ -10,7 +11,7 @@ export default function HiddenTrophies({ awards, compact = false }: { awards: re
       {!compact && <p className="collectible-note">Эти трофеи раскрылись только после выполнения. Награды сохраняются навсегда.</p>}
       <div className="hidden-trophies-grid">{awards.map(award => (
         <article className="hidden-trophy-card" key={award.id}>
-          <div className="hidden-trophy-top"><span className="hidden-trophy-icon" aria-hidden="true">{award.icon}</span><span><CheckCircle2 size={12} />СЕКРЕТ РАСКРЫТ</span></div>
+          <div className="hidden-trophy-top"><span className="hidden-trophy-icon">{revealUserId ? <AchievementReveal key={`${revealUserId}:${award.id}`} userId={revealUserId} achievementId={award.id} tier={1} icon={award.icon} name={award.name} /> : <span aria-hidden="true">{award.icon}</span>}</span><span><CheckCircle2 size={12} />СЕКРЕТ РАСКРЫТ</span></div>
           <h4>{award.name}</h4>
           {!compact && <p>{award.description}</p>}
           <OwnershipBadge stats={award.community} compact={compact} />

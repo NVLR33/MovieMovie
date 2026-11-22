@@ -28,6 +28,7 @@ npm run dev -- --hostname 0.0.0.0
 
 ```sh
 npm test
+npm run test:live   # SSE, чат, URL-only и Storage на локальных адаптерах
 npm run test:wallet # настоящие API + изолированная локальная PGlite, без рабочей БД
 npm run typecheck
 npm run lint
@@ -41,3 +42,6 @@ npm run build      # требует DATABASE_URL окружения
 - [Правила экономики попкорна](docs/popcorn-economy.md)
 - [Оценка идей и roadmap](docs/product-roadmap.md)
 - [Источник и лицензия геометрии карты](docs/world-map-attribution.md)
+
+- [SSE, компактный интерфейс и перенос изображений](docs/live-ui-storage.md)
+- [Настроения, шторка отзывов, умная шапка и микро-взаимодействия](docs/contextual-cinema-ui.md)

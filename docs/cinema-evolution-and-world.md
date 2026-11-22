@@ -101,7 +101,7 @@
 
 ## Развёртывание и проверка
 
-До выкладки приложения примените все **восемь миграций**, включая
+До выкладки приложения примените все **девять миграций**, включая
 `scripts/migrations/20261122-virtual-pet.sql` и `scripts/migrations/20261122-wallet-economy.sql` через штатный runner или обновлённый
 `scripts/supabase/01-upgrade.sql`, затем запустите `02-verify.sql`.
 Инструкция: [Supabase README](../scripts/supabase/README.md). Удалённая БД в этой

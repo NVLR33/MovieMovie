@@ -1,5 +1,6 @@
 'use client';
 
+import { LIVE_EVENT } from './use-live-updates';
 import { useCallback, useEffect, useState } from 'react';
 
 // Polling is cancelled on URL changes/unmount; old responses cannot overwrite a new conversation.
@@ -11,7 +12,7 @@ export function useJsonResource<T>(url: string | null, intervalMs = 0) {
   useEffect(() => {
     if (!url) return;
     const controller = new AbortController();
-    let pending = false;
+    let pending = false, dirty = false;
     async function load() {
       if (pending) return;
       pending = true;
@@ -24,12 +25,16 @@ export function useJsonResource<T>(url: string | null, intervalMs = 0) {
         // Keep the last successful snapshot on transient network errors.
       } finally {
         pending = false;
+        if (dirty && !controller.signal.aborted) { dirty = false; void load(); }
       }
     }
+    const invalidate = (event: Event) => { if (url?.startsWith('/api/chat') && (event as CustomEvent).detail?.channels?.includes('chat')) { if (pending) dirty = true; else void load(); } };
+    window.addEventListener(LIVE_EVENT, invalidate);
     void load();
     const timer = intervalMs > 0 ? setInterval(load, intervalMs) : undefined;
     return () => {
       controller.abort();
+      window.removeEventListener(LIVE_EVENT, invalidate);
       if (timer) clearInterval(timer);
     };
   }, [url, intervalMs, revision]);

@@ -12,7 +12,7 @@ test('migration inventory has the additive upgrades in deterministic order', () 
   assert.deepEqual(files.map(file => file.name), [
     '20261122-custom-titles.sql', '20261122-hidden-achievements.sql',
     '20261122-movie-cast.sql', '20261122-private-rewards.sql',
-    '20261122-series-achievements.sql', '20261122-virtual-pet.sql', '20261122-wallet-economy.sql', '20261122-z-system-indexes.sql',
+    '20261122-series-achievements.sql', '20261122-virtual-pet.sql', '20261122-wallet-economy.sql', '20261122-z-system-indexes.sql', '20261122-zz-realtime.sql',
   ]);
   for (const file of files) {
     assert.equal(file.checksum, createHash('sha256').update(file.sql).digest('hex'));
@@ -105,4 +105,16 @@ test('SQL Editor bundle skips applied files and verifies the whole schema before
   assert.match(sql, /EXECUTE \$file_/);
   assert.match(sql, /DO \$verify_schema\$/);
   assert(sql.indexOf('DO $verify_schema$') < sql.indexOf('COMMIT;'));
+});
+
+
+test('realtime revisions are durable, private and transactional with guarded image writes', () => {
+  const sql = files.find(file => file.name === '20261122-zz-realtime.sql')!.sql;
+  assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
+  assert.match(sql, /SECURITY DEFINER SET search_path = pg_catalog, public/);
+  assert.match(sql, /ON CONFLICT\(audience_id\) DO UPDATE/);
+  assert.match(sql, /before_row=after_row/);
+  assert.match(sql, /CREATE TRIGGER mg_movie_image_urls BEFORE INSERT OR UPDATE OF poster,backdrop/);
+  assert.match(sql, /current_value IS DISTINCT FROM previous_value/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION/);
 });

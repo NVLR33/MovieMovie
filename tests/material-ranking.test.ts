@@ -90,3 +90,34 @@ test('URL options roundtrip, including Cyrillic categories, and invalid params f
     assert.deepEqual(parseMaterialTopOptions(new URLSearchParams(invalid)), defaults);
   }
 });
+
+test('favorites rank current user counts, exclude zero/missing counts and keep stable ties', () => {
+  const input = [
+    { ...materials[0], id: 6, favoriteCount: 1, rating: 10 },
+    { ...materials[0], id: 5, favoriteCount: 5, rating: 7, ratingCount: 2, views: 8 },
+    { ...materials[0], id: 4, favoriteCount: 5, rating: 8, ratingCount: 1, views: 8 },
+    { ...materials[0], id: 3, favoriteCount: 5, rating: 8, ratingCount: 2, views: 8 },
+    { ...materials[0], id: 2, favoriteCount: 5, rating: 8, ratingCount: 2, views: 9 },
+    { ...materials[0], id: 1, favoriteCount: 5, rating: 8, ratingCount: 2, views: 9 },
+    { ...materials[0], id: 7, favoriteCount: 0 },
+    { ...materials[0], id: 8 },
+    { ...materials[0], id: 9, favoriteCount: NaN },
+  ];
+  const before = structuredClone(input);
+  const result = rankMaterials(input, { ...defaults, metric: 'favorites' });
+  assert.deepEqual(result.materials.map(item => item.id), [1, 2, 3, 4, 5, 6]);
+  assert.equal(result.eligibleCount, 6);
+  assert.deepEqual(input, before);
+  assert.deepEqual(rankMaterials(input, { ...defaults, metric: 'favorites', category: 'Фильм' }).materials, []);
+});
+
+test('favorites supports category/size URL roundtrip and ranks before slicing', () => {
+  for (const limit of MATERIAL_TOP_LIMITS) {
+    const options: MaterialTopOptions = { metric: 'favorites', category: 'Фильм', limit };
+    assert.deepEqual(parseMaterialTopOptions(new URL(materialTopUrl(options), 'https://example.test').searchParams), options);
+    const ranked = rankMaterials(materials.map(item => ({ ...item, favoriteCount: item.id })), options);
+    assert.equal(ranked.eligibleCount, 75);
+    assert.equal(ranked.materials.length, Math.min(limit, 75));
+    assert.equal(ranked.materials[0].id, 150);
+  }
+});

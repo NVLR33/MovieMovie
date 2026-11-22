@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { summarizeRatings } from '@/lib/rating-summary';
 import { db } from '@/db';
-import { users, movies, watches, ratings, comments, bookmarks, friendships, notifications, gameScores } from '@/db/schema';
+import { users, movies, watches, ratings, comments, bookmarks, friendships, notifications, gameScores, favorites } from '@/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 
 export async function ensureSeed() {
@@ -17,16 +17,19 @@ export function getTitleMinutes(film:{duration:number;episodes:number|null;categ
 
 // React cache deduplicates metadata/page reads within a render, without stale cross-request data.
 export const getOverview = cache(async () => {
-  const [films, ratingGroups] = await Promise.all([
+  const [films, favoriteGroups, ratingGroups] = await Promise.all([
     db.select().from(movies).orderBy(desc(movies.createdAt)),
+    db.select({ movieId: favorites.movieId, count: sql<number>`count(*)::int` })
+      .from(favorites).groupBy(favorites.movieId),
     db.select({ movieId: ratings.movieId, value: ratings.value, count: sql<number>`count(*)::int` })
       .from(ratings).groupBy(ratings.movieId, ratings.value),
   ]);
+  const favoriteMap = new Map(favoriteGroups.map(row => [row.movieId, row.count]));
   const scoreMap = summarizeRatings(ratingGroups);
 
   return films.map(m => {
     const s = scoreMap.get(m.id);
-    return { ...m, rating: s?.average || 0, ratingCount: s?.count || 0, ratingDist: s?.dist || {} };
+    return { ...m, favoriteCount: favoriteMap.get(m.id) || 0, rating: s?.average || 0, ratingCount: s?.count || 0, ratingDist: s?.dist || {} };
   });
 });
 
@@ -56,6 +59,7 @@ export type Film = {
   createdAt: Date;
   rating: number;
   ratingCount: number;
+  favoriteCount?: number;
   ratingDist: Record<string, number>;
 };
 

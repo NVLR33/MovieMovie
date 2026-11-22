@@ -6,14 +6,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "db:bundle": "tsx scripts/generate-supabase.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "db:status": "tsx scripts/migrate-db.ts --status",
     "map:generate": "tsx scripts/generate-world-map.ts",
     "test:wallet": "node tests/integration/popcorn-economy.mjs",
-    "db:verify": "tsx scripts/verify-db.ts"
+    "db:verify": "tsx scripts/verify-db.ts",
+    "images:migrate": "tsx scripts/migrate-inline-images.ts",
+    "test:live": "node tests/integration/realtime-storage.mjs",
+    "test:routes": "node tests/integration/http-routes.mjs",
+    "test:browser": "node tests/integration/browser-routes.mjs",
+    "test:ui": "node tests/integration/responsive-ui.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",
@@ -52,5 +57,10 @@
     "tsx": "^4.23.15",
     "typescript": "5.9.3",
     "world-atlas": "^2.0.2"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "$esbuild"
+    }
   }
 }

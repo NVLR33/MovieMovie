@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useMemo, useState, type MouseEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, CheckCircle2, Crown, Eye, Film as FilmIcon, Star, Trophy } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Crown, Eye, Heart, Film as FilmIcon, Star, Trophy } from 'lucide-react';
 import type { Film } from '@/lib/data';
 import { formatFilmRating } from '@/lib/rating-display';
 import {
@@ -60,6 +60,7 @@ export default function TopMaterials({ films, go, compact = false, en = false, w
         <div className="material-metrics" role="group" aria-label={en ? 'Rank by' : 'Критерий топа'}>
           <button type="button" aria-pressed={metric === 'rating'} onClick={() => update({ metric: 'rating' })}><Star size={16} />{en ? 'By rating' : 'По рейтингу'}</button>
           <button type="button" aria-pressed={metric === 'views'} onClick={() => update({ metric: 'views' })}><Eye size={17} />{en ? 'By views' : 'По просмотрам'}</button>
+          <button type="button" aria-pressed={metric === 'favorites'} onClick={() => update({ metric: 'favorites' })}><Heart size={16} />{en ? 'Most favorited' : 'По любимому'}</button>
         </div>
         <div className="material-limits" role="group" aria-label={en ? 'Top size' : 'Размер топа'}>
           {MATERIAL_TOP_LIMITS.map(size => compact ?
@@ -78,6 +79,8 @@ export default function TopMaterials({ films, go, compact = false, en = false, w
       </div>
       <p className="material-top-method">{metric === 'rating'
         ? (en ? 'Average user rating. Ties: more votes, then more views. Only rated titles are included.' : 'По средней оценке пользователей сайта. При равенстве — по числу оценок, затем просмотров. Только материалы с оценками.')
+        : metric === 'favorites'
+          ? (en ? 'Number of users who currently have the title in favorites. Ties: rating, votes, then views. Only favorited titles are included.' : 'По числу пользователей, у которых материал сейчас в любимом. При равенстве — по рейтингу, числу оценок, затем просмотрам. Только материалы в любимом.')
         : (en ? 'Total views, all time. Ties: higher rating, then more votes. Only titles with views are included.' : 'По общему числу просмотров за всё время. При равенстве — по рейтингу, затем числу оценок. Только материалы с просмотрами.')}</p>
 
       {visible.length ? <ol className="material-ranking">
@@ -87,17 +90,18 @@ export default function TopMaterials({ films, go, compact = false, en = false, w
             <span className="material-poster">{film.poster ? <img src={film.poster} alt={film.title} loading="lazy" /> : <FilmIcon size={24} aria-label={en ? 'No poster' : 'Без постера'} />}{!compact && watchedIds?.has(film.id) && <span className="material-watched" title={en ? 'Watched' : 'Просмотрено'}><CheckCircle2 size={14} /></span>}</span>
             <span className="material-info"><strong>{film.title}</strong><span className="material-subtitle">{film.year} · {en ? (categoryNames[film.category] || film.category) : film.category}</span>{!compact && <span className="material-genre">{film.genre}</span>}</span>
             <span className="material-score">
-              <span title={en ? 'Average user rating' : 'Средняя оценка пользователей'} className={compact || metric === 'rating' ? 'material-score-primary' : 'material-score-secondary'}><Star size={13} fill={metric === 'rating' ? 'currentColor' : 'none'} />{formatFilmRating(film)}</span>
+              <span title={en ? 'Average user rating' : 'Средняя оценка пользователей'} className={metric === 'rating' || (compact && metric !== 'favorites') ? 'material-score-primary' : 'material-score-secondary'}><Star size={13} fill={metric === 'rating' ? 'currentColor' : 'none'} />{formatFilmRating(film)}</span>
               {!compact && metric === 'rating' && <small>{number(film.ratingCount)} {en ? 'votes' : 'оценок'}</small>}
+              {metric === 'favorites' && <span title={en ? 'Users who added to favorites' : 'Пользователей добавили в любимое'} className="material-score-primary"><Heart size={13} fill="currentColor" />{number(film.favoriteCount || 0)}</span>}
               {compact && film.ageRating && <span className="material-age" title={en ? 'Age rating' : 'Возрастное ограничение'}>{film.ageRating}</span>}
               {!compact && <span title={en ? 'Total views' : 'Всего просмотров'} className={metric === 'views' ? 'material-score-primary' : 'material-score-secondary'}><Eye size={13} />{number(film.views || 0)}</span>}
             </span>
           </a>
         </li>)}
-      </ol> : <div className="material-top-empty"><Trophy size={32} /><h3>{en ? 'The top is yet to come' : 'Этот топ ещё впереди'}</h3><p>{metric === 'rating' ? (en ? 'No rated titles in this category yet. Be the first to rate one.' : 'В этой категории пока нет оценённых материалов. Стань первым, кто поставит оценку.') : (en ? 'No views in this category yet. Discover something new.' : 'В этой категории пока нет просмотров. Открой для себя новую историю.')}</p><button type="button" className="outline-btn small" onClick={() => go(category === 'Все' ? '/catalog' : `/catalog?category=${encodeURIComponent(category)}`)}>{en ? 'Explore catalog' : 'Открыть каталог'}<ArrowRight size={14} /></button></div>}
+      </ol> : <div className="material-top-empty"><Trophy size={32} /><h3>{en ? 'The top is yet to come' : 'Этот топ ещё впереди'}</h3><p>{metric === 'rating' ? (en ? 'No rated titles in this category yet. Be the first to rate one.' : 'В этой категории пока нет оценённых материалов. Стань первым, кто поставит оценку.') : metric === 'favorites' ? (en ? 'No titles in this category have been favorited yet. Add your favorites to start the ranking.' : 'В этой категории пока нет материалов в любимом. Добавь любимые истории, чтобы открыть топ.') : (en ? 'No views in this category yet. Discover something new.' : 'В этой категории пока нет просмотров. Открой для себя новую историю.')}</p><button type="button" className="outline-btn small" onClick={() => go(category === 'Все' ? '/catalog' : `/catalog?category=${encodeURIComponent(category)}`)}>{en ? 'Explore catalog' : 'Открыть каталог'}<ArrowRight size={14} /></button></div>}
 
       {compact && visible.length > 0 && <a className="material-top-more" href={materialTopUrl(options)} onClick={e => navigate(e, materialTopUrl(options))}>{en ? 'Explore the full ranking' : 'Исследовать полный топ'}<ArrowRight size={16} /></a>}
-      {!compact && visible.length > 0 && visible.length < limit && <p className="material-top-footnote">{en ? 'Only real titles are shown. The ranking will grow with new ratings and views.' : 'Показываем только реальные материалы. Топ будет расти вместе с новыми оценками и просмотрами.'}</p>}
+      {!compact && visible.length > 0 && visible.length < limit && <p className="material-top-footnote">{en ? 'Only real titles are shown. The ranking will grow with new ratings, views and favorites.' : 'Показываем только реальные материалы. Топ будет расти вместе с новыми оценками, просмотрами и добавлениями в любимое.'}</p>}
     </section>
   );
 }
