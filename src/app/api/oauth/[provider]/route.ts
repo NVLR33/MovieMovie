@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validOAuthState } from '@/lib/auth-validation';
 import { randomBytes } from 'crypto';
 import { db } from '@/db';
 import { users } from '@/db/schema';
@@ -57,8 +58,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   const savedState = req.cookies.get('mg_oauth_yandex')?.value;
   const receivedState = req.nextUrl.searchParams.get('state');
 
-  if (savedState && receivedState && savedState !== receivedState) {
-    console.warn('[OAUTH] State mismatch warning:', { savedState, receivedState });
+  if (!validOAuthState(savedState, receivedState)) {
+    const response = NextResponse.redirect(new URL('/?auth=failed', baseUrl));
+    response.cookies.delete('mg_oauth_yandex');
+    return response;
   }
 
   try {
@@ -93,7 +96,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
     const email = info.default_email?.toLowerCase();
     const providerId = String(info.id);
-    if (!email || !providerId) throw new Error('profile_invalid');
+    if (!email || !info.id) throw new Error('profile_invalid');
 
     await ensureSeed();
 

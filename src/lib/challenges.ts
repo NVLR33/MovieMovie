@@ -74,6 +74,8 @@ export async function syncChallengeProgress(userId: number) {
     const completed = progress >= challenge.target;
 
     await db.transaction(async tx => {
+      // A transaction alone does not prevent two requests from claiming the same reward.
+      await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('update');
       const [existing] = await tx
         .select()
         .from(challengeProgress)

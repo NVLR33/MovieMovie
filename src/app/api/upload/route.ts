@@ -113,68 +113,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let host = 'invalid-url';
-    try {
-      host = new URL(supabaseUrl).host;
-    } catch {
-      host = 'invalid-url';
-    }
-
-    const keyParts = serviceRoleKey.split('.').length;
-
-    console.error('[UPLOAD] env check', {
-      host,
-      urlLen: supabaseUrl.length,
-      keyLen: serviceRoleKey.length,
-      keyParts,
-      keyPrefix: serviceRoleKey.slice(0, 4),
-    });
-
-    if (serviceRoleKey.startsWith('sb_')) {
-      console.error('[UPLOAD] looks like new sb_ key, need legacy service_role JWT');
-      return NextResponse.json(
-        {
-          error:
-            'В Vercel лежит новый ключ sb_..., а нужен legacy service_role (начинается с eyJ) из Settings → API Keys → Legacy API Keys.',
-        },
-        { status: 500 }
-      );
-    }
-
-    if (keyParts !== 3) {
-      console.error('[UPLOAD] service key is not JWT');
-      return NextResponse.json(
-        {
-          error:
-            'Ключ Supabase не похож на JWT. Нужен именно service_role из Legacy API Keys, а не JWT Secret.',
-        },
-        { status: 500 }
-      );
-    }
-
-    try {
-      const payloadJson = Buffer.from(
-        serviceRoleKey.split('.')[1],
-        'base64'
-      ).toString('utf8');
-      const payload = JSON.parse(payloadJson) as { ref?: string };
-      if (payload.ref && !supabaseUrl.includes(payload.ref)) {
-        console.error('[UPLOAD] key ref mismatch', {
-          host,
-          keyRef: payload.ref,
-        });
-        return NextResponse.json(
-          {
-            error:
-              'URL и ключ Supabase из разных проектов. Проверьте, что оба взяты из moviemovie / main PRODUCTION.',
-          },
-          { status: 500 }
-        );
-      }
-    } catch {
-      // дальше Supabase сам вернет ошибку
-    }
-
+    // Supabase supports both legacy service_role JWTs and modern sb_secret_ keys.
+    // Do not parse key internals or log fragments of server credentials.
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,

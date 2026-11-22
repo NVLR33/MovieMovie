@@ -9,7 +9,11 @@ export async function GET(req: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Необходимо войти' }, { status: 401 });
 
-  const withId = Number(req.nextUrl.searchParams.get('with'));
+  const withParam = req.nextUrl.searchParams.get('with');
+  const withId = Number(withParam);
+  if (withParam !== null && (!Number.isSafeInteger(withId) || withId < 1)) {
+    return NextResponse.json({ error: 'Неверный ID собеседника' }, { status: 400 });
+  }
 
   if (withId) {
     // [CHAT:CONVERSATION] Load message thread between two users.
@@ -29,7 +33,8 @@ export async function GET(req: NextRequest) {
         and(eq(messages.fromId, user.id), eq(messages.toId, withId)),
         and(eq(messages.fromId, withId), eq(messages.toId, user.id))
       )
-    ).orderBy(messages.createdAt).limit(200);
+    ).orderBy(desc(messages.createdAt), desc(messages.id)).limit(200);
+    thread.reverse();
 
     // Mark incoming messages as read
     await db.update(messages).set({ read: true }).where(
@@ -101,6 +106,7 @@ export async function POST(req: NextRequest) {
     const text = String(body.text || '').trim().slice(0, 2000);
     const movieId = body.movieId ? Number(body.movieId) : null;
 
+    if (!Number.isSafeInteger(toId) || toId < 1 || (movieId !== null && (!Number.isSafeInteger(movieId) || movieId < 1))) throw Error('Неверный ID');
     if (!text && !movieId) throw Error('Сообщение не может быть пустым');
     if (toId === user.id) throw Error('Нельзя написать самому себе');
 

@@ -18,6 +18,7 @@ import WrappedExperience from './wrapped-experience';
 import WrappedShare from './wrapped-share';
 import type { WrappedData } from './wrapped-experience';
 import { AnimatedNumber } from '@/components/animated-number';
+import { useJsonResource } from './use-json-resource';
 import ShareCenter, { type ShareContent } from './share-modal';
 
 // --- Types ---
@@ -320,6 +321,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [lang, setLang] = useState('ru');
+  const [preferencesReady, setPreferencesReady] = useState(false);
   
   // Сезонное оформление
   const [seasonMode, setSeasonMode] = useState('auto');
@@ -403,16 +405,30 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   };
 
   useEffect(() => {
-    refresh();
+    // Initial network synchronization; refresh updates state after the response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh();
+  }, []);
+
+  useEffect(() => {
     if (searchParams.get('auth')) {
+      // OAuth redirects are external events; synchronize the dialog once after hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthOpen(true);
       if (searchParams.get('auth') === 'config') notify('Для входа через соцсети настройте OAuth-ключи сервера');
       else notify('Не удалось выполнить вход через провайдера');
     }
   }, [searchParams]);
 
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('mg_theme', theme); }, [theme]);
-  useEffect(() => { localStorage.setItem('mg_lang', lang); }, [lang]);
+  useEffect(() => {
+    // Browser-only preferences must be read after hydration, before persistence effects run.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTheme(localStorage.getItem('mg_theme') || 'dark');
+    setLang(localStorage.getItem('mg_lang') || 'ru');
+    setPreferencesReady(true);
+  }, []);
+  useEffect(() => { if (preferencesReady) { document.documentElement.dataset.theme = theme; localStorage.setItem('mg_theme', theme); } }, [theme, preferencesReady]);
+  useEffect(() => { if (preferencesReady) localStorage.setItem('mg_lang', lang); }, [lang, preferencesReady]);
 
   // Загружаем сезонные настройки из браузера
 useEffect(() => {
@@ -428,6 +444,8 @@ useEffect(() => {
   ];
 
   if (savedMode && allowedModes.includes(savedMode)) {
+    // Restore browser-only seasonal preferences after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeasonMode(savedMode);
   }
 
@@ -897,7 +915,7 @@ return (
 
           <main className="content" key={path}>
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
-              : active === 'catalog' ? (<Catalog films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
+              : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} />)
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
@@ -1903,14 +1921,6 @@ function Catalog({
   const [minRating, setMinRating] = useState('0');
   const [watchFilter, setWatchFilter] = useState('all');
 
-  useEffect(() => {
-    setQuery(searchParams.get('search') || searchValue || '');
-    setCategory(searchParams.get('category') || 'Все');
-    setGenre(searchParams.get('genre') || 'Все жанры');
-    setStudio(searchParams.get('studio') || 'Все студии');
-    setYear(searchParams.get('year') || 'Любой год');
-  }, [searchParams, searchValue]);
-
   const filtered = useMemo(() => films.filter(f =>
     (!query || [f.title, f.originalTitle, f.genre, f.director, f.description, f.category, f.studio || ''].join(' ').toLowerCase().includes(query.toLowerCase())) &&
     (category === 'Все' || f.category === category) &&
@@ -2008,7 +2018,12 @@ function Catalog({
   );
 }
 
-function MovieDetail({
+function MovieDetail(props: Omit<React.ComponentProps<typeof MovieDetailContent>, 'film'> & { film?: FilmType }) {
+  if (!props.film) return <div className="empty-state"><h2>История не найдена</h2><button className="primary-btn" onClick={() => props.go('/catalog')}>К каталогу</button></div>;
+  return <MovieDetailContent {...props} film={props.film} key={props.film.id} />;
+}
+
+function MovieDetailContent({
   film,
   data,
   go,
@@ -2018,7 +2033,7 @@ function MovieDetail({
   onSocialShare,
   edit
 }: {
-  film?: FilmType;
+  film: FilmType;
   data: Data;
   go: (s: string) => void;
   action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
@@ -2035,7 +2050,6 @@ function MovieDetail({
     if (film) fetch('/api/visit?movieId=' + film.id).catch(() => {});
   }, [film?.id]);
 
-  if (!film) return <div className="empty-state"><h2>История не найдена</h2><button className="primary-btn" onClick={() => go('/catalog')}>К каталогу</button></div>;
 
   const saved = useMemo(() => data.bookmarks.some(b => b.movieId === film.id), [data.bookmarks, film.id]);
   // ❤️ Состояние избранного
@@ -3623,7 +3637,7 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
         <div className="auth-separator">или продолжить с</div>
         <div className="oauth-row">
           <div className="telegram-login-box">
-            {botName ? <div ref={tgRef} /> : <button type="button" className="telegram-fallback" onClick={() => void finishTelegram({ id: 12345678, first_name: 'Test', username: 'moviego_test_user', photo_url: '' })}><span className="telegram-badge">✈</span> Telegram<small>Sandbox login</small></button>}
+            {botName ? <div ref={tgRef} /> : <button type="button" className="telegram-fallback" disabled title="Вход через Telegram не настроен"><span className="telegram-badge">✈</span> Telegram<small>Не настроен</small></button>}
           </div>
           <button type="button" className="yandex-login-btn" onClick={() => { window.location.href = '/api/oauth/yandex'; }}><b className="yandex-y">Я</b> Яндекс</button>
         </div>
@@ -4199,6 +4213,7 @@ function MovieForm({
 }
 
 function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId: number; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; openChat: (id: number) => void; auth: () => void; }) {
+  const myWatchedIds = useWatchedIds();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -4216,7 +4231,6 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
   const s = profile.stats;
   const level = s.level;
 
-  const myWatchedIds = useWatchedIds(); // оптимизация: берем из контекста
   const commonFilms = profile.recentWatches.filter(w => w.film && myWatchedIds.has(w.film.id)).length;
 
   return (
@@ -4301,7 +4315,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
           <div className="profile-tile">
             <div className="tile-heading"><span><TrendingUp size={18} /> Лучшее из просмотренного</span></div>
             <div className="history-list">
-              {profile.ratings.sort((a, b) => b.value - a.value).slice(0, 5).map((r, i) => (
+              {[...profile.ratings].sort((a, b) => b.value - a.value).slice(0, 5).map((r, i) => (
                 <button key={i} onClick={() => go('/movie/' + r.movieId)}>
                   <PosterThumb movieId={r.movieId} src={data.films.find(f => f.id === r.movieId)?.poster} alt="" />
                   <span><b>{r.title}</b><small>Оценка: {r.value.toFixed(1)} / 10</small></span>
@@ -4360,32 +4374,30 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
 }
 
 function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) => void; openChat: (id: number) => void; auth: () => void; }) {
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activePeer, setActivePeer] = useState<number | null>(null);
-  const [thread, setThread] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [shareSearch, setShareSearch] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadInbox = async () => { const r = await fetch('/api/chat'); if (r.ok) { const d = await r.json(); setConversations(d.conversations || []); } };
-  const loadThread = async (peerId: number) => { const r = await fetch('/api/chat?with=' + peerId); if (r.ok) { const d = await r.json(); setThread(d.messages || []); setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 80); } };
-
-  useEffect(() => { loadInbox(); }, []);
+  const [inbox, loadInbox] = useJsonResource<{ conversations: ChatConversation[] }>(data.user ? '/api/chat' : null);
+  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>(activePeer ? '/api/chat?with=' + activePeer : null, 4000);
+  const conversations = inbox?.conversations || [];
+  const thread = conversation?.messages || [];
+  const lastMessageId = thread[thread.length - 1]?.id;
   useEffect(() => {
-    if (activePeer) { loadThread(activePeer); pollRef.current = setInterval(() => loadThread(activePeer), 4000); }
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [activePeer]);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [lastMessageId]);
 
   const sendMessage = async (movieId?: number) => {
     if (!activePeer) return;
     if (!text.trim() && !movieId) return;
     setSending(true);
     try {
-      await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toId: activePeer, text: text.trim() || '', movieId: movieId || null }) });
-      setText(''); setShareOpen(false); await loadThread(activePeer); await loadInbox();
+      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toId: activePeer, text: text.trim() || '', movieId: movieId || null }) });
+      if (!response.ok) return;
+      setText(''); setShareOpen(false); loadThread(); loadInbox();
     } catch { } finally { setSending(false); }
   };
 
@@ -4509,30 +4521,20 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
 }
 
 function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data: Data; go: (s: string) => void; close: () => void; notify: (s: string) => void; }) {
-  const [thread, setThread] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareSearch, setShareSearch] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const peer = data.people.find(p => p.id === peerId);
 
-  const loadThread = async () => {
-    const r = await fetch('/api/chat?with=' + peerId);
-    if (r.ok) {
-      const d = await r.json();
-      setThread(d.messages || []);
-      setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 60);
-    }
-  };
-
+  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>('/api/chat?with=' + peerId, 4000);
+  const thread = conversation?.messages || [];
+  const lastMessageId = thread[thread.length - 1]?.id;
   useEffect(() => {
-    loadThread();
-    pollRef.current = setInterval(loadThread, 4000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [peerId]);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [lastMessageId]);
 
   const sendMessage = async (movieId?: number) => {
     if (!text.trim() && !movieId) return;
@@ -4750,7 +4752,6 @@ function CollabLists({ data, go, action, auth }: { data: Data; go: (s: string) =
 }
 
 function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>) => Promise<boolean>; auth: () => void; }) {
-  const [film, setFilm] = useState<FilmType | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
   const [activeEmbed, setActiveEmbed] = useState('');
   const [chatLog, setChatLog] = useState<{ id: number, user: string, text: string }[]>([]);
@@ -4759,15 +4760,7 @@ function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: D
   const msgRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    if (!data.user) return;
-    const mId = searchParams.get('movie');
-    if (mId) {
-      const f = data.films.find(x => x.id === Number(mId));
-      if (f) { setFilm(f); return; }
-    }
-    setFilm(data.films[0] || null);
-  }, [data.user, searchParams, data.films]);
+  const film = data.films.find(f => f.id === Number(searchParams.get('movie'))) || data.films[0] || null;
 
   useEffect(() => { if (msgRef.current) msgRef.current.scrollTop = msgRef.current.scrollHeight; }, [chatLog]);
 

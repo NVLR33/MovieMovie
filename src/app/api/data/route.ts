@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, sql } from 'drizzle-orm';
 import { getUser, publicUser } from '@/lib/auth';
 import {
   collabLists,
@@ -361,7 +361,8 @@ export async function GET() {
       allChallenges,
       allChallengeProgress
     ] = await Promise.all([
-      db.select().from(users),
+      db.select({ id: users.id, username: users.username, avatar: users.avatar,
+        role: users.role, xp: users.xp, createdAt: users.createdAt }).from(users),
 
       db.select()
         .from(watches)
@@ -373,14 +374,15 @@ export async function GET() {
         .from(comments)
         .orderBy(desc(comments.createdAt)),
 
-      db.select().from(bookmarks),
+      db.select().from(bookmarks).where(eq(bookmarks.userId, me?.id ?? -1)),
 
       db.select().from(favorites),
 
-      db.select().from(friendships),
+      db.select().from(friendships).where(or(eq(friendships.fromId, me?.id ?? -1), eq(friendships.toId, me?.id ?? -1))),
 
       db.select()
         .from(notifications)
+        .where(eq(notifications.userId, me?.id ?? -1))
         .orderBy(desc(notifications.createdAt)),
 
       db.select().from(gameScores),
@@ -397,8 +399,20 @@ export async function GET() {
 
       db.select().from(challenges),
 
-      db.select().from(challengeProgress)
+      db.select().from(challengeProgress).where(eq(challengeProgress.userId, me?.id ?? -1))
     ]);
+
+    const filmsById = new Map(films.map(film => [film.id, film]));
+    const watchesByUser = new Map<number, typeof allWatches>();
+    const ratingCounts = new Map<number, number>();
+    const gameTotals = new Map<number, number>();
+    for (const watch of allWatches) {
+      const entries = watchesByUser.get(watch.userId);
+      if (entries) entries.push(watch);
+      else watchesByUser.set(watch.userId, [watch]);
+    }
+    for (const rating of allRatings) ratingCounts.set(rating.userId, (ratingCounts.get(rating.userId) || 0) + 1);
+    for (const score of allScores) gameTotals.set(score.userId, (gameTotals.get(score.userId) || 0) + score.score);
 
     const names = Object.fromEntries(
       people.map(p => [
@@ -506,15 +520,11 @@ const myChallenges = allChallenges
         const person = names[fid];
 
         const fWatches =
-          allWatches.filter(
-            w => w.userId === fid
-          );
+          (watchesByUser.get(fid) || []);
 
         const fMinutes =
           fWatches.reduce((n, w) => {
-            const film = films.find(
-              f => f.id === w.movieId
-            );
+            const film = filmsById.get(w.movieId);
 
             return n +
               (film
@@ -554,7 +564,7 @@ const myChallenges = allChallenges
 
       const unreadMsgs =
         await db
-          .select({ id: messages.id })
+          .select({ count: sql<number>`count(*)::int` })
           .from(messages)
           .where(
             and(
@@ -564,7 +574,7 @@ const myChallenges = allChallenges
           );
 
       unreadMessages =
-        unreadMsgs.length;
+        unreadMsgs[0]?.count || 0;
 
       onThisDay = getOnThisDay(
         myWatches,
@@ -606,9 +616,7 @@ const myChallenges = allChallenges
             (n, w) =>
               n +
               (
-                films.find(
-                  f => f.id === w.movieId
-                )?.duration || 0
+                filmsById.get(w.movieId)?.duration || 0
               ),
             0
           );
@@ -617,9 +625,7 @@ const myChallenges = allChallenges
           new Map<string, number>();
 
         prevWatches.forEach(w => {
-          const f = films.find(
-            x => x.id === w.movieId
-          );
+          const f = filmsById.get(w.movieId);
 
           if (f) {
             f.genre.split(',').forEach(g => {
@@ -785,9 +791,7 @@ pendingSuggestionsCount,
 
       leaderboard: people.map(p => {
         const userWatches =
-          allWatches.filter(
-            w => w.userId === p.id
-          );
+          (watchesByUser.get(p.id) || []);
 
         return {
           id: p.id,
@@ -800,9 +804,7 @@ pendingSuggestionsCount,
 
           minutes: userWatches.reduce(
             (n, w) => {
-              const film = films.find(
-                f => f.id === w.movieId
-              );
+              const film = filmsById.get(w.movieId);
 
               return n +
                 (film
@@ -819,19 +821,10 @@ pendingSuggestionsCount,
           ),
 
           ratings:
-            allRatings.filter(
-              r => r.userId === p.id
-            ).length,
+            (ratingCounts.get(p.id) || 0),
 
           gameScore:
-            allScores
-              .filter(
-                s => s.userId === p.id
-              )
-              .reduce(
-                (a, s) => a + s.score,
-                0
-              )
+            (gameTotals.get(p.id) || 0)
         };
       }),
 
@@ -847,9 +840,7 @@ pendingSuggestionsCount,
           )
           .map(i => ({
             ...i,
-            film: films.find(
-              f => f.id === i.movieId
-            )
+            film: filmsById.get(i.movieId)
           }))
       })),
 

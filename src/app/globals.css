@@ -3,6 +3,9 @@
    [STYLE:TOKENS] Refreshed 2026 palette — deeper glass, warmer accent
    ══════════════════════════════════════════════════════════════ */
 :root {
+  --font-unbounded: 'Unbounded Variable';
+  --font-golos: 'Golos Text Variable';
+  --font-rubik: 'Rubik Variable';
   --bg: #06080e;
   --sidebar: #0a0d14;
   --surface: rgba(16,19,28,.82);

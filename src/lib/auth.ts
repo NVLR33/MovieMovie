@@ -1,3 +1,4 @@
+import { sessionSecret } from '@/lib/auth-validation';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import { createHash } from 'crypto';
@@ -6,20 +7,21 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 // [AUTH:SESSION] Signed, httpOnly session cookie compatible with Vercel serverless.
-const secretKey = process.env.SESSION_SECRET || process.env.DATABASE_URL || 'development-only-secret';
-const secret = new Uint8Array(createHash('sha256').update(secretKey).digest());
+function getSecret() {
+  return new Uint8Array(createHash('sha256').update(sessionSecret()).digest());
+}
 
 export async function setSession(id: number) {
   const token = await new SignJWT({ id })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
-    .sign(secret);
+    .sign(getSecret());
 
   const cookieStore = await cookies();
   cookieStore.set('mg_session', token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 30,
@@ -30,7 +32,7 @@ export async function clearSession() {
   const cookieStore = await cookies();
   cookieStore.set('mg_session', '', {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
@@ -42,7 +44,8 @@ export async function getUser() {
     const cookieStore = await cookies();
     const token = cookieStore.get('mg_session')?.value;
     if (!token) return null;
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret(), { algorithms: ['HS256'] });
+    if (!Number.isSafeInteger(payload.id) || Number(payload.id) <= 0) return null;
     const [user] = await db.select().from(users).where(eq(users.id, Number(payload.id))).limit(1);
     return user || null;
   } catch (e) {

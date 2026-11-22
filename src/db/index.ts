@@ -8,8 +8,7 @@ if (!databaseUrl) {
 }
 
 // [DB:POOL] Vercel serverless-compatible pool.
-// pgbouncer=true disables prepared statements which are not supported in transaction mode.
-// ssl required for Supabase.
+// Drizzle uses unnamed queries unless explicitly prepared; compatible with transaction pooling.
 const globalForDb = globalThis as typeof globalThis & {
   __mgPool?: Pool;
 };
@@ -22,6 +21,7 @@ export const pool =
     ssl: databaseUrl.includes("supabase.com") ? { rejectUnauthorized: false } : false,
     max: 1, // serverless: keep pool small
     idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
   });
 
 if (process.env.NODE_ENV !== "production") {

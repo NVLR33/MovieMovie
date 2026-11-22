@@ -1,31 +1,10 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Unbounded, Golos_Text, Rubik } from 'next/font/google';
+// Fonts are bundled locally: production builds no longer depend on Google Fonts access.
+import '@fontsource-variable/unbounded';
+import '@fontsource-variable/golos-text';
+import '@fontsource-variable/rubik/wght.css';
 import './globals.css';
-
-// Заголовки
-const unbounded = Unbounded({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-unbounded',
-  display: 'swap',
-});
-
-// Основной интерфейс
-const golos = Golos_Text({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-golos',
-  display: 'swap',
-});
-
-// Карточки и статистика
-const rubik = Rubik({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-rubik',
-  display: 'swap',
-});
 
 // [SEO:METADATA]
 export const metadata: Metadata = {
@@ -64,13 +43,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body
-        className={`
-          ${unbounded.variable}
-          ${golos.variable}
-          ${rubik.variable}
-        `}
-      >
+      <body>
         {children}
       </body>
     </html>
