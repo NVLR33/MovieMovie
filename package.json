@@ -28,7 +28,8 @@
     "test:mobile:browser": "node tests/integration/browser-mobile.mjs",
     "test:ambient:browser": "node tests/integration/browser-ambient.mjs",
     "test:hud:browser": "node tests/integration/browser-hud.mjs",
-    "test:passport:browser": "node tests/integration/browser-passport.mjs"
+    "test:passport:browser": "node tests/integration/browser-passport.mjs",
+    "test:orbit:browser": "node tests/integration/browser-orbit.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

@@ -5,6 +5,7 @@ import { MobileNavigation, MobileMovieActions, MobileRatingSheet } from './mobil
 import AmbientCanvas, { AmbientToggle } from './ambient-canvas';
 import { ExperienceHud, ProfileHud, ProfileLevel } from './cinema-hud';
 import CinemaPassport from './cinema-passport';
+import MemoryOrbit from './memory-orbit';
 import { canAccessAdmin, canCreateMaterial } from '@/lib/permissions';
 import { type MovieSuggestion } from '@/lib/movie-suggestions';
 import { authErrorMessage } from '@/lib/auth-errors';
@@ -2839,19 +2840,8 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
       </div>
     ),
     history: (
-      <div className="profile-tile">
-        <div className="tile-heading"><span><Clock3 size={18} /> История просмотров</span>{editing && <GripVertical size={18} />}</div>
-        {watched.length ? (
-          <div className="history-list">
-            {watched.slice(0, 5).map(w => (
-              <button key={w.id} onClick={() => go('/movie/' + w.movieId)}>
-                <PosterThumb movieId={w.movieId} src={w.film?.poster} alt="" />
-                <span><b>{w.film?.title}</b><small>{new Date(w.watchedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} · {w.film?.duration} мин</small></span>
-                <ChevronRight size={16} />
-              </button>
-            ))}
-          </div>
-        ) : <div className="tile-empty">Твоя история начнётся с первого просмотра. <button onClick={() => go('/catalog')}>В каталог →</button></div>}
+      <div className="profile-tile orbit-profile-tile">
+        <MemoryOrbit films={data.films} watches={data.watches} ratings={data.ratings} comments={data.comments} userId={u.id} editing={editing} go={go} />
       </div>
     ),
     achievements: (
