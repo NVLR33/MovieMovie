@@ -6,6 +6,9 @@ import '@fontsource-variable/golos-text';
 import '@fontsource-variable/rubik/wght.css';
 import './globals.css';
 import '../components/mobile-experience.css';
+import '../components/ambient-canvas.css';
+import '../components/cinema-hud.css';
+import '../components/cinema-passport.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

@@ -20,3 +20,11 @@ const shapes = visible.features.map((country, index) => ({
 }));
 writeFileSync('src/data/world-map.json', JSON.stringify({ width: 960, height: 480, source: 'world-atlas 2 / Natural Earth 1:110m', shapes }) + '\n');
 console.log(`Generated ${shapes.length} world map shapes.`);
+
+// Orthographic profile globe: retain geographic coordinates, not a distorted flat map.
+const globe = visible.features.map(country => ({
+  code: countries.numericToAlpha2(String(country.id).padStart(3, '0')) || null,
+  geometry: JSON.parse(JSON.stringify(country.geometry, (_key, value) => typeof value === 'number' ? Math.round(value * 100) / 100 : value)),
+}));
+writeFileSync('src/data/world-globe.json', JSON.stringify({ source: 'world-atlas 2 / Natural Earth 1:110m', countries: globe }) + '\n');
+console.log(`Generated ${globe.length} globe geometries.`);
