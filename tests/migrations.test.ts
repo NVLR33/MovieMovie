@@ -12,7 +12,8 @@ test('migration inventory has the additive upgrades in deterministic order', () 
   assert.deepEqual(files.map(file => file.name), [
     '20261122-custom-titles.sql', '20261122-hidden-achievements.sql',
     '20261122-movie-cast.sql', '20261122-private-rewards.sql',
-    '20261122-series-achievements.sql', '20261122-virtual-pet.sql', '20261122-wallet-economy.sql', '20261122-z-system-indexes.sql', '20261122-zz-realtime.sql',
+    '20261122-series-achievements.sql', '20261122-virtual-pet.sql', '20261122-wallet-economy.sql', '20261122-z-system-indexes.sql', '20261122-zz-realtime.sql', '20261122-zzz-full-suggestions.sql',
+    '20261122-zzzz-admin-workspace.sql',
   ]);
   for (const file of files) {
     assert.equal(file.checksum, createHash('sha256').update(file.sql).digest('hex'));
@@ -117,4 +118,15 @@ test('realtime revisions are durable, private and transactional with guarded ima
   assert.match(sql, /CREATE TRIGGER mg_movie_image_urls BEFORE INSERT OR UPDATE OF poster,backdrop/);
   assert.match(sql, /current_value IS DISTINCT FROM previous_value/);
   assert.match(sql, /REVOKE ALL ON FUNCTION/);
+});
+
+test('admin workspace migration adds independent capability, session revocation and private audit', () => {
+  const sql = files.find(file => file.name === '20261122-zzzz-admin-workspace.sql')!.sql;
+  for (const column of ['is_editor', 'is_suspended', 'suspension_reason', 'session_version']) assert(sql.includes('ADD COLUMN IF NOT EXISTS ' + column));
+  assert.match(sql, /ALTER TABLE mg_admin_audit ENABLE ROW LEVEL SECURITY/);
+  assert.match(sql, /REVOKE ALL ON TABLE mg_admin_audit FROM PUBLIC/);
+  assert.match(sql, /REVOKE ALL ON SEQUENCE mg_admin_audit_id_seq FROM PUBLIC/);
+  assert.match(sql, /ARRAY\['anon','authenticated'\]/);
+  assert.equal(/CREATE POLICY/i.test(sql), false);
+  assert.equal(/UPDATE mg_users SET role/i.test(sql), false);
 });

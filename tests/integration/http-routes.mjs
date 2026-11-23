@@ -21,11 +21,12 @@ const post = (cookie, body, status = 200) => call('/api/action', { cookie, body,
 try {
   assert.equal((await db.query("SELECT value FROM mm_audit_fixture WHERE key='isolated'")).rows[0]?.value, 'yes');
   await call('/api/health');
+  await call('/api/admin',{status:401});
   for (const route of ['/', '/catalog','/world','/top','/profile','/watchlist','/favorites','/leaderboard','/achievements','/challenges','/games','/friends','/wrapped','/collab','/watchroom','/chat','/admin','/about-admin','/movie/1','/movie/2','/room/ABC123']) await call(route);
   for (const route of ['/missing-page','/catalog/deep','/movie','/movie/0','/movie/no','/movie/2147483648','/movie/999999','/user/999999','/compare/999999','/room/a','/api/no-such-api']) await call(route, { status:404 });
-  const apis = ['/api/action','/api/auth','/api/chat','/api/data','/api/events','/api/health','/api/oauth/yandex','/api/pet','/api/profile','/api/pulse','/api/series','/api/upload','/api/visit','/api/wrapped'];
+  const apis = ['/api/admin','/api/action','/api/auth','/api/chat','/api/data','/api/events','/api/health','/api/oauth/yandex','/api/pet','/api/profile','/api/pulse','/api/series','/api/upload','/api/visit','/api/wrapped'];
   for (const route of apis) await call(route, { method:'PATCH', status:405 });
-  for (const route of ['/api/action','/api/chat','/api/pet','/api/upload']) await call(route, { body:{}, status:401 });
+  for (const route of ['/api/admin','/api/action','/api/chat','/api/pet','/api/upload']) await call(route, { body:{}, status:401 });
   assert.equal((await call('/api/auth')).json().user, null);
   assert.equal((await call('/api/data')).json().user, null);
   await call('/api/pulse');
@@ -110,5 +111,5 @@ try {
   const controller=new AbortController();
   const events=await fetch(base+'/api/events',{headers:{cookie:one.cookie},signal:controller.signal}); assert.equal(events.status,200);
   const reader=events.body.getReader(); const frame=await reader.read();assert(new TextDecoder().decode(frame.value).includes('retry:'));controller.abort();await reader.cancel().catch(()=>{});checks++;
-  console.log(`Passed ${checks} real HTTP checks: all 14 API routes, page inventory/404/405, sessions/roles, malformed input, collections, comments/replies/reactions, friendships/chat privacy, series, wallet, visits and SSE.`);
+  console.log(`Passed ${checks} real HTTP checks: all 15 API routes, page inventory/404/405, sessions/roles, malformed input, collections, comments/replies/reactions, friendships/chat privacy, series, wallet, visits and SSE.`);
 } finally { await db.end(); }

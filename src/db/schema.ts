@@ -1,9 +1,10 @@
-import { pgTable, bigint, serial, text, integer, timestamp, real, boolean, uniqueIndex, index, check } from 'drizzle-orm/pg-core';
+import { pgTable, jsonb, bigint, serial, text, integer, timestamp, real, boolean, uniqueIndex, index, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import type { MaterialInput } from '../lib/material-input';
 
 // [DB:USERS] Account, roles, profile customization and progression.
 export const users = pgTable('mg_users', {
-  id: serial('id').primaryKey(), email: text('email').notNull().unique(), username: text('username').notNull().unique(), passwordHash: text('password_hash'), provider: text('provider').default('email'), providerId: text('provider_id'), role: text('role').notNull().default('visitor'), bio: text('bio').default('Кино — это больше, чем история.'), avatar: text('avatar'), theme: text('theme').default('dark'), language: text('language').default('ru'), headerStyle: integer('header_style').default(1), headerImage: text('header_image'), avatarFrame: text('avatar_frame').default('none'), headerFrame: text('header_frame').default('none'), profileEffect: text('profile_effect').default('none'), nameEffect: text('name_effect').default('none'), nameColor: text('name_color').default('default'), tileOrder: text('tile_order').default('stats,genres,history,achievements,friends'), xp: integer('xp').default(0), equippedTitle: text('equipped_title'), quests: text('quests').default('{}'), lastQuestDate: text('last_quest_date'), telegramId: text('telegram_id'), createdAt: timestamp('created_at').defaultNow().notNull()
+  id: serial('id').primaryKey(), email: text('email').notNull().unique(), username: text('username').notNull().unique(), passwordHash: text('password_hash'), provider: text('provider').default('email'), providerId: text('provider_id'), role: text('role').notNull().default('visitor'), isEditor: boolean('is_editor').notNull().default(false), isSuspended: boolean('is_suspended').notNull().default(false), suspensionReason: text('suspension_reason'), sessionVersion: integer('session_version').notNull().default(0), bio: text('bio').default('Кино — это больше, чем история.'), avatar: text('avatar'), theme: text('theme').default('dark'), language: text('language').default('ru'), headerStyle: integer('header_style').default(1), headerImage: text('header_image'), avatarFrame: text('avatar_frame').default('none'), headerFrame: text('header_frame').default('none'), profileEffect: text('profile_effect').default('none'), nameEffect: text('name_effect').default('none'), nameColor: text('name_color').default('default'), tileOrder: text('tile_order').default('stats,genres,history,achievements,friends'), xp: integer('xp').default(0), equippedTitle: text('equipped_title'), quests: text('quests').default('{}'), lastQuestDate: text('last_quest_date'), telegramId: text('telegram_id'), createdAt: timestamp('created_at').defaultNow().notNull()
 });
 // [DB:MOVIES] Curated media library and watch destinations.
 export const movies = pgTable('mg_movies', {
@@ -129,6 +130,8 @@ export const movieSuggestions = pgTable(
 
     comment: text('comment'),
 
+    material: jsonb('material').$type<MaterialInput>(),
+
     status: text('status')
       .notNull()
       .default('pending'),
@@ -146,8 +149,9 @@ export const movieSuggestions = pgTable(
       .notNull(),
 
     reviewedAt: timestamp('reviewed_at'),
-  }
-);
+  },
+  t => [index('mg_suggestion_status_date').on(t.status, t.createdAt), index('mg_suggestion_user_status').on(t.userId, t.status)]
+).enableRLS();
 
 // Event-time trophies are immutable. No movie FK: deleting a title must not erase earned history.
 export const hiddenAchievementEvents = pgTable('mg_hidden_achievement_events', {
@@ -261,3 +265,16 @@ export const realtimeVersions = pgTable('mg_realtime_versions', {
   audienceId: integer('audience_id').primaryKey(),
   revision: bigint('revision', { mode: 'bigint' }).notNull().default(sql`1`),
 }, t => [check('mg_realtime_audience_valid', sql`${t.audienceId} >= 0`), check('mg_realtime_revision_valid', sql`${t.revision} > 0`)]).enableRLS();
+
+// Private append-only application audit trail. Never contains passwords, tokens or private messages.
+export const adminAudit = pgTable('mg_admin_audit', {
+  id: serial('id').primaryKey(),
+  actorId: integer('actor_id').notNull().references(() => users.id),
+  actorName: text('actor_name').notNull(),
+  action: text('action').notNull(),
+  targetType: text('target_type').notNull(),
+  targetId: integer('target_id'),
+  summary: text('summary').notNull(),
+  details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, t => [index('mg_admin_audit_actor_date').on(t.actorId, t.createdAt), index('mg_admin_audit_action_date').on(t.action, t.createdAt)]).enableRLS();
