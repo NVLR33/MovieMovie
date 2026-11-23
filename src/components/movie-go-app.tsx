@@ -1,9 +1,10 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
-import AdminWorkspace from './admin-workspace';
+import { MobileNavigation, MobileMovieActions, MobileRatingSheet } from './mobile-experience';
 import { canAccessAdmin, canCreateMaterial } from '@/lib/permissions';
 import { type MovieSuggestion } from '@/lib/movie-suggestions';
+import { authErrorMessage } from '@/lib/auth-errors';
 import { browserStorage, copyText } from '@/lib/browser-preferences';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useOptimistic, startTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -11,7 +12,7 @@ import {
   Home, Clapperboard, Compass, Trophy, Gamepad2, Users, Bookmark, Shield, Search,
   Bell, Sun, Moon, ChevronDown, ChevronRight, ArrowUpRight, ArrowRight, Play,
   Plus, Star, Clock3, CalendarDays, Sparkles, Shuffle, Heart, MessageCircle,
-  Send, Settings2, LogOut, Menu, X, Film, Flame, Eye, SlidersHorizontal, Check,
+  Send, Settings2, LogOut, X, Film, Flame, Eye, SlidersHorizontal, Check,
   Pencil, Trash2, Upload, Copy, Share2, Crown, Zap, Award, GripVertical,
   RotateCcw, ExternalLink, Volume2, Timer, Layers3, MonitorPlay, UserPlus,
   CheckCircle2, LockKeyhole, TrendingUp, BarChart3, BookOpen, GitBranch, Globe2,
@@ -56,6 +57,7 @@ import { progressionTitle, type UserTitleCollection, type UserTitleDisplay } fro
 import type { UnlockedHiddenAchievement } from '@/lib/hidden-achievement-types';
 import { useJsonResource } from './use-json-resource';
 import ShareCenter, { type ShareContent } from './share-modal';
+const AdminWorkspace = React.lazy(() => import('./admin-workspace'));
 const WorldCinema = React.lazy(() => import('./world-cinema'));
 const CinemaPetStudio = React.lazy(() => import('./cinema-pet-studio'));
 const PublicCinemaPet = React.lazy(() => import('./cinema-pet-studio').then(module => ({ default: module.PublicCinemaPet })));
@@ -379,7 +381,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   
   // Контейнер для точного центрирования победителя
   const rouletteContainerRef = useRef<HTMLDivElement>(null);
-  const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
   const [shareFilm, setShareFilm] = useState<FilmType | null>(null);
   const [shareContent, setShareContent] = useState<ShareContent | null>(null);
@@ -466,8 +467,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
       // OAuth redirects are external events; synchronize the dialog once after hydration.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthOpen(true);
-      if (searchParams.get('auth') === 'config') notify('Для входа через соцсети настройте OAuth-ключи сервера');
-      else notify('Не удалось выполнить вход через провайдера');
+      notify(authErrorMessage(searchParams.get('auth')));
     }
   }, [searchParams]);
 
@@ -546,10 +546,9 @@ useEffect(() => {
   
   const go = (url: string) => {
     router.push(url);
-    setMobileNav(false);
     setNoticeOpen(false);
     setProfileOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const action = (payload: Record<string, unknown>, success?: string): Promise<boolean> => {
@@ -716,7 +715,7 @@ return (
     <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
       <div className={`app-shell ${filmId ? 'has-cinema-atmosphere' : ''}`} data-live={liveStatus}>
         {filmId > 0 && <CinemaAtmosphere film={data.films.find(f => f.id === filmId)} />}
-        <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
+        <aside className="sidebar">
           <button type="button" className="side-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
             <BrandLogo sizes="(max-width: 760px) 160px, (max-width: 1050px) 48px, 160px" priority />
           </button>
@@ -783,9 +782,6 @@ return (
         <div className="main-wrap">
           <header className="topbar">
             <div id="movie-context-slot" />
-            <button className="mobile-menu icon-button" onClick={() => setMobileNav(!mobileNav)}>
-              <Menu size={21} />
-            </button>
 
             <button type="button" className="mobile-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
               <BrandLogo sizes="96px" />
@@ -1023,7 +1019,7 @@ return (
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
-              : active === 'admin' ? <AdminWorkspace data={data} go={go} action={action} edit={setEditFilm} review={setReviewSuggestion} refresh={refresh} />
+              : active === 'admin' ? <React.Suspense fallback={<p role="status">Загружаем центр управления…</p>}><AdminWorkspace data={data} go={go} action={action} edit={setEditFilm} review={setReviewSuggestion} refresh={refresh} /></React.Suspense>
               : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
               : <div className="empty-state"><h1>Страница не найдена</h1><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>
             }
@@ -1038,7 +1034,15 @@ return (
           </footer>
         </div>
 
-        {mobileNav && <div className="mobile-scrim" onClick={() => setMobileNav(false)} />}
+        <MobileNavigation key={path} page={active} go={go} auth={() => setAuthOpen(true)} signedIn={!!data.user} en={en} destinations={[
+          ...nav.map(item => ({ ...item, count: item.id === 'watchlist' ? data.bookmarks.length : undefined })),
+          { id: 'profile', label: words.profile, url: '/profile', icon: Users, requiresAuth: true },
+          { id: 'friends', label: en ? 'Friends' : 'Друзья', url: '/friends', icon: UserPlus, requiresAuth: true },
+          { id: 'chat', label: en ? 'Chat' : 'Чат', url: '/chat', icon: MessageCircle, requiresAuth: true, count: data.unreadMessages },
+          { id: 'wrapped', label: en ? 'My cinema year' : 'Мой киногод', url: '/wrapped', icon: CalendarDays, requiresAuth: true },
+          ...(canAccessAdmin(data.user) ? [{ id: 'admin', label: 'Центр управления', url: '/admin', icon: Shield }] : []),
+          ...(data.user?.role === 'admin' ? [{ id: 'about-admin', label: 'О проекте', url: '/about-admin', icon: BookOpen }] : []),
+        ]} />
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
 {roulette && (
@@ -2133,7 +2137,9 @@ function MovieDetailContent({
 }) {
   const posterAnchor = useRef<HTMLDivElement>(null);
   const [reviewsOpen, setReviewsOpen] = useState(false);
-  const requireAuth = (callback: () => void) => { if (!data.user) setReviewsOpen(false); requestAuth(callback); };
+  const [mobileRatingOpen, setMobileRatingOpen] = useState(false);
+  const closeMobileRating = React.useCallback(() => setMobileRatingOpen(false), []);
+  const requireAuth = (callback: () => void) => { if (!data.user) { setReviewsOpen(false); setMobileRatingOpen(false); } requestAuth(callback); };
   const submittingComment = useRef(false);
   const [ratingBurst, setRatingBurst] = useState(0);
   const ratingInFlight = useRef(false);
@@ -2185,6 +2191,8 @@ function MovieDetailContent({
 
   return (
     <div className="movie-detail-page">
+      <MobileMovieActions title={film.title} rating={myRating} saved={saved} rate={() => setMobileRatingOpen(true)} reviews={() => setReviewsOpen(true)} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
+      {mobileRatingOpen && <MobileRatingSheet rating={myRating} title={film.title} save={rate} close={closeMobileRating} />}
       <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       <button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
 
@@ -2320,6 +2328,7 @@ function MovieDetailContent({
                 })}
               </div>
               <div className="rating-current-value">{hover || myRating || "—"} <span>/ 10</span></div>
+              <button type="button" className="mobile-inline-rating outline-btn" aria-haspopup="dialog" onClick={() => setMobileRatingOpen(true)}><Star size={18}/>{myRating ? 'Изменить оценку' : 'Поставить оценку'}</button>
             </div>
 
             {film.ratingCount > 0 ? (
@@ -3528,6 +3537,8 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
 }
 
 function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () => Promise<void>; notify: (s: string) => void; }) {
+  const authParams = useSearchParams();
+  const [error, setError] = useState(() => authParams.get('auth') ? authErrorMessage(authParams.get('auth')) : '');
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -3538,13 +3549,15 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setBusy(true);
     try {
       const r = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: tab, email, password, username }) });
       const d = await r.json();
-      if (!r.ok) notify(d.error || 'Ошибка входа');
+      if (!r.ok) { const message = d.error || 'Ошибка входа'; setError(message); notify(message); }
       else { await refresh(); notify(tab === 'login' ? 'С возвращением!' : 'Добро пожаловать в moviemovie!'); close(); }
     } catch {
+      setError('Ошибка соединения. Проверьте сеть и попробуйте ещё раз.');
       notify('Ошибка соединения');
     } finally {
       setBusy(false);
@@ -3552,13 +3565,15 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
   };
 
   const finishTelegram = async (telegramData: { id: number; first_name?: string; username?: string; photo_url?: string; }) => {
+    setError('');
     setBusy(true);
     try {
       const r = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'telegram', telegramData }) });
       const d = await r.json();
-      if (!r.ok) notify(d.error || 'Ошибка Telegram-входа');
+      if (!r.ok) { const message = d.error || 'Ошибка Telegram-входа'; setError(message); notify(message); }
       else { await refresh(); notify('Вход через Telegram выполнен'); close(); }
     } catch {
+      setError('Ошибка соединения с Telegram. Попробуйте другой способ входа.');
       notify('Ошибка соединения с Telegram');
     } finally {
       setBusy(false);
@@ -3590,6 +3605,7 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
         <span className="eyebrow">ТВОЯ ИСТОРИЯ НАЧИНАЕТСЯ ЗДЕСЬ</span>
         <h2>{tab === 'login' ? 'С возвращением!' : 'Присоединяйся к нам.'}</h2>
         <p>Кино лучше, когда есть с кем им поделиться.</p>
+        {error && <div className="auth-error-message" role="alert">{error}</div>}
         <div className="auth-tabs">
           <button className={tab === 'login' ? 'selected' : ''} onClick={() => setTab('login')}>Войти</button>
           <button className={tab === 'register' ? 'selected' : ''} onClick={() => setTab('register')}>Регистрация</button>

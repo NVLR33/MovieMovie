@@ -22,7 +22,10 @@
     "test:suggestions": "node tests/integration/movie-suggestions.mjs",
     "test:suggestions:browser": "node tests/integration/browser-suggestions.mjs",
     "test:admin": "node tests/integration/admin-workspace.mjs",
-    "test:admin:browser": "node tests/integration/browser-admin.mjs"
+    "test:admin:browser": "node tests/integration/browser-admin.mjs",
+    "test:auth": "node tests/integration/auth-providers.mjs",
+    "test:auth:browser": "node tests/integration/browser-auth.mjs",
+    "test:mobile:browser": "node tests/integration/browser-mobile.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

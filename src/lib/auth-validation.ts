@@ -33,3 +33,13 @@ export function sessionSecret(env: NodeJS.ProcessEnv = process.env) {
   }
   return 'development-only-secret-not-for-production';
 }
+
+/** Server-only SITE_URL wins over an older build-time public value. */
+export function oauthSiteOrigin(env: { SITE_URL?: string; NEXT_PUBLIC_SITE_URL?: string; NODE_ENV?: string } = process.env) {
+  const value = env.SITE_URL?.trim() || env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://moviemovie.ru';
+  const url = new URL(value);
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if ((url.protocol !== 'https:' && !(env.NODE_ENV !== 'production' && local && url.protocol === 'http:')) ||
+      url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('Invalid OAuth site origin');
+  return url.origin;
+}
