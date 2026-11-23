@@ -1,6 +1,6 @@
 # Third-party map data
 
-The generated file src/data/world-map.json is derived from world-atlas 2.0.2 (Natural Earth 1:110m). Generation: npm run map:generate. The geographic reference is simplified and does not express a position on boundaries. Antarctica is excluded for readability. Natural Earth data is public domain; world-atlas carries the following license:
+The generated files src/data/world-map.json and src/data/world-globe.json are derived from world-atlas 2.0.2 (Natural Earth 1:110m). Generation: npm run map:generate. The geographic reference is simplified and does not express a position on boundaries. Antarctica is excluded for readability. Natural Earth data is public domain; world-atlas carries the following license:
 
 Copyright 2013-2019 Michael Bostock
 

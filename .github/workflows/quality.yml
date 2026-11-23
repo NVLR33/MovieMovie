@@ -45,6 +45,9 @@ jobs:
           npm run test:admin:browser
           npm run test:auth:browser
           npm run test:mobile:browser
+          npm run test:ambient:browser
+          npm run test:hud:browser
+          npm run test:passport:browser
           npm run test:ui
       - uses: actions/upload-artifact@v4
         if: failure()

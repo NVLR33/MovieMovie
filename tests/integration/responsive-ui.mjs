@@ -46,7 +46,7 @@ b.onLoad({filter:/movie-go-app\.tsx$/},a=>({contents:fs.readFileSync(a.path,'utf
 }}]});
 const browser=await pw.launch({executablePath:await chromium.executablePath(),args:chromium.args.filter(arg=>arg!=='--single-process'),headless:true});try{
 const page=await browser.newPage({viewport:{width:1280,height:1000},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('BROWSER FIXTURE ERROR:',e.message)});
-const css=fs.readFileSync('src/app/globals.css','utf8').replace('@import "tailwindcss";','')+'\n'+fs.readFileSync('src/components/admin-workspace.css','utf8')+'\n'+fs.readFileSync('src/components/mobile-experience.css','utf8');
+const css=fs.readFileSync('src/app/globals.css','utf8').replace('@import "tailwindcss";','')+'\n'+fs.readFileSync('src/components/admin-workspace.css','utf8')+'\n'+fs.readFileSync('src/components/mobile-experience.css','utf8')+'\n'+fs.readFileSync('src/components/ambient-canvas.css','utf8')+'\n'+fs.readFileSync('src/components/cinema-hud.css','utf8')+'\n'+fs.readFileSync('src/components/cinema-passport.css','utf8');
 await page.route('https://fixture.test/**',r=>r.request().url().endsWith('.png')?r.fulfill({contentType:'image/png',body:fs.readFileSync('public/brand/moviemovie-logo.png')}):r.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>'+css+'</style><div id="root"></div>'}));
 const open=async path=>{await page.goto('https://fixture.test'+path);await page.addScriptTag({content:result.outputFiles[0].text});await page.waitForTimeout(500)};
 const widths=[320,360,390,600,760,1024,1280,1920];

@@ -8,11 +8,11 @@ import { allCountryCodes, buildCountryIndex, cinemaDensity, countryName, parseFi
 import { formatFilmRating } from '@/lib/rating-display';
 
 const LEGEND = ['0', '1–2', '3–5', '6–11', '12+'];
-export default function WorldCinema({ films, watchedIds, signedIn, go, auth, en = false }: {
-  films: Film[]; watchedIds: ReadonlySet<number>; signedIn: boolean; go: (url: string) => void; auth: () => void; en?: boolean;
+export default function WorldCinema({ films, watchedIds, signedIn, go, auth, en = false, initialMode = '', initialCountry = '' }: {
+  films: Film[]; watchedIds: ReadonlySet<number>; signedIn: boolean; go: (url: string) => void; auth: () => void; en?: boolean; initialMode?: string; initialCountry?: string;
 }) {
-  const [mode, setMode] = useState<'catalog' | 'watched'>('catalog');
-  const [selected, setSelected] = useState('');
+  const [mode, setMode] = useState<'catalog' | 'watched'>(initialMode === 'watched' && signedIn ? 'watched' : 'catalog');
+  const [selected, setSelected] = useState(allCountryCodes().includes(initialCountry) ? initialCountry : '');
   const [hover, setHover] = useState('');
   const [zoom, setZoom] = useState(false);
   const [countryQuery, setCountryQuery] = useState('');

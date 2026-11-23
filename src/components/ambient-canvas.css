@@ -1,0 +1,271 @@
+/* Typed colors let gradients interpolate too; regular surface transitions remain a fallback. */
+@property --ambient-primary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #a78bfa;
+}
+@property --ambient-secondary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #6476a4;
+}
+@property --ambient-tertiary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #c0a6da;
+}
+@property --ambient-accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #a78bfa;
+}
+@property --ambient-accent2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #d4c4ff;
+}
+:root {
+  transition:
+    --ambient-accent 700ms ease,
+    --ambient-accent2 700ms ease,
+    --ambient-primary 700ms ease,
+    --ambient-secondary 700ms ease,
+    --ambient-tertiary 700ms ease;
+}
+:root[data-ambient='on'] {
+  --bg: var(--ambient-bg);
+  --sidebar: var(--ambient-sidebar);
+  --surface: var(--ambient-surface);
+  --surface2: var(--ambient-surface2);
+  --surface3: var(--ambient-surface3);
+  --accent: var(--ambient-accent);
+  --accent2: var(--ambient-accent2);
+  --accent-glow: var(--ambient-glow);
+  --text: var(--ambient-text);
+  --muted: var(--ambient-muted);
+  --subtle: var(--ambient-subtle);
+  --border: color-mix(in srgb, var(--ambient-secondary) 18%, transparent);
+  --border-hi: color-mix(in srgb, var(--ambient-primary) 32%, transparent);
+  --season-accent: var(--ambient-accent);
+  --season-glow: var(--ambient-glow);
+  --season-soft: color-mix(in srgb, var(--ambient-primary) 6%, transparent);
+  --season-border: color-mix(
+    in srgb,
+    var(--ambient-secondary) 28%,
+    transparent
+  );
+}
+body,
+.sidebar,
+.topbar,
+.footer,
+.mobile-bottom-nav,
+.mobile-movie-actions,
+.review-drawer,
+.mobile-sheet,
+.glass-modal,
+.info-panel-fancy,
+.rating-selector-box {
+  transition:
+    background-color 700ms ease,
+    color 700ms ease,
+    border-color 700ms ease,
+    box-shadow 700ms ease;
+}
+:root[data-ambient='on']
+  :is(
+    .primary-btn,
+    .mobile-movie-actions .mobile-rate-action,
+    .mobile-rating-values button[aria-pressed='true']
+  ) {
+  color: var(--ambient-on-accent);
+  background: linear-gradient(
+    120deg,
+    var(--ambient-accent),
+    var(--ambient-accent2)
+  );
+}
+:root[data-ambient='on']
+  :is(
+    .primary-btn,
+    .outline-btn,
+    .nav-item,
+    .mobile-tab-icon,
+    .mobile-more-links > a
+  ) {
+  transition:
+    background-color 700ms ease,
+    color 700ms ease,
+    border-color 700ms ease,
+    box-shadow 700ms ease,
+    transform 180ms ease;
+}
+.ambient-canvas > .ambient-poster {
+  transition: opacity 700ms ease;
+  opacity: 0.18;
+}
+.ambient-canvas > .ambient-wash {
+  inset: 0;
+  filter: none;
+  opacity: 0;
+  background:
+    radial-gradient(
+      ellipse at 12% 14%,
+      color-mix(in srgb, var(--ambient-primary) 38%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse at 90% 46%,
+      color-mix(in srgb, var(--ambient-secondary) 32%, transparent),
+      transparent 64%
+    ),
+    radial-gradient(
+      ellipse at 35% 95%,
+      color-mix(in srgb, var(--ambient-tertiary) 14%, transparent),
+      transparent 65%
+    );
+  transition: opacity 700ms ease;
+}
+:root[data-ambient='on'] .ambient-canvas > .ambient-wash {
+  opacity: 1;
+}
+:root[data-ambient='on'] .ambient-canvas > span {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--bg) 35%, transparent) 70%,
+    var(--bg)
+  );
+}
+:root[data-ambient='on'] .has-cinema-atmosphere .detail-hero {
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--bg) 95%, transparent),
+      color-mix(in srgb, var(--bg) 65%, transparent)
+    ),
+    var(--movie-backdrop) !important;
+}
+:root[data-ambient='on'] .has-cinema-atmosphere .detail-intro {
+  text-shadow: 0 1px 8px var(--bg);
+}
+.movie-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.movie-page-toolbar .back-link {
+  margin: 0;
+}
+.ambient-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.ambient-toggle[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.ambient-toggle b {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.ambient-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .ambient-toggle {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+  .movie-page-toolbar {
+    gap: 8px;
+  }
+  .movie-page-toolbar .back-link {
+    font-size: 11px;
+  }
+  /* Gradients use no additional images/filters; keep the mobile backdrop inexpensive. */
+  .ambient-canvas > .ambient-poster {
+    filter: blur(16px);
+    opacity: 0.12;
+  }
+  .ambient-canvas > .ambient-wash {
+    filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  body,
+  .sidebar,
+  .topbar,
+  .footer,
+  .mobile-bottom-nav,
+  .mobile-movie-actions,
+  .review-drawer,
+  .mobile-sheet,
+  .glass-modal,
+  .info-panel-fancy,
+  .rating-selector-box,
+  .ambient-canvas > div,
+  :root[data-ambient='on']
+    :is(
+      .primary-btn,
+      .outline-btn,
+      .nav-item,
+      .mobile-tab-icon,
+      .mobile-more-links > a
+    ) {
+    transition: none !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-reduced-data: reduce) {
+  .ambient-canvas {
+    display: none;
+  }
+}
+:root[data-ambient='on'] .detail-intro {
+  color: var(--text);
+}
+:root[data-ambient='on']
+  :is(
+    .detail-badges,
+    .original-title,
+    .detail-description,
+    .rating-of,
+    .detail-views
+  ) {
+  color: var(--muted);
+}
+:root[data-ambient='on'] .genre-list button {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border-hi);
+}
+:root[data-ambient='on'] .detail-badges .eyebrow {
+  color: var(--accent);
+}
+:root[data-ambient='on'][data-theme='light'] .detail-intro h1 {
+  text-shadow: none;
+}
+:root[data-ambient='on'][data-theme='light']
+  .detail-community-rating
+  .big-rating {
+  background: #15151e;
+  border-radius: 12px;
+  padding: 8px;
+}

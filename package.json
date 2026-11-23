@@ -25,7 +25,10 @@
     "test:admin:browser": "node tests/integration/browser-admin.mjs",
     "test:auth": "node tests/integration/auth-providers.mjs",
     "test:auth:browser": "node tests/integration/browser-auth.mjs",
-    "test:mobile:browser": "node tests/integration/browser-mobile.mjs"
+    "test:mobile:browser": "node tests/integration/browser-mobile.mjs",
+    "test:ambient:browser": "node tests/integration/browser-ambient.mjs",
+    "test:hud:browser": "node tests/integration/browser-hud.mjs",
+    "test:passport:browser": "node tests/integration/browser-passport.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",
@@ -33,6 +36,7 @@
     "@fontsource-variable/unbounded": "5.3.0",
     "@supabase/supabase-js": "^2.117.2",
     "bcryptjs": "^3.0.3",
+    "d3-geo": "^3.1.2",
     "dotenv": "17.3.1",
     "drizzle-orm": "0.45.2",
     "i18n-iso-countries": "^7.14.0",
@@ -53,7 +57,6 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/topojson-client": "^3.1.5",
-    "d3-geo": "^3.1.2",
     "drizzle-kit": "0.31.10",
     "esbuild": "0.25.12",
     "eslint": "9.39.4",

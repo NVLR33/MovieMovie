@@ -58,14 +58,12 @@ try {
       'Dock breakpoint ' + width,
     );
     if (width <= 760) {
-      const boxes = await dock
-        .locator(':scope > *')
-        .evaluateAll((els) =>
-          els.map((el) => ({
-            w: el.getBoundingClientRect().width,
-            h: el.getBoundingClientRect().height,
-          })),
-        );
+      const boxes = await dock.locator(':scope > *').evaluateAll((els) =>
+        els.map((el) => ({
+          w: el.getBoundingClientRect().width,
+          h: el.getBoundingClientRect().height,
+        })),
+      );
       assert.equal(boxes.length, 5);
       assert(boxes.every((b) => b.w >= 44 && b.h >= 44));
       assert.equal(await page.locator('.sidebar').isVisible(), false);
@@ -98,6 +96,21 @@ try {
       document.querySelector('.mobile-bottom-nav > button') ===
       document.activeElement,
   );
+  // Repeated close/reopen catches inherited visibility racing native focus restoration.
+  for (let repeat = 0; repeat < 5; repeat++) {
+    await dock.getByRole('button', { name: 'Ещё', exact: true }).click();
+    await more.waitFor();
+    for (let i = 0; i < 12; i++) await page.keyboard.press('Tab');
+    await page.keyboard.press('Escape');
+    await more.waitFor({ state: 'detached' });
+    await page.waitForFunction(
+      () =>
+        document.querySelector('.mobile-bottom-nav > button') ===
+        document.activeElement,
+      null,
+      { timeout: 5000 },
+    );
+  }
   await dock.getByRole('button', { name: 'Ещё', exact: true }).click();
   await more.getByRole('link', { name: 'Любимое', exact: true }).click();
   await page.waitForURL('**/favorites');

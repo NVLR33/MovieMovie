@@ -1,0 +1,809 @@
+/* Cinema HUD: fine instrumentation, not a full-screen arcade overlay. */
+.app-shell {
+  --hud-ink: var(--accent);
+  --hud-pink: var(--accent2);
+  --hud-edge: color-mix(in srgb, var(--hud-ink) 24%, var(--border));
+  --hud-grid: color-mix(in srgb, var(--hud-ink) 5%, transparent);
+}
+.hud-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.hud-experience {
+  display: contents;
+}
+.hud-xp-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--hud-edge);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--hud-ink));
+  color: var(--text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hud-xp-chip > svg {
+  color: var(--hud-ink);
+}
+.hud-xp-level {
+  font:
+    10px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.hud-xp-level b {
+  font-size: 14px;
+}
+.hud-xp-total {
+  border-left: 1px solid var(--border-hi);
+  padding-left: 9px;
+  font:
+    11px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  color: var(--muted);
+}
+.hud-xp-total small {
+  font-size: 9px;
+}
+.hud-xp-chip:hover {
+  border-color: var(--hud-ink);
+}
+.hud-xp-chip:focus-visible,
+.hud-next-mission:focus-visible {
+  outline: 2px solid var(--hud-ink);
+  outline-offset: 4px;
+}
+.hud-xp-rail {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: color-mix(in srgb, var(--hud-ink) 10%, var(--surface));
+  pointer-events: none;
+  overflow: hidden;
+}
+.hud-xp-rail > i,
+.hud-level-track > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--hud-ink), var(--hud-pink));
+  box-shadow: 0 0 12px var(--accent-glow);
+  transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hud-xp-rail > span {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(10% - 1px),
+    color-mix(in srgb, var(--bg) 60%, transparent) calc(10% - 1px),
+    color-mix(in srgb, var(--bg) 60%, transparent) 10%
+  );
+}
+.hud-xp-announcer {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 18px;
+  max-width: calc(100vw - 36px);
+  pointer-events: none;
+}
+.hud-xp-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 15px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--hud-edge);
+  box-shadow: 0 8px 25px #0002;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  animation: hud-feedback 4.2s ease both;
+}
+.hud-xp-feedback svg {
+  color: var(--hud-ink);
+  flex-shrink: 0;
+}
+@keyframes hud-feedback {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-5px);
+    visibility: hidden;
+  }
+}
+.hud-command {
+  margin: 24px 0 30px;
+  min-width: 0;
+}
+.hud-section-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+.hud-section-label > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font:
+    10px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  letter-spacing: 0.12em;
+  color: var(--hud-ink);
+}
+.hud-section-label > small {
+  color: var(--subtle);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+.hud-overview {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+}
+.hud-sync-tile {
+  position: relative;
+  isolation: isolate;
+}
+.hud-level-panel {
+  grid-column: span 6;
+  grid-row: span 2;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid var(--hud-edge);
+  background:
+    radial-gradient(
+      ellipse at 95% 10%,
+      color-mix(in srgb, var(--hud-ink) 12%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(var(--hud-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hud-grid) 1px, transparent 1px), var(--surface);
+  background-size:
+    auto,
+    28px 28px,
+    28px 28px,
+    auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  overflow: hidden;
+}
+.hud-panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hud-kicker {
+  font:
+    9px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hud-serial {
+  font:
+    9px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  color: var(--subtle);
+  white-space: nowrap;
+}
+.hud-level-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.hud-level-number {
+  color: var(--hud-ink);
+  font:
+    600 clamp(42px, 5vw, 68px) / 1 'Unbounded Variable',
+    sans-serif;
+  letter-spacing: -0.08em;
+  text-shadow: 0 0 25px var(--accent-glow);
+}
+.hud-level-identity > div {
+  min-width: 0;
+}
+.hud-level-identity h2 {
+  font-size: clamp(13px, 1.4vw, 18px);
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.hud-level-identity > svg {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--hud-ink);
+  opacity: 0.6;
+}
+.hud-level-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hud-level-meta > b {
+  color: var(--text);
+  font:
+    600 18px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+.hud-level-meta > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.hud-level-meta strong {
+  color: var(--text);
+}
+.hud-level-track {
+  height: 7px;
+  border-radius: 3px;
+  background: var(--surface3);
+  overflow: hidden;
+  margin-top: -6px;
+}
+.hud-level-scale {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -10px;
+  color: var(--subtle);
+  font:
+    9px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+.hud-level-scale > span:last-child {
+  display: flex;
+  align-items: center;
+}
+.hud-metric {
+  grid-column: span 3;
+  text-align: left;
+  border: 1px solid var(--hud-edge);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--hud-ink) 4%, transparent),
+      transparent
+    ),
+    var(--surface);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.hud-metric-caption {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font:
+    8px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+}
+.hud-metric-caption svg {
+  flex-shrink: 0;
+  color: var(--hud-ink);
+}
+.hud-metric strong {
+  color: var(--text);
+  font:
+    500 clamp(21px, 2vw, 30px) / 1.2 'Unbounded Variable',
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.hud-metric small {
+  color: var(--subtle);
+  font-size: 10px;
+}
+.hud-metric-time,
+.hud-metric-days {
+  --hud-ink: var(--accent2);
+}
+.hud-mission-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.hud-next-mission {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 20px;
+  border: 1px solid var(--hud-edge);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--hud-ink) 7%, transparent),
+      transparent
+    ),
+    var(--surface);
+  color: var(--text);
+  min-width: 0;
+  text-align: left;
+}
+.hud-next-mission:hover {
+  border-color: var(--hud-ink);
+  background-color: var(--surface2);
+}
+.hud-mission-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 23px;
+  flex-shrink: 0;
+}
+.hud-mission-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+.hud-mission-copy b {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.hud-mission-copy small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.hud-mission-progress {
+  width: 62px;
+  flex-shrink: 0;
+  color: var(--hud-ink);
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+}
+.hud-mission-progress > i {
+  display: block;
+  height: 3px;
+  background: var(--surface3);
+  margin-top: 8px;
+}
+.hud-mission-progress > i > span {
+  display: block;
+  height: 100%;
+  background: var(--hud-ink);
+}
+.hud-next-mission > svg {
+  color: var(--subtle);
+  flex-shrink: 0;
+}
+.hud-reward-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.hud-reward-note > svg {
+  flex-shrink: 0;
+  color: var(--hud-ink);
+}
+.hud-reward-note b {
+  font-size: 11px;
+}
+.hud-reward-note p {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 6px 0 0;
+}
+/* True data-driven bento layout. DOM order and saved drag order stay intact. */
+.profile-tiles.hud-bento {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+.hud-bento > [data-hud-tile='stats'] {
+  grid-column: span 8;
+}
+.hud-bento > [data-hud-tile='genres'] {
+  grid-column: span 4;
+}
+.hud-bento > [data-hud-tile='history'] {
+  grid-column: span 7;
+}
+.hud-bento > [data-hud-tile='achievements'] {
+  grid-column: span 5;
+}
+.hud-bento > [data-hud-tile='friends'] {
+  grid-column: 1 / -1;
+}
+.hud-bento .profile-tile {
+  position: relative;
+  isolation: isolate;
+  border-color: var(--hud-edge);
+  background:
+    linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--hud-ink) 4%, transparent),
+      transparent 50%
+    ),
+    var(--surface);
+  border-radius: 18px;
+}
+.hud-bento .profile-tile::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 22px;
+  height: 2px;
+  width: 34px;
+  background: var(--hud-ink);
+  opacity: 0.65;
+  box-shadow: 0 0 12px var(--accent-glow);
+  pointer-events: none;
+}
+.hud-bento .tile-heading {
+  font-size: 12px;
+}
+.hud-bento .expanded-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px;
+}
+.hud-bento .expanded-stats > div {
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  border-radius: 12px;
+  min-width: 0;
+  padding: 16px 12px;
+}
+.hud-bento .expanded-stats > div:first-child {
+  grid-column: span 2;
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--hud-ink) 10%, transparent),
+      transparent
+    ),
+    var(--surface2);
+}
+.hud-bento .expanded-stats > div:first-child b {
+  font-size: 30px;
+}
+.hud-bento .expanded-stats > div b {
+  overflow-wrap: anywhere;
+}
+/* Border-only heartbeat runs ONLY during a real refresh/mutation, not while idle. */
+.hud-sync-tile::after,
+.hud-bento .profile-tile::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--hud-ink);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+.app-shell[data-hud-busy='true']
+  :is(.hud-sync-tile, .hud-bento .profile-tile)::after {
+  animation: hud-sync 1.8s ease-in-out infinite;
+}
+@keyframes hud-sync {
+  0%,
+  100% {
+    opacity: 0.08;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+/* Quiet global refinements preserve poster/rating semantics and existing navigation. */
+.sidebar .nav-item.active {
+  box-shadow: inset 2px 0 var(--accent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    transparent
+  );
+}
+.stats-tabs button.active {
+  box-shadow: inset 0 -2px var(--accent);
+}
+@media (max-width: 1200px) {
+  .hud-xp-total {
+    display: none;
+  }
+  .hud-level-panel {
+    grid-column: span 12;
+    grid-row: auto;
+  }
+  .hud-metric {
+    grid-column: span 3;
+  }
+  .hud-mission-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hud-bento > [data-hud-tile='stats'],
+  .hud-bento > [data-hud-tile='genres'] {
+    grid-column: 1 / -1;
+  }
+  .hud-bento > [data-hud-tile='history'],
+  .hud-bento > [data-hud-tile='achievements'] {
+    grid-column: span 6;
+  }
+}
+@media (max-width: 760px) {
+  .top-actions {
+    gap: 5px;
+  }
+  .hud-xp-chip {
+    padding: 5px 7px;
+    gap: 4px;
+  }
+  .hud-xp-chip > svg {
+    width: 12px;
+  }
+  .hud-xp-level {
+    font-size: 8px;
+  }
+  .hud-xp-level b {
+    font-size: 12px;
+  }
+  .hud-section-label > small {
+    display: none;
+  }
+  .hud-section-label > span {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+  .hud-command {
+    margin-top: 20px;
+  }
+  .hud-overview {
+    gap: 8px;
+  }
+  .hud-level-panel {
+    padding: 20px;
+    gap: 19px;
+  }
+  .hud-level-identity {
+    gap: 14px;
+  }
+  .hud-level-number {
+    font-size: 48px;
+  }
+  .hud-level-identity h2 {
+    font-size: 14px;
+  }
+  .hud-metric {
+    grid-column: span 6;
+    padding: 15px;
+    gap: 11px;
+  }
+  .hud-metric strong {
+    font-size: 25px;
+  }
+  .hud-metric-caption {
+    font-size: 8px;
+    letter-spacing: 0.02em;
+  }
+  .hud-metric small {
+    font-size: 9px;
+  }
+  .hud-next-mission {
+    padding: 16px 13px;
+    gap: 10px;
+  }
+  .hud-mission-icon {
+    width: 34px;
+    height: 38px;
+    font-size: 20px;
+  }
+  .hud-mission-progress {
+    width: 40px;
+    font-size: 10px;
+  }
+  .hud-next-mission > svg {
+    display: none;
+  }
+  .hud-reward-note {
+    padding: 14px;
+  }
+  .profile-tiles.hud-bento {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .profile-tiles.hud-bento > [data-hud-tile] {
+    grid-column: 1;
+  }
+  .hud-bento .expanded-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .hud-bento .expanded-stats > div:first-child {
+    grid-column: auto;
+  }
+  .hud-bento .expanded-stats > div:first-child b {
+    font-size: 25px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-xp-rail > i,
+  .hud-level-track > i {
+    transition: none !important;
+  }
+  .app-shell[data-hud-busy='true']
+    :is(.hud-sync-tile, .hud-bento .profile-tile)::after {
+    animation: none;
+    opacity: 0.3;
+  }
+  .hud-xp-feedback {
+    animation-name: hud-feedback-still;
+  }
+}
+@keyframes hud-feedback-still {
+  0%,
+  95% {
+    opacity: 1;
+  }
+  100% {
+    visibility: hidden;
+  }
+}
+@media (forced-colors: active) {
+  .hud-xp-rail,
+  .hud-level-track {
+    border: 1px solid CanvasText;
+  }
+  .hud-xp-rail > i,
+  .hud-level-track > i,
+  .hud-mission-progress > i > span {
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+}
+/* On phones the level lives beside search, never squeezing the logo/account controls. */
+@media (max-width: 760px) {
+  .topbar:has(.hud-xp-chip) > .top-search {
+    margin-right: 66px;
+  }
+  .hud-xp-chip {
+    position: absolute;
+    right: 16px;
+    bottom: 10px;
+    width: 58px;
+    min-height: 44px;
+  }
+}
+/* A compact player identity leaves the first screen for useful progression, not empty cover art. */
+.hud-profile-cover {
+  height: auto;
+  min-height: 220px;
+}
+.hud-profile-cover .profile-cover-content {
+  position: relative;
+  inset: auto;
+  padding: 62px 28px 26px;
+  align-items: center;
+}
+.hud-profile-cover .profile-name {
+  font-size: clamp(22px, 2.4vw, 34px);
+  line-height: 1.2;
+  margin: 12px 0 8px;
+  overflow-wrap: anywhere;
+}
+.hud-profile-cover .cover-main > p {
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 0;
+}
+.hud-profile-cover .cover-side .avatar {
+  width: 76px !important;
+  height: 76px !important;
+}
+.hud-bento .profile-badges {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.hud-bento .profile-badges > div {
+  padding: 10px 8px;
+}
+.hud-bento .profile-badges > div:not(.earned) {
+  opacity: 0.8;
+}
+.hud-bento .profile-badges .ownership-meta {
+  font-size: 8px;
+}
+.hud-bento .profile-badges .ownership-percentage {
+  margin-bottom: 0;
+}
+@media (max-width: 760px) {
+  .hud-profile-cover {
+    min-height: 0;
+  }
+  .hud-profile-cover .profile-cover-content {
+    padding: 52px 18px 20px;
+    align-items: flex-start;
+    gap: 18px;
+  }
+  .hud-profile-cover .profile-name {
+    font-size: 23px;
+  }
+  .hud-profile-cover .cover-side {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .hud-profile-cover .cover-side .avatar-edit {
+    align-self: center;
+    flex-shrink: 0;
+  }
+  .hud-profile-cover .cover-actions-bar {
+    flex: 1;
+    justify-content: flex-end;
+  }
+  .hud-profile-cover .cover-side .avatar {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  .hud-profile-cover .cover-edit {
+    min-height: 40px;
+    margin: 0;
+  }
+}

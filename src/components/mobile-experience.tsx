@@ -1,6 +1,7 @@
 'use client';
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useCallback,
@@ -102,7 +103,7 @@ export function MobileSheet({
   restoreFocus?: RefObject<HTMLElement | null>;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current!,
       previous =
         restoreFocus?.current || (document.activeElement as HTMLElement | null),
@@ -118,17 +119,29 @@ export function MobileSheet({
       media.removeEventListener('change', resized);
       element.close();
       document.body.style.overflow = overflow;
-      // Native dialog close queues a browser task which otherwise steals restored focus.
-      window.setTimeout(() => {
-        const target = previous;
+      // Close while connected, then allow :has(dialog) visibility inheritance to settle.
+      // Some Chromium frames expose a visible dock with still-hidden button styles.
+      const restore = (attempt = 0) => {
+        const target = previous,
+          active = document.activeElement;
         if (
-          target?.isConnected &&
-          !document.querySelector(
-            'dialog[open], .modal-backdrop, [role=dialog]',
-          )
+          !target?.isConnected ||
+          document.querySelector('dialog[open], .modal-backdrop, [role=dialog]')
         )
+          return;
+        if (
+          active &&
+          active !== document.body &&
+          active !== target &&
+          !element.contains(active)
+        )
+          return;
+        if (getComputedStyle(target).visibility === 'visible')
           target.focus({ preventScroll: true });
-      });
+        if (document.activeElement !== target && attempt < 8)
+          requestAnimationFrame(() => restore(attempt + 1));
+      };
+      window.setTimeout(() => requestAnimationFrame(() => restore()));
     };
   }, [close, restoreFocus]);
   return (

@@ -2,6 +2,9 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { MobileNavigation, MobileMovieActions, MobileRatingSheet } from './mobile-experience';
+import AmbientCanvas, { AmbientToggle } from './ambient-canvas';
+import { ExperienceHud, ProfileHud, ProfileLevel } from './cinema-hud';
+import CinemaPassport from './cinema-passport';
 import { canAccessAdmin, canCreateMaterial } from '@/lib/permissions';
 import { type MovieSuggestion } from '@/lib/movie-suggestions';
 import { authErrorMessage } from '@/lib/auth-errors';
@@ -333,6 +336,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const pendingActions = useRef(new Set<string>());
   const refreshVersion = useRef(0);
   const [loading, setLoading] = useState(true);
+  const [hudPending, setHudPending] = useState(0);
   const [theme, setTheme] = useState('dark');
   const [lang, setLang] = useState('ru');
   const [preferencesReady, setPreferencesReady] = useState(false);
@@ -415,6 +419,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const refresh = async () => {
     if (pendingActions.current.size) return;
     const version = ++refreshVersion.current;
+    setHudPending(count => count + 1);
     try {
       const r = await fetch('/api/data', { cache: 'no-store' });
       if (r.ok) {
@@ -429,6 +434,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     } catch {
       notify('Не удалось обновить данные');
     } finally {
+      setHudPending(count => Math.max(0, count - 1));
       setLoading(false);
     }
   };
@@ -563,6 +569,7 @@ useEffect(() => {
       value: Number(payload.value), watchedAt: new Date().toISOString(),
     } : null;
     if (key) { pendingActions.current.add(key); refreshVersion.current++; }
+    setHudPending(count => count + 1);
     return new Promise(resolve => startTransition(async () => {
       if (update) addOptimistic(update);
       let ok = false;
@@ -585,6 +592,7 @@ useEffect(() => {
       finally {
         if (key) pendingActions.current.delete(key);
         if (ok) await refresh();
+        setHudPending(count => Math.max(0, count - 1));
         resolve(ok);
       }
     }));
@@ -713,8 +721,8 @@ const startRoulette = () => {
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
     <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
-      <div className={`app-shell ${filmId ? 'has-cinema-atmosphere' : ''}`} data-live={liveStatus}>
-        {filmId > 0 && <CinemaAtmosphere film={data.films.find(f => f.id === filmId)} />}
+      <div className={`app-shell ${filmId ? 'has-cinema-atmosphere' : ''}`} data-live={liveStatus} data-hud-busy={hudPending > 0 || loading}>
+        {filmId > 0 && <AmbientCanvas poster={data.films.find(f => f.id === filmId)?.poster} backdrop={data.films.find(f => f.id === filmId)?.backdrop} />}
         <aside className="sidebar">
           <button type="button" className="side-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
             <BrandLogo sizes="(max-width: 760px) 160px, (max-width: 1050px) 48px, 160px" priority />
@@ -847,6 +855,7 @@ return (
             </div>
 
             <div className="top-actions">
+              {data.user && <ExperienceHud key={data.user.id} xp={serverData.user?.xp ?? null} go={go} en={en} />}
               <span className={`live-connection live-${liveStatus}`} role="status" title={liveStatus === 'live' ? 'Живые обновления подключены' : 'Восстанавливаем живые обновления; резервное обновление включено'}><i /><span>{liveStatus === 'live' ? 'Live' : 'Соединение…'}</span></span>
               <div className="language-switch" onClick={changeLang}>
                 {lang.toUpperCase()} <ChevronDown size={12} />
@@ -1001,7 +1010,7 @@ return (
           <main className="content" key={path}>
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
               : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
-              : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={go} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
+              : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema key={`${searchParams.get('mode')}:${searchParams.get('country')}:${data.user?.id || 'guest'}`} initialMode={searchParams.get('mode') || ''} initialCountry={searchParams.get('country') || ''} films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={go} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
               : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} />
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} onSeriesUpdated={refresh} />)
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
@@ -2194,9 +2203,9 @@ function MovieDetailContent({
       <MobileMovieActions title={film.title} rating={myRating} saved={saved} rate={() => setMobileRatingOpen(true)} reviews={() => setReviewsOpen(true)} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       {mobileRatingOpen && <MobileRatingSheet rating={myRating} title={film.title} save={rate} close={closeMobileRating} />}
       <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
-      <button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
+      <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button><AmbientToggle /></div>
 
-      <div className={`detail-hero tone-${tone(film.rating)}`} style={{ backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` }}>
+      <div className={`detail-hero tone-${tone(film.rating)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
         <div className="detail-poster" ref={posterAnchor}>
           <PosterThumb movieId={film.id} src={image(film)} alt={film.title} wrapStyle={{ display: 'block' }} />
         </div>
@@ -2767,8 +2776,6 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
 
   const watched = data.watches.map(w => ({ ...w, film: data.films.find(f => f.id === w.movieId) })).filter(x => x.film);
   const minutes = watched.reduce((n, w) => n + (w.film ? titleMinutes(w.film) : 0), 0);
-  const level = Math.floor((u.xp || 0) / 500) + 1;
-  const progress = ((u.xp || 0) % 500) / 5;
   const achieved = achievementDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length + (data.hiddenAchievements?.length || 0);
   const categoryCounts = categories.slice(1).map(c => ({
     name: c,
@@ -2890,10 +2897,10 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
 
   return (
     <>
-      <div className={`profile-cover header-style- effect-${u.profileEffect || 'none'} ${u.headerImage && u.headerStyle === 5 ? 'custom-header' : ''}`} style={u.headerImage && u.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${u.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={u.headerStyle || 1} data-frame={u.headerFrame || 'none'}>
+      <div className={`profile-cover hud-profile-cover header-style- effect-${u.profileEffect || 'none'} ${u.headerImage && u.headerStyle === 5 ? 'custom-header' : ''}`} style={u.headerImage && u.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${u.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={u.headerStyle || 1} data-frame={u.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
-        <span className="cover-label">moviemovie · MEMBER PROFILE</span>
+        <span className="cover-label">moviemovie · ЛИЧНЫЙ КИНОПАСПОРТ</span>
         <div className="cover-orbit">✦</div>
         <div className="profile-cover-content">
           <div className="cover-main">
@@ -2918,6 +2925,8 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         </div>
       </div>
 
+      <div className="passport-level-banner"><ProfileLevel xp={u.xp} title={progressionTitle(new Set(watched.map(watch => watch.movieId)).size)} /></div>
+
       <nav className="profile-section-tabs" aria-label="Разделы профиля">{[
         ['diary', 'Кинодневник', BookOpen], ['pet', 'Кинопитомец и попкорн', Sparkles], ['card', 'Киновизитка', Clapperboard], ['titles', 'Титулы', Crown],
       ].map(([id, label, Icon]) => { const TabIcon = Icon as typeof BookOpen; return <button key={String(id)} type="button" aria-pressed={profileSection === id} onClick={() => setProfileSection(String(id))}><TabIcon size={17} />{String(label)}</button>; })}</nav>
@@ -2925,21 +2934,9 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
       {profileSection === 'card' && <CinemaCardStudio user={u} films={data.films} watches={data.watches} progress={data.achievementProgress} ownership={data.achievementStats} hiddenAchievements={data.hiddenAchievements} go={go} />}
       {profileSection === 'titles' && <UserTitleStudio collection={data.titles} username={u.username} action={action} />}
       {profileSection === 'diary' && <>
-      <button type="button" className="world-profile-entry" onClick={() => go('/world')}><Globe2 size={22} /><span><b>Твоя кино-карта мира</b><small>Открывай страны через кино</small></span><ArrowRight size={18} /></button>
+      <CinemaPassport films={data.films} watches={data.watches} go={go} onTitles={() => setProfileSection('titles')} />
 
-      <div className="profile-level-row">
-        <div className="level-card">
-          <div className="level-emblem"><Zap size={23} fill="currentColor" /></div>
-          <div>
-            <span>УРОВЕНЬ {level} · {progressionTitle(new Set(watched.map(watch => watch.movieId)).size)}</span>
-            <div className="level-track"><i style={{ width: `${progress}%` }} /></div>
-            <small>{(u.xp || 0) % 500} / 500 XP до следующего уровня</small>
-          </div>
-          <strong>{fmt(u.xp || 0)} XP</strong>
-        </div>
-        <div className="profile-mini-stat"><Trophy size={21} /><b>{achieved}</b><small>достижения</small></div>
-        <div className="profile-mini-stat"><Flame size={21} /><b>{new Set(data.watches.map(w => new Date(w.watchedAt).toISOString().slice(0, 10))).size}</b><small>активных дней</small></div>
-      </div>
+      <ProfileHud showLevel={false} xp={u.xp} title={progressionTitle(new Set(watched.map(watch => watch.movieId)).size)} watches={new Set(watched.map(watch => watch.movieId)).size} minutes={minutes} achieved={achieved} days={new Set(data.watches.map(w => new Date(w.watchedAt).toISOString().slice(0, 10))).size} progress={data.achievementProgress} go={go} />
 
       {editing && (
         <div className="customize-panel">
@@ -3003,9 +3000,9 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         {editing && <span className="drag-hint"><GripVertical size={16} /> Перетащи, чтобы изменить порядок</span>}
       </div>
 
-      <div className="profile-tiles">
+      <div className="profile-tiles hud-bento">
         {order.filter(id => tiles[id]).map(id => (
-          <div key={id} draggable={editing} onDragStart={() => setDragged(id)} onDragOver={e => e.preventDefault()} onDrop={() => { if (!dragged || dragged === id) return; const next = [...order]; next.splice(next.indexOf(dragged), 1); next.splice(next.indexOf(id), 0, dragged); setOrder(next); save({ tileOrder: next.join(',') }); setDragged(''); }} className={editing ? 'draggable-tile' : ''}>
+          <div key={id} data-hud-tile={id} draggable={editing} onDragStart={() => setDragged(id)} onDragOver={e => e.preventDefault()} onDrop={() => { if (!dragged || dragged === id) return; const next = [...order]; next.splice(next.indexOf(dragged), 1); next.splice(next.indexOf(id), 0, dragged); setOrder(next); save({ tileOrder: next.join(',') }); setDragged(''); }} className={editing ? 'draggable-tile' : ''}>
             {tiles[id]}
           </div>
         ))}
@@ -5010,10 +5007,4 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
       </div>
     </>
   );
-}
-
-function CinemaAtmosphere({ film }: { film?: FilmType }) {
-  const source = film?.backdrop || film?.poster;
-  if (!source || !/^(https?:\/\/|\/(?!\/))/.test(source)) return null;
-  return <div className="cinema-atmosphere" aria-hidden="true"><div style={{ backgroundImage: `url(${JSON.stringify(source)})` }} /><span /></div>;
 }
