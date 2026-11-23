@@ -21,7 +21,7 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=moderate
       - run: npm run typecheck && npm run lint && npm test
-      - run: npm run test:wallet && npm run test:live && npm run test:suggestions && npm run test:admin
+      - run: npm run test:wallet && npm run test:live && npm run test:suggestions && npm run test:admin && npm run test:auth
       - name: Check generated database bundle
         run: npm run db:bundle && git diff --exit-code -- scripts/supabase/01-upgrade.sql scripts/supabase/03-schema-audit.sql
       - run: npm run build
@@ -43,6 +43,8 @@ jobs:
           npm run test:browser
           npm run test:suggestions:browser
           npm run test:admin:browser
+          npm run test:auth:browser
+          npm run test:mobile:browser
           npm run test:ui
       - uses: actions/upload-artifact@v4
         if: failure()

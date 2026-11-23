@@ -1,10 +1,13 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 // Fonts are bundled locally: production builds no longer depend on Google Fonts access.
 import '@fontsource-variable/unbounded';
 import '@fontsource-variable/golos-text';
 import '@fontsource-variable/rubik/wght.css';
 import './globals.css';
+import '../components/mobile-experience.css';
+
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 
 // [SEO:METADATA]
 export const metadata: Metadata = {

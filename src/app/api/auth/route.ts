@@ -1,3 +1,4 @@
+import { AUTH_MESSAGES, isAuthSchemaError, databaseErrorCode } from '@/lib/auth-errors';
 import { readJsonObject, RequestError, requestFailure, isDatabaseFailure } from '@/lib/request-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyTelegramLogin } from '@/lib/auth-validation';
@@ -120,6 +121,10 @@ export async function POST(req: NextRequest) {
     console.log('[AUTH] Login:', u.username);
     return NextResponse.json({ user: publicUser(u) });
   } catch (e) {
+    if (isAuthSchemaError(e)) {
+      console.error('[AUTH] Database schema is not ready', { sqlState: databaseErrorCode(e) });
+      return NextResponse.json({ error: AUTH_MESSAGES.schema }, { status: 503 });
+    }
     if (e instanceof RequestError) return requestFailure(e);
     if (isDatabaseFailure(e) && ((e as { code?: string }).code === '23505' || (e as { cause?: { code?: string } }).cause?.code === '23505')) return NextResponse.json({ error: 'Почта или имя уже используются' }, { status: 409 });
     console.error('[AUTH:POST] Error:', e);

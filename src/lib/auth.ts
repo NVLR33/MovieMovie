@@ -1,5 +1,6 @@
 import { sessionIsCurrent } from '@/lib/permissions';
 import { RequestError } from '@/lib/request-validation';
+import { AUTH_MESSAGES } from '@/lib/auth-errors';
 import { sessionSecret } from '@/lib/auth-validation';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
@@ -10,7 +11,8 @@ import { eq } from 'drizzle-orm';
 
 // [AUTH:SESSION] Signed, httpOnly session cookie compatible with Vercel serverless.
 function getSecret() {
-  return new Uint8Array(createHash('sha256').update(sessionSecret()).digest());
+  try { return new Uint8Array(createHash('sha256').update(sessionSecret()).digest()); }
+  catch { throw new RequestError(AUTH_MESSAGES.session, 503); }
 }
 
 export async function setSession(id: number) {

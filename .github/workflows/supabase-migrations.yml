@@ -24,7 +24,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Test migration sources and wallet integrity locally
-        run: npm test && npm run test:wallet && npm run test:live && npm run test:suggestions && npm run test:admin
+        run: npm test && npm run test:wallet && npm run test:live && npm run test:suggestions && npm run test:admin && npm run test:auth
       - name: Validate migration inventory
         run: npm run db:migrate -- --dry-run
       - name: Apply pending migrations atomically

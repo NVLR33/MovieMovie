@@ -50,3 +50,7 @@ npm run build      # требует DATABASE_URL окружения
 - [Полноценная предложка и очередь модерации](docs/movie-suggestions.md)
 
 - [Новая админ-панель, независимый редактор, блокировки и журнал](docs/admin-workspace.md)
+
+- [Диагностика входа через Яндекс, Telegram и почту](docs/auth-troubleshooting.md)
+
+- [Мобильная навигация, зоны большого пальца и адаптивность](docs/mobile-experience.md)
