@@ -1,3 +1,4 @@
+import { canCreateMaterial } from '@/lib/permissions';
 import { requireSameOrigin, RequestError, requestFailure } from '@/lib/request-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/auth';
@@ -24,6 +25,8 @@ const ALLOWED_KINDS = [
   'header',
   'poster',
   'backdrop',
+  'suggestionPoster',
+  'suggestionBackdrop',
 ] as const;
 
 type UploadKind = (typeof ALLOWED_KINDS)[number];
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     if (
       ['poster', 'backdrop'].includes(kind) &&
-      !['admin', 'moderator'].includes(user.role)
+      !canCreateMaterial(user)
     ) {
       return NextResponse.json(
         { error: 'Недостаточно прав для загрузки изображений материалов' },
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
     const filename = `${randomUUID()}.${extension}`;
 
     const path =
-      kind === 'avatar' || kind === 'header'
+      kind === 'avatar' || kind === 'header' || kind === 'suggestionPoster' || kind === 'suggestionBackdrop'
         ? `${kind}/${user.id}/${filename}`
         : `${kind}/${filename}`;
 

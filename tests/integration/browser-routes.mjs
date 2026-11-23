@@ -43,8 +43,9 @@ try{
  ];
  for(const[label,value,expected]of cases){await open('/catalog');await page.getByRole('button',{name:'Все фильтры',exact:true}).click();await page.getByRole('combobox',{name:label,exact:true}).selectOption(value);await check(expected)}
  for(const sort of ['popular','rating','new','old']){
+  const current=await(await api.get(base+'/api/data')).json();
   await open('/catalog');await page.getByRole('button',{name:'Все фильтры',exact:true}).click();await page.getByRole('combobox',{name:'Сортировка',exact:true}).selectOption(sort);
-  const expected=[...snapshot.films].sort((a,b)=>(sort==='rating'?b.rating-a.rating:sort==='new'?b.year-a.year:sort==='old'?a.year-b.year:(b.views||0)-(a.views||0))||a.id-b.id).map(f=>f.title);assert.deepEqual(await cards(),expected);
+  const expected=[...current.films].sort((a,b)=>(sort==='rating'?b.rating-a.rating:sort==='new'?b.year-a.year:sort==='old'?a.year-b.year:(b.views||0)-(a.views||0))||a.id-b.id).map(f=>f.title);assert.deepEqual(await cards(),expected);
  }
  await open('/catalog?studio=Studio%20B&year=2020');assert(await page.locator('#catalog-precise-filters').isVisible());await check(find(f=>f.year===2020&&(f.studio||'').includes('Studio B')));
  await open('/catalog');for(const mood of ['🍿 Попкорновый аттракцион','🧠 Вскипятить мозги','😭 Поплакать','🌃 Эстетика ночи','☕ Уютный вечер','🦖 На одном дыхании']){const button=page.getByRole('button',{name:mood,exact:true});await button.click();assert.equal(await button.getAttribute('aria-pressed'),'true')}

@@ -1,6 +1,9 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
+import AdminWorkspace from './admin-workspace';
+import { canAccessAdmin, canCreateMaterial } from '@/lib/permissions';
+import { type MovieSuggestion } from '@/lib/movie-suggestions';
 import { browserStorage, copyText } from '@/lib/browser-preferences';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useOptimistic, startTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -60,7 +63,7 @@ const PublicCinemaPet = React.lazy(() => import('./cinema-pet-studio').then(modu
 // --- Types ---
 type User = {
   displayTitle?: UserTitleDisplay | null;
-  id: number; email: string; username: string; role: string; bio: string | null; avatar: string | null;
+  id: number; email: string; username: string; role: string; isEditor: boolean; bio: string | null; avatar: string | null;
   theme: string | null; language: string | null; headerStyle: number | null; headerImage: string | null;
   avatarFrame: string | null; headerFrame: string | null; profileEffect: string | null; nameEffect: string | null;
   nameColor: string | null; tileOrder: string | null; xp: number | null; createdAt: string;
@@ -90,27 +93,7 @@ type Comment = {
 type Person = { displayTitle?: UserTitleDisplay | null; id: number; username: string; avatar: string | null; role: string; xp: number | null; };
 type Friend = { id: number; fromId: number; toId: number; status: string; };
 // [TYPE:MOVIE_SUGGESTION] Предложения пользователей
-type MovieSuggestion = {
-  id: number;
-  userId: number;
-  title: string;
-  year: number;
-  genre: string;
-  category: string;
-  comment: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  reviewedAt: string | null;
-  reviewReason: string | null;
-  movieId: number | null;
 
-  author: {
-    id: number;
-    username: string;
-    avatar: string | null;
-    role: string;
-  } | null;
-};
 type Notice = { id: number; message: string; link: string | null; read: boolean; createdAt: string; };
 type Leader = Person & { watches: number; minutes: number; streak: number; ratings: number; gameScore: number; };
 type FriendActivity = { id: number; username: string; avatar: string | null; watches: number; minutes: number; lastWatch: string | null; commonFilms: number; };
@@ -402,6 +385,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [shareContent, setShareContent] = useState<ShareContent | null>(null);
   const [editFilm, setEditFilm] = useState<FilmType | null | undefined>(undefined);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [reviewSuggestion, setReviewSuggestion] = useState<MovieSuggestion | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatPeerId, setChatPeerId] = useState<number | null>(null);
 
@@ -468,6 +452,14 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('suggestions') === 'mine' && data.user?.id) {
+      // A moderation notification explicitly opens the author's proposal history.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSuggestOpen(true);
+    }
+  }, [searchParams, data.user?.id]);
 
   useEffect(() => {
     if (searchParams.get('auth')) {
@@ -762,7 +754,7 @@ return (
                 <MessageCircle size={19} /><span>{en ? 'Chat' : 'Чат'}</span>
                 {data.unreadMessages > 0 && <small>{data.unreadMessages}</small>}
               </button>
-              {['admin', 'moderator'].includes(data.user?.role || '') && (
+              {canAccessAdmin(data.user) && (
                 <button className={`nav-item ${active === 'admin' ? 'active' : ''}`} onClick={() => go('/admin')}>
                   <Shield size={19} /><span>{words.admin}</span>
                 </button>
@@ -1012,7 +1004,7 @@ return (
 
           <main className="content" key={path}>
             {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
-              : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} userRole={data.user?.role || ''} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
+              : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={go} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
               : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} />
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} onSeriesUpdated={refresh} />)
@@ -1031,7 +1023,7 @@ return (
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
-              : active === 'admin' ? <Admin data={data} go={go} action={action} edit={setEditFilm} />
+              : active === 'admin' ? <AdminWorkspace data={data} go={go} action={action} edit={setEditFilm} review={setReviewSuggestion} refresh={refresh} />
               : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
               : <div className="empty-state"><h1>Страница не найдена</h1><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>
             }
@@ -1224,13 +1216,8 @@ return (
           </div>
         )}
 
-        {suggestOpen && (
-  <SuggestMovieModal
-    close={() => setSuggestOpen(false)}
-    action={action}
-  />
-)}
-        
+        {suggestOpen && <MovieForm film={null} mode="suggest" suggestions={data.suggestions.filter(s => s.userId === data.user?.id)} close={() => setSuggestOpen(false)} action={action} notify={notify} onSaved={async () => {}} />}
+        {reviewSuggestion && <MovieForm film={null} suggestion={reviewSuggestion} close={() => setReviewSuggestion(null)} action={action} notify={notify} onSaved={async id => { await refresh(); go(`/movie/${id}`); router.refresh(); }} />}
         {editFilm !== undefined && <MovieForm film={editFilm} close={() => setEditFilm(undefined)} action={action} notify={notify} onSaved={async id => { await refresh(); go(`/movie/${id}`); router.refresh(); }} />}
 {chatOpen && chatPeerId && data.user && (
   <ChatDrawer
@@ -1990,7 +1977,7 @@ function Catalog({
   go,
   searchValue,
   en,
-  userRole = '',
+  canAdd = false,
   onAdd,
   onSuggest,
   watchedIds = new Set(),
@@ -1999,7 +1986,7 @@ function Catalog({
   go: (s: string) => void;
   searchValue: string;
   en: boolean;
-  userRole?: string;
+  canAdd?: boolean;
   onAdd?: () => void;
   onSuggest?: () => void;
   watchedIds?: Set<number>;
@@ -2030,7 +2017,7 @@ function Catalog({
           <p>{en ? 'Your next favorite story is waiting right here.' : 'Твоё следующее любимое кино уже где-то здесь.'}</p>
         </div>
         <div className="heading-count"><Film size={19} />{films.length} {en ? 'stories' : 'историй'}</div>
-{['admin', 'moderator'].includes(userRole) ? (
+{canAdd ? (
   onAdd && (
     <button className="primary-btn" onClick={onAdd}>
       <Plus size={17} />
@@ -3540,201 +3527,6 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
   );
 }
 
-function Admin({ data, go, action, edit }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; edit: (f: FilmType | null) => void; }) {
-  const searchParams = useSearchParams();
-
-const [tab, setTab] = useState(
-  searchParams.get('tab') === 'suggestions'
-    ? 'suggestions'
-    : 'films'
-);
-  if (!['admin', 'moderator'].includes(data.user?.role || '')) return <div className="gate"><Shield size={40} /><h1>Доступ закрыт</h1><p>Этот раздел доступен только команде moviemovie.</p><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>;
-
-  return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">ЦЕНТР УПРАВЛЕНИЯ</span><h1>За кадром <em>moviemovie.</em></h1><p>Управляй историями и заботься о нашем сообществе.</p></div>
-        <button className="primary-btn" onClick={() => edit(null)}><Plus size={18} /> Добавить материал</button>
-      </div>
-      <div className="admin-stats">
-        <div><Film size={21} /><b>{data.films.length}</b><small>материалов</small></div>
-        <div><Users size={21} /><b>{data.people.length}</b><small>участников</small></div>
-        <div><Eye size={21} /><b>{fmt(data.films.reduce((n, f) => n + (f.views || 0), 0))}</b><small>посещений</small></div>
-        <div><MessageCircle size={21} /><b>{data.comments.length}</b><small>комментариев</small></div>
-      </div>
-<div className="category-tabs">
-  <button
-    className={tab === 'films' ? 'selected' : ''}
-    onClick={() => setTab('films')}
-  >
-    Материалы
-  </button>
-
-  <button
-    className={tab === 'suggestions' ? 'selected' : ''}
-    onClick={() => setTab('suggestions')}
-  >
-    Предложения
-    {data.pendingSuggestionsCount > 0 && (
-      <span className="suggestion-tab-count">
-        {data.pendingSuggestionsCount}
-      </span>
-    )}
-  </button>
-
-  {data.user?.role === 'admin' && (
-    <button
-      className={tab === 'users' ? 'selected' : ''}
-      onClick={() => setTab('users')}
-    >
-      Пользователи и роли
-    </button>
-  )}
-</div>
-
-      {tab === 'films' ? (
-        <div className="admin-list">
-          {data.films.map(f => (
-            <div className="admin-row" key={f.id}>
-              <PosterThumb movieId={f.id} src={f.poster} alt="" />
-              <div><b>{f.title}</b><small>{f.year} · {f.category} · ★ {formatFilmRating(f)}</small></div>
-              <span>{f.views} просмотров</span>
-              <button onClick={() => edit(f)} title="Редактировать"><Pencil size={18} /></button>
-              {data.user?.role === 'admin' && <button className="danger" onClick={() => { if (window.confirm(`Удалить «${f.title}»?`)) action({ action: 'movieDelete', id: f.id }, 'Материал удалён'); }} title="Удалить"><Trash2 size={18} /></button>}
-            </div>
-          ))}
-        </div>
-      ) : tab === 'suggestions' ? (
-  <div className="suggestions-list">
-    {data.suggestions.length ? (
-      data.suggestions.map(s => (
-        <div className="suggestion-card" key={s.id}>
-          <div className="suggestion-card-top">
-            <div>
-              <span className="eyebrow">
-                {s.category} · {s.year}
-              </span>
-
-              <h3>{s.title}</h3>
-
-              <p>{s.genre}</p>
-            </div>
-
-            <span className={`suggestion-status ${s.status}`}>
-              {s.status === 'pending'
-                ? 'На рассмотрении'
-                : s.status === 'approved'
-                ? 'Одобрено'
-                : 'Отклонено'}
-            </span>
-          </div>
-
-          <div className="suggestion-author">
-            <Avatar
-              name={s.author?.username || 'User'}
-              src={s.author?.avatar}
-              size={30}
-            />
-
-            <span>
-              {s.author?.username || 'Пользователь'}
-            </span>
-
-            <small>
-              {new Date(s.createdAt).toLocaleDateString('ru-RU')}
-            </small>
-          </div>
-
-          {s.comment && (
-            <div className="suggestion-comment">
-              {s.comment}
-            </div>
-          )}
-
-          {s.status === 'pending' && (
-            <div className="suggestion-actions">
-              <button
-                className="primary-btn small"
-                onClick={() => {
-                  const film = data.films.find(film => film.title.trim().toLowerCase() === s.title.trim().toLowerCase() && film.year === s.year);
-                  if (film) void action({ action: 'approveSuggestion', id: s.id, movieId: film.id }, 'Предложение принято, награда проверена');
-                  else { window.alert('Сначала добавьте предложенный материал в каталог с тем же названием и годом. Затем нажмите «Одобрить» ещё раз — предложение будет связано с карточкой, а автор получит попкорн.'); edit(null); }
-                }}
-              >
-                <Check size={15} />
-                Одобрить
-              </button>
-
-              <button
-                className="outline-btn small"
-                onClick={() => {
-                  const reason = window.prompt(
-                    'Причина отклонения (необязательно):'
-                  );
-
-                  if (reason === null) return;
-
-                  action(
-                    {
-                      action: 'rejectSuggestion',
-                      id: s.id,
-                      reason
-                    },
-                    'Предложение отклонено'
-                  );
-                }}
-              >
-                <X size={15} />
-                Отклонить
-              </button>
-            </div>
-          )}
-
-          {s.status === 'rejected' && s.reviewReason && (
-            <p className="suggestion-reason">
-              Причина: {s.reviewReason}
-            </p>
-          )}
-
-          {s.status === 'approved' && s.movieId && (
-            <button
-              className="text-link"
-              onClick={() => go('/movie/' + s.movieId)}
-            >
-              Открыть материал
-              <ArrowUpRight size={15} />
-            </button>
-          )}
-        </div>
-      ))
-    ) : (
-      <div className="empty-state">
-        <Clapperboard size={36} />
-        <h3>Предложений пока нет</h3>
-        <p>Здесь будут появляться материалы, предложенные пользователями.</p>
-      </div>
-    )}
-  </div>
-) : (
-  <div className="admin-list">
-    {data.people.map(p => (
-            <div className="admin-row user-admin-row" key={p.id}>
-              <Avatar name={p.username} src={p.avatar} size={42} />
-              <div><b>{p.username}</b><small>{p.xp} XP · ID {p.id}</small></div>
-              <select value={p.role} disabled={p.id === data.user?.id} onChange={e => action({ action: 'role', userId: p.id, role: e.target.value }, 'Роль изменена')}>
-                <option value="visitor">Посетитель</option>
-                <option value="vip">VIP</option>
-                <option value="moderator">Модератор</option>
-                <option value="admin">Администратор</option>
-              </select>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
 function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () => Promise<void>; notify: (s: string) => void; }) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -3824,183 +3616,65 @@ function AuthModal({ close, refresh, notify }: { close: () => void; refresh: () 
   );
 }
 
-// [COMPONENT:SUGGEST_MOVIE] User movie suggestion form
-function SuggestMovieModal({
-  close,
-  action,
-}: {
-  close: () => void;
-  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
-}) {
-  const [title, setTitle] = useState('');
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [genre, setGenre] = useState('');
-  const [category, setCategory] = useState('Фильм');
-  const [comment, setComment] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy) return;
-
-    setBusy(true);
-
-    const ok = await action(
-      {
-        action: 'suggestMovie',
-        title,
-        year,
-        genre,
-        category,
-        comment,
-      },
-      'Предложение отправлено на рассмотрение 🎬'
-    );
-
-    setBusy(false);
-
-    if (ok) close();
-  };
-
-  return (
-    <div className="modal-backdrop" onClick={close}>
-      <div
-        className="glass-modal editor-modal"
-        onClick={e => e.stopPropagation()}
-      >
-        <button
-          className="modal-close"
-          onClick={close}
-          disabled={busy}
-        >
-          <X size={20} />
-        </button>
-
-        <span className="eyebrow">
-          <Clapperboard size={14} />
-          ПРЕДЛОЖЕНИЕ МАТЕРИАЛА
-        </span>
-
-        <h2>Предложить кино</h2>
-
-        <p>
-          Не нашёл любимую историю в каталоге?
-          Предложи её нашей команде!
-        </p>
-
-        <form onSubmit={submit} className="editor-form">
-
-          <label>
-            Название *
-            <input
-              required
-              minLength={2}
-              maxLength={150}
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Например: Интерстеллар"
-            />
-          </label>
-
-          <div className="form-two">
-            <label>
-              Год выпуска *
-              <input
-                type="number"
-                required
-                min={1888}
-                max={2100}
-                value={year}
-                onChange={e => setYear(Number(e.target.value))}
-              />
-            </label>
-
-            <label>
-              Категория *
-              <select
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-              >
-                {categories.slice(1).map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label>
-            Жанр *
-            <input
-              required
-              maxLength={200}
-              value={genre}
-              onChange={e => setGenre(e.target.value)}
-              placeholder="Фантастика, Драма"
-            />
-          </label>
-
-          <label>
-            Почему стоит добавить? (необязательно)
-            <textarea
-              rows={3}
-              maxLength={1000}
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              placeholder="Расскажи, почему рекомендуешь этот материал..."
-            />
-          </label>
-
-          <button
-            className="primary-btn auth-submit"
-            disabled={busy}
-            type="submit"
-          >
-            {busy ? 'Отправляем...' : 'Отправить предложение'}
-            <Send size={17} />
-          </button>
-
-        </form>
-      </div>
-    </div>
-  );
-}
-
-
 function MovieForm({
   film,
+  mode = 'edit',
+  suggestion,
+  suggestions = [],
   close,
   action,
   onSaved,
   notify
 }: {
   film: FilmType | null;
+  mode?: 'edit' | 'suggest';
+  suggestion?: MovieSuggestion;
+  suggestions?: MovieSuggestion[];
   close: () => void;
   action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
   notify: (s: string) => void;
   onSaved: (id: number) => Promise<void>;
 }) {
+  const initial: Partial<FilmType> & { endYear?: number | null; ongoing?: boolean } = suggestion
+    ? { ...suggestion.material, title: suggestion.title, year: suggestion.year, genre: suggestion.genre, category: suggestion.category }
+    : film || {};
+  const [comment, setComment] = useState('');
+  const [error, setError] = useState('');
+  const dialog = useRef<HTMLDialogElement>(null);
+  const pending = useRef(false);
+  const [uploading, setUploading] = useState(false);
+  const uploadPending = useRef(false);
+  const dirty = useRef(false);
+  const requestClose = () => { if (!pending.current && !uploadPending.current && (!dirty.current || window.confirm('Закрыть форму? Несохранённые изменения будут потеряны.'))) close(); };
+  useEffect(() => {
+    const element = dialog.current!;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    element.showModal();
+    return () => { element.close(); document.body.style.overflow = overflow; };
+  }, []);
   const [form, setForm] = useState({
-    title: film?.title || '',
-    originalTitle: (film as any)?.originalTitle || '',
-    description: (film as any)?.description || '',
-    category: film?.category || 'Фильм',
-    genre: (film as any)?.genre || '',
-    studio: (film as any)?.studio || '',
-    year: film?.year || 2026,
-    ageRating: (film as any)?.ageRating || '',
-    endYear: (film as any)?.endYear ?? '',
-    ongoing: (film as any)?.ongoing ?? false,
-    duration: film?.duration || 90,
-    episodes: (film as any)?.episodes || 0,
-    mood: (film as any)?.mood || '',
-    poster: film?.poster || '',
-    backdrop: (film as any)?.backdrop || '',
-    watchUrl: (film as any)?.watchUrl || '',
-    director: (film as any)?.director || '',
-    cast: film?.cast || '',
-    franchise: film?.franchise || '',
-    festivalRecognized: film?.festivalRecognized || false,
-    country: (film as any)?.country || ''
+    title: initial.title || '',
+    originalTitle: initial.originalTitle || '',
+    description: initial.description || '',
+    category: initial.category || 'Фильм',
+    genre: initial.genre || '',
+    studio: initial.studio || '',
+    year: initial.year || new Date().getFullYear(),
+    ageRating: initial.ageRating || '',
+    endYear: initial.endYear ?? '',
+    ongoing: initial.ongoing ?? false,
+    duration: initial.duration || 90,
+    episodes: initial.episodes || 0,
+    mood: initial.mood || '',
+    poster: initial.poster || '',
+    backdrop: initial.backdrop || '',
+    watchUrl: initial.watchUrl || '',
+    director: initial.director || '',
+    cast: initial.cast || '',
+    franchise: initial.franchise || '',
+    festivalRecognized: initial.festivalRecognized || false,
+    country: initial.country || ''
   });
 
   const [busy, setBusy] = useState(false);
@@ -4013,65 +3687,30 @@ function MovieForm({
     key: keyof typeof form,
     value: string | number | boolean
   ) => {
+    dirty.current = true;
     setForm(v => ({ ...v, [key]: value }));
   };
 
-  const upload = async (file?: File) => {
-    if (!file) return;
-
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('kind', 'poster');
-
+  const uploadImage = async (kind: 'poster' | 'backdrop', file?: File) => {
+    if (!file || uploadPending.current || pending.current) return;
+    if (file.size > 4 * 1024 * 1024) { setError('Максимальный размер изображения — 4 МБ'); return; }
+    uploadPending.current = true; setUploading(true); setError('');
+    const fd = new FormData(); fd.append('file', file);
+    fd.append('kind', mode === 'suggest' ? kind === 'poster' ? 'suggestionPoster' : 'suggestionBackdrop' : kind);
     try {
-      const r = await fetch('/api/upload', {
-        method: 'POST',
-        body: fd
-      });
-
-      const d = await r.json();
-
-      if (r.ok && d.url) {
-        field('poster', d.url);
-        notify('Обложка загружена');
-      } else {
-        notify(d.error || 'Ошибка загрузки');
-      }
-    } catch {
-      notify('Ошибка загрузки обложки');
-    }
-  };
-
-  const uploadBackdrop = async (file?: File) => {
-    if (!file) return;
-
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('kind', 'backdrop');
-
-    try {
-      const r = await fetch('/api/upload', {
-        method: 'POST',
-        body: fd
-      });
-
-      const d = await r.json();
-
-      if (r.ok && d.url) {
-        field('backdrop', d.url);
-        notify('Фоновое изображение загружено');
-      } else {
-        notify(d.error || 'Не удалось загрузить фон');
-      }
-    } catch {
-      notify('Ошибка загрузки фонового изображения');
-    }
+      const response = await fetch('/api/upload', { method: 'POST', body: fd });
+      const result = await response.json();
+      if (!response.ok || !result.url) throw new Error(result.error || 'Ошибка загрузки');
+      field(kind, result.url);
+      notify('Изображение загружено');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Ошибка загрузки'); }
+    finally { uploadPending.current = false; setUploading(false); }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (busy) return;
+    if (pending.current || uploadPending.current) return;
 
     if (isSeries && !form.ongoing && form.endYear !== '') {
       if (Number(form.endYear) < Number(form.year)) {
@@ -4080,33 +3719,33 @@ function MovieForm({
       }
     }
 
-    setBusy(true);
+    pending.current = true;
+    setBusy(true); setError('');
 
+    const material = { ...form, endYear: isSeries && !form.ongoing && form.endYear !== '' ? Number(form.endYear) : null, ongoing: isSeries ? form.ongoing : false };
     try {
+      if (mode === 'suggest') {
+        const ok = await action({ action: 'suggestMovie', ...material, comment }, 'Предложение отправлено на рассмотрение 🎬');
+        if (ok) close();
+        else setError('Предложение не отправлено. Проверь поля и сообщение сервера; введённые данные сохранены в форме.');
+        return;
+      }
       const response = await fetch('/api/action', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          action: 'movieSave',
-          id: film?.id,
-          ...form,
-          endYear: isSeries && !form.ongoing && form.endYear !== ''
-            ? Number(form.endYear)
-            : null,
-          ongoing: isSeries ? form.ongoing : false
-        })
+        body: JSON.stringify(suggestion ? { action: 'approveSuggestion', id: suggestion.id, material } : { action: 'movieSave', id: film?.id, ...material })
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        notify(result.error || 'Ошибка сохранения материала');
+        setError(result.error || 'Ошибка сохранения материала');
         return;
       }
 
-      notify(film ? 'Материал обновлён' : 'Материал опубликован');
+      notify(suggestion ? 'Предложение принято, материал опубликован' : film ? 'Материал обновлён' : 'Материал опубликован');
 
       close();
 
@@ -4116,35 +3755,38 @@ function MovieForm({
         notify('Сервер не вернул ID материала. Обнови каталог.');
       }
     } catch {
-      notify('Ошибка соединения с сервером');
+      setError('Ошибка соединения с сервером. Данные остались в форме, попробуй ещё раз.');
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   };
 
   return (
-    <div className="modal-backdrop" onClick={close}>
+    <dialog className="material-editor-dialog" ref={dialog} aria-labelledby="material-editor-title" onCancel={event => { event.preventDefault(); requestClose(); }} onClick={event => { if (event.target === event.currentTarget) requestClose(); }}>
       <div
         className="glass-modal editor-modal"
         onClick={e => e.stopPropagation()}
       >
-        <button className="modal-close" onClick={close}>
+        <button type="button" aria-label="Закрыть форму материала" className="modal-close" disabled={busy || uploading} onClick={requestClose}>
           <X size={20} />
         </button>
 
-        <span className="eyebrow">КУРАТОР КАТАЛОГА</span>
-
-        <h2>
-          {film ? 'Редактировать историю' : 'Новая история'}
-        </h2>
+        <span className="eyebrow">{mode === 'suggest' ? 'ТВОЯ ИДЕЯ ДЛЯ КАТАЛОГА' : 'КУРАТОР КАТАЛОГА'}</span>
+        <h2 id="material-editor-title">{mode === 'suggest' ? 'Предложить кино' : suggestion ? 'Проверка предложения' : film ? 'Редактировать историю' : 'Новая история'}</h2>
+        <p>{mode === 'suggest' ? 'Заполни карточку как для каталога. После одобрения она станет материалом, а ты получишь уведомление. Одновременно — до 5 заявок.' : suggestion ? `Заявка от ${suggestion.author?.username || 'пользователя'}. Исправь данные перед публикацией. Материал и решение сохранятся вместе.` : 'Поля со звёздочкой обязательны.'}</p>
+        {suggestion && !suggestion.material && <p className="suggestion-legacy">Это старая краткая заявка. Дополните обязательные поля — повторно отправлять её не нужно.</p>}
+        {mode === 'suggest' && suggestions.length > 0 && <details className="my-suggestions"><summary>Мои предложения · {suggestions.filter(s => s.status === 'pending').length} на рассмотрении</summary>{suggestions.slice(0, 20).map(s => <div key={s.id}><b>{s.title} · {s.year}</b><span>{s.status === 'pending' ? 'На рассмотрении' : s.status === 'approved' ? 'Принято' : 'Отклонено'}</span>{s.reviewReason && <p>{s.reviewReason}</p>}{s.movieId && <a href={`/movie/${s.movieId}`}>Открыть материал →</a>}</div>)}</details>}
+        <details className="material-preview"><summary>Предпросмотр карточки</summary><div>{form.poster && <img src={form.poster} alt="Предпросмотр постера" />}<section><h3>{form.title || 'Название материала'}</h3><small>{form.category} · {form.year} · {form.duration} мин</small><p>{form.description || 'Здесь появится описание'}</p></section></div></details>
 
         <form onSubmit={submit} className="editor-form">
+          <fieldset disabled={busy || uploading} className="material-fields">
 
           <div className="form-two">
             <label>
               Название *
               <input
-                required
+                required minLength={2} maxLength={150}
                 value={form.title}
                 onChange={e => field('title', e.target.value)}
               />
@@ -4153,6 +3795,7 @@ function MovieForm({
             <label>
               Оригинальное название
               <input
+                maxLength={200}
                 value={form.originalTitle}
                 onChange={e => field('originalTitle', e.target.value)}
               />
@@ -4163,7 +3806,7 @@ function MovieForm({
             Описание *
             <textarea
               required
-              rows={3}
+              rows={3} maxLength={3000} aria-label="Описание материала"
               value={form.description}
               onChange={e => field('description', e.target.value)}
             />
@@ -4186,7 +3829,8 @@ function MovieForm({
               {isSeries ? 'Год начала' : 'Год выпуска'}
               <input
                 type="number"
-                min="1900"
+                required
+                min="1888"
                 max="2100"
                 value={form.year}
                 onChange={e => field('year', Number(e.target.value))}
@@ -4210,7 +3854,7 @@ function MovieForm({
               Минуты
               <input
                 type="number"
-                min="1"
+                min="1" max="10000" required
                 value={form.duration}
                 onChange={e => field('duration', Number(e.target.value))}
               />
@@ -4220,7 +3864,7 @@ function MovieForm({
               Серии
               <input
                 type="number"
-                min="0"
+                min="0" max="100000" disabled={!isSeries}
                 value={form.episodes}
                 onChange={e => field('episodes', Number(e.target.value))}
               />
@@ -4280,6 +3924,7 @@ function MovieForm({
             <label>
               Жанры (через запятую)
               <input
+                maxLength={200}
                 value={form.genre}
                 onChange={e => field('genre', e.target.value)}
               />
@@ -4355,7 +4000,7 @@ function MovieForm({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   hidden
-                  onChange={e => upload(e.target.files?.[0])}
+                  onChange={e => void uploadImage('poster', e.target.files?.[0])}
                 />
               </label>
             </div>
@@ -4384,23 +4029,27 @@ function MovieForm({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   hidden
-                  onChange={e => uploadBackdrop(e.target.files?.[0])}
+                  onChange={e => void uploadImage('backdrop', e.target.files?.[0])}
                 />
               </label>
             </div>
           </label>
 
+          {mode === 'suggest' && <label>Комментарий для редакции<textarea maxLength={1000} rows={3} value={comment} onChange={e => { dirty.current = true; setComment(e.target.value); }} placeholder="Почему стоит добавить или что нужно проверить (не публикуется в описании)" /></label>}
+          </fieldset>
+          {error && <p className="material-form-error" role="alert">{error}</p>}
+          {uploading && <p role="status">Загружаем изображение…</p>}
           <button
             className="primary-btn auth-submit"
-            disabled={busy}
+            disabled={busy || uploading}
           >
-            {busy ? 'Сохранение...' : 'Сохранить материал'}
+            {busy ? 'Сохранение…' : mode === 'suggest' ? 'Отправить предложение' : suggestion ? 'Одобрить и открыть материал' : 'Сохранить материал'}
             <Check size={17} />
           </button>
 
         </form>
       </div>
-    </div>
+    </dialog>
   );
 }
 

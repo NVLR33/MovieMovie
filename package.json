@@ -18,7 +18,11 @@
     "test:live": "node tests/integration/realtime-storage.mjs",
     "test:routes": "node tests/integration/http-routes.mjs",
     "test:browser": "node tests/integration/browser-routes.mjs",
-    "test:ui": "node tests/integration/responsive-ui.mjs"
+    "test:ui": "node tests/integration/responsive-ui.mjs",
+    "test:suggestions": "node tests/integration/movie-suggestions.mjs",
+    "test:suggestions:browser": "node tests/integration/browser-suggestions.mjs",
+    "test:admin": "node tests/integration/admin-workspace.mjs",
+    "test:admin:browser": "node tests/integration/browser-admin.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

@@ -472,6 +472,120 @@ END
 $apply_migration$;
 
 
+-- ========== 20261122-zzz-full-suggestions.sql ==========
+DO $apply_migration$
+BEGIN
+  IF EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzz-full-suggestions.sql' AND checksum <> '651bdef3af0b9038b3432131e96b3907c7249b2b7e3f4bff744e986f365387c7') THEN
+    RAISE EXCEPTION 'Applied migration checksum mismatch: 20261122-zzz-full-suggestions.sql';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzz-full-suggestions.sql') THEN
+    EXECUTE $file_651bdef3af0b9038$
+-- Additive: old short proposals remain readable and can be completed by a curator.
+ALTER TABLE mg_movie_suggestions ADD COLUMN IF NOT EXISTS material jsonb;
+CREATE INDEX IF NOT EXISTS mg_suggestion_status_date ON mg_movie_suggestions(status, created_at);
+CREATE INDEX IF NOT EXISTS mg_suggestion_user_status ON mg_movie_suggestions(user_id, status);
+-- Suggestions and moderation history are private server-managed records.
+ALTER TABLE mg_movie_suggestions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE mg_movie_suggestions FROM PUBLIC;
+REVOKE ALL ON SEQUENCE mg_movie_suggestions_id_seq FROM PUBLIC;
+DO $security$
+DECLARE api_role text;
+BEGIN
+  FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=api_role) THEN
+      EXECUTE format('REVOKE ALL ON TABLE mg_movie_suggestions FROM %I',api_role);
+      EXECUTE format('REVOKE ALL ON SEQUENCE mg_movie_suggestions_id_seq FROM %I',api_role);
+    END IF;
+  END LOOP;
+END
+$security$;
+-- Deliver moderation changes to author/moderator shells without a manual reload.
+CREATE OR REPLACE FUNCTION mg_suggestion_changed() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $changed$
+DECLARE target integer;
+BEGIN
+  IF TG_OP='UPDATE' AND to_jsonb(OLD)=to_jsonb(NEW) THEN RETURN NULL; END IF;
+  FOR target IN
+    SELECT DISTINCT id FROM (
+      SELECT 0 AS id
+      UNION ALL SELECT id FROM public.mg_users WHERE role IN ('admin','moderator')
+      UNION ALL SELECT CASE WHEN TG_OP='INSERT' THEN NULL ELSE OLD.user_id END
+      UNION ALL SELECT CASE WHEN TG_OP='DELETE' THEN NULL ELSE NEW.user_id END
+    ) audiences WHERE id IS NOT NULL ORDER BY id
+  LOOP
+    INSERT INTO public.mg_realtime_versions(audience_id,revision) VALUES(target,1)
+    ON CONFLICT(audience_id) DO UPDATE SET revision=public.mg_realtime_versions.revision+1;
+  END LOOP;
+  RETURN NULL;
+END
+$changed$;
+REVOKE ALL ON FUNCTION mg_suggestion_changed() FROM PUBLIC;
+DO $trigger$
+BEGIN
+  IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.mg_movie_suggestions'::regclass AND tgname='mg_realtime_invalidate' AND NOT tgisinternal) THEN
+    CREATE TRIGGER mg_realtime_invalidate AFTER INSERT OR UPDATE OR DELETE ON mg_movie_suggestions
+    FOR EACH ROW EXECUTE FUNCTION mg_suggestion_changed();
+  END IF;
+END
+$trigger$;
+
+$file_651bdef3af0b9038$;
+    INSERT INTO moviemovie_migrations.history(name, checksum)
+    VALUES ('20261122-zzz-full-suggestions.sql', '651bdef3af0b9038b3432131e96b3907c7249b2b7e3f4bff744e986f365387c7');
+  END IF;
+END
+$apply_migration$;
+
+
+-- ========== 20261122-zzzz-admin-workspace.sql ==========
+DO $apply_migration$
+BEGIN
+  IF EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzzz-admin-workspace.sql' AND checksum <> 'c4c18126ea177bd4906aa99dd590c7b297de1a5fe3161576861c97f2791a5cc1') THEN
+    RAISE EXCEPTION 'Applied migration checksum mismatch: 20261122-zzzz-admin-workspace.sql';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzzz-admin-workspace.sql') THEN
+    EXECUTE $file_c4c18126ea177bd4$
+-- Independent publication capability; existing roles are not silently promoted.
+ALTER TABLE mg_users ADD COLUMN IF NOT EXISTS is_editor boolean NOT NULL DEFAULT false;
+ALTER TABLE mg_users ADD COLUMN IF NOT EXISTS is_suspended boolean NOT NULL DEFAULT false;
+ALTER TABLE mg_users ADD COLUMN IF NOT EXISTS suspension_reason text;
+ALTER TABLE mg_users ADD COLUMN IF NOT EXISTS session_version integer NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS mg_admin_audit (
+  id serial PRIMARY KEY,
+  actor_id integer NOT NULL REFERENCES mg_users(id),
+  actor_name text NOT NULL,
+  action text NOT NULL,
+  target_type text NOT NULL,
+  target_id integer,
+  summary text NOT NULL,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS mg_admin_audit_actor_date ON mg_admin_audit(actor_id,created_at);
+CREATE INDEX IF NOT EXISTS mg_admin_audit_action_date ON mg_admin_audit(action,created_at);
+ALTER TABLE mg_admin_audit ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE mg_admin_audit FROM PUBLIC;
+REVOKE ALL ON SEQUENCE mg_admin_audit_id_seq FROM PUBLIC;
+DO $security$
+DECLARE api_role text;
+BEGIN
+  FOREACH api_role IN ARRAY ARRAY['anon','authenticated'] LOOP
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=api_role) THEN
+      EXECUTE format('REVOKE ALL ON TABLE mg_admin_audit FROM %I',api_role);
+      EXECUTE format('REVOKE ALL ON SEQUENCE mg_admin_audit_id_seq FROM %I',api_role);
+    END IF;
+  END LOOP;
+END
+$security$;
+
+$file_c4c18126ea177bd4$;
+    INSERT INTO moviemovie_migrations.history(name, checksum)
+    VALUES ('20261122-zzzz-admin-workspace.sql', 'c4c18126ea177bd4906aa99dd590c7b297de1a5fe3161576861c97f2791a5cc1');
+  END IF;
+END
+$apply_migration$;
+
+
 -- Fail closed on incompatible legacy schema before committing any migration.
 DO $verify_schema$
 DECLARE failed text;
@@ -483,6 +597,7 @@ BEGIN
 -- delete actions, index columns/uniqueness/readiness, named validated CHECKs and required RLS.
 -- Does not compare default values/CHECK expressions or audit every existing RLS policy.
 WITH expected_tables(table_name, rls) AS (VALUES
+  ('mg_admin_audit', true),
   ('mg_bookmarks', false),
   ('mg_challenge_progress', false),
   ('mg_challenges', false),
@@ -499,7 +614,7 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_messages', false),
   ('mg_movie_club', false),
   ('mg_movie_pioneers', true),
-  ('mg_movie_suggestions', false),
+  ('mg_movie_suggestions', true),
   ('mg_movies', false),
   ('mg_notifications', false),
   ('mg_popcorn_ledger', true),
@@ -515,6 +630,15 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_watch_rooms', false),
   ('mg_watches', false)
 ), expected_columns(table_name, column_name, sql_type, not_null, needs_default) AS (VALUES
+  ('mg_admin_audit', 'id', 'integer', true, true),
+  ('mg_admin_audit', 'actor_id', 'integer', true, false),
+  ('mg_admin_audit', 'actor_name', 'text', true, false),
+  ('mg_admin_audit', 'action', 'text', true, false),
+  ('mg_admin_audit', 'target_type', 'text', true, false),
+  ('mg_admin_audit', 'target_id', 'integer', false, false),
+  ('mg_admin_audit', 'summary', 'text', true, false),
+  ('mg_admin_audit', 'details', 'jsonb', true, true),
+  ('mg_admin_audit', 'created_at', 'timestamp without time zone', true, true),
   ('mg_bookmarks', 'id', 'integer', true, true),
   ('mg_bookmarks', 'user_id', 'integer', true, false),
   ('mg_bookmarks', 'movie_id', 'integer', true, false),
@@ -619,6 +743,7 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_movie_suggestions', 'genre', 'text', true, false),
   ('mg_movie_suggestions', 'category', 'text', true, false),
   ('mg_movie_suggestions', 'comment', 'text', false, false),
+  ('mg_movie_suggestions', 'material', 'jsonb', false, false),
   ('mg_movie_suggestions', 'status', 'text', true, true),
   ('mg_movie_suggestions', 'reviewed_by', 'integer', false, false),
   ('mg_movie_suggestions', 'review_reason', 'text', false, false),
@@ -701,6 +826,10 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_users', 'provider', 'text', false, true),
   ('mg_users', 'provider_id', 'text', false, false),
   ('mg_users', 'role', 'text', true, true),
+  ('mg_users', 'is_editor', 'boolean', true, true),
+  ('mg_users', 'is_suspended', 'boolean', true, true),
+  ('mg_users', 'suspension_reason', 'text', false, false),
+  ('mg_users', 'session_version', 'integer', true, true),
   ('mg_users', 'bio', 'text', false, true),
   ('mg_users', 'avatar', 'text', false, false),
   ('mg_users', 'theme', 'text', false, true),
@@ -730,6 +859,8 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_watches', 'movie_id', 'integer', true, false),
   ('mg_watches', 'watched_at', 'timestamp without time zone', true, true)
 ), expected_indexes(table_name, index_name, columns, is_unique) AS (VALUES
+  ('mg_admin_audit', 'mg_admin_audit_actor_date', 'actor_id,created_at', false),
+  ('mg_admin_audit', 'mg_admin_audit_action_date', 'action,created_at', false),
   ('mg_bookmarks', 'mg_bookmark_unique', 'user_id,movie_id', true),
   ('mg_comments', 'mg_comment_movie_date', 'movie_id,created_at', false),
   ('mg_episode_ratings', 'mg_episode_rating_unique', 'user_id,episode_id', true),
@@ -738,6 +869,8 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_hidden_achievement_events', 'mg_hidden_event_unique', 'user_id,kind,movie_id', true),
   ('mg_hidden_achievement_events', 'mg_hidden_event_week', 'user_id,kind,week_key', false),
   ('mg_messages', 'mg_message_pair_date', 'from_id,to_id,created_at', false),
+  ('mg_movie_suggestions', 'mg_suggestion_status_date', 'status,created_at', false),
+  ('mg_movie_suggestions', 'mg_suggestion_user_status', 'user_id,status', false),
   ('mg_notifications', 'mg_notification_user_date', 'user_id,created_at', false),
   ('mg_popcorn_ledger', 'mg_popcorn_source_unique', 'user_id,source_key', true),
   ('mg_popcorn_ledger', 'mg_popcorn_user_day', 'user_id,created_at', false),
@@ -754,6 +887,8 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_watches', 'mg_watch_user_date', 'user_id,watched_at', false),
   ('mg_watches', 'mg_watch_movie', 'movie_id', false)
 ), expected_keys(table_name, key_type, columns, foreign_table, foreign_columns, delete_action) AS (VALUES
+  ('mg_admin_audit', 'p', 'id', '', '', ''),
+  ('mg_admin_audit', 'f', 'actor_id', 'mg_users', 'id', 'a'),
   ('mg_bookmarks', 'p', 'id', '', '', ''),
   ('mg_bookmarks', 'f', 'user_id', 'mg_users', 'id', 'a'),
   ('mg_bookmarks', 'f', 'movie_id', 'mg_movies', 'id', 'a'),

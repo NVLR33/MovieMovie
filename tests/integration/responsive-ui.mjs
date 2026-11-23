@@ -40,13 +40,13 @@ window.fetch=async(url,init)=>{
 };
 function ChatFixture(){const[d]=useJsonResource('/api/chat?with=2');return <div>Messages: {d?.messages?.length??'loading'}</div>}
 createRoot(document.getElementById('root')).render(location.pathname==='/chat-test'?<ChatFixture/>:<App initialFilms={films}/>);
-`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',loader:{'.png':'dataurl'},define:{'process.env.NODE_ENV':'"production"','process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME':'""'},plugins:[{name:'fixture',setup(b){
+`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',loader:{'.png':'dataurl','.css':'empty'},define:{'process.env.NODE_ENV':'"production"','process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME':'""'},plugins:[{name:'fixture',setup(b){
 b.onResolve({filter:/^next\/(navigation|image)$/},a=>({path:a.path,namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},a=>({contents:a.path.endsWith('navigation')?`import{useSyncExternalStore}from'react';const router={push:url=>{history.pushState(null,'',url);window.dispatchEvent(new Event('fixture:navigate'))},refresh:()=>{}};export const useRouter=()=>router;export const usePathname=()=>useSyncExternalStore(fn=>{window.addEventListener('fixture:navigate',fn);return()=>window.removeEventListener('fixture:navigate',fn)},()=>location.pathname);const search=new URLSearchParams(location.search);export const useSearchParams=()=>search;`:`import React from'react';export default({src,priority,fill,unoptimized,...props})=>React.createElement('img',{...props,src:typeof src==='string'?src:src.src});`,loader:'jsx',resolveDir:process.cwd()}));
 b.onLoad({filter:/movie-go-app\.tsx$/},a=>({contents:fs.readFileSync(a.path,'utf8')+'\nexport{blank};',loader:'tsx',resolveDir:dirname(a.path)}));
 }}]});
 const browser=await pw.launch({executablePath:await chromium.executablePath(),args:chromium.args.filter(arg=>arg!=='--single-process'),headless:true});try{
-const page=await browser.newPage({viewport:{width:1280,height:1000},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
-const css=fs.readFileSync('src/app/globals.css','utf8').replace('@import "tailwindcss";','');
+const page=await browser.newPage({viewport:{width:1280,height:1000},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('BROWSER FIXTURE ERROR:',e.message)});
+const css=fs.readFileSync('src/app/globals.css','utf8').replace('@import "tailwindcss";','')+'\n'+fs.readFileSync('src/components/admin-workspace.css','utf8');
 await page.route('https://fixture.test/**',r=>r.request().url().endsWith('.png')?r.fulfill({contentType:'image/png',body:fs.readFileSync('public/brand/moviemovie-logo.png')}):r.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>'+css+'</style><div id="root"></div>'}));
 const open=async path=>{await page.goto('https://fixture.test'+path);await page.addScriptTag({content:result.outputFiles[0].text});await page.waitForTimeout(500)};
 const widths=[320,360,390,600,760,1024,1280,1920];

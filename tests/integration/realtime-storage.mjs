@@ -40,6 +40,8 @@ try{
  const png=new Uint8Array([137,80,78,71,13,10,26,10,1]);
  await user(null);await upload('avatar','image/png',png,401);await user(1);await upload('poster','image/png',png,403);await upload('avatar','image/png',new TextEncoder().encode('<svg>'),400);
  const avatar=await upload('avatar','image/png',png,200);assert(avatar.url.startsWith('https://'));assert.equal((await pg.query('SELECT avatar FROM mg_users WHERE id=1')).rows[0].avatar,avatar.url);assert.equal(uploads[0].options.cacheControl,'31536000');assert(uploads[0].path.startsWith('avatar/1/'));
+ const suggestionPoster=await upload('suggestionPoster','image/png',png,200);assert(suggestionPoster.url.includes('/suggestionPoster/1/'));assert.equal((await pg.query('SELECT avatar FROM mg_users WHERE id=1')).rows[0].avatar,avatar.url);
+ const suggestionBackdrop=await upload('suggestionBackdrop','image/png',png,200);assert(suggestionBackdrop.url.includes('/suggestionBackdrop/1/'));
  storageFailure=true;const failure=await upload('avatar','image/png',png,500);assert(!failure.error.includes('private backend'));assert.equal((await pg.query('SELECT avatar FROM mg_users WHERE id=1')).rows[0].avatar,avatar.url);storageFailure=false;
  await user(3);const poster=await upload('poster','image/png',png,200);assert(poster.url.startsWith('https://'));await pg.query('UPDATE mg_movies SET poster=$1 WHERE id=1',[poster.url]);
  // No revision advances on rolled-back/no-op writes; a sender and recipient get private invalidation.

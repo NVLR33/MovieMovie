@@ -1,3 +1,5 @@
+import { writeAdminAudit } from '@/lib/admin-audit';
+import { canModerate } from '@/lib/permissions';
 import { readJsonObject, RequestError, requestFailure } from '@/lib/request-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq, gt, ne, sql } from 'drizzle-orm';
@@ -33,7 +35,7 @@ export async function GET(req: NextRequest) {
     const seasons = await loadSeries(db, movieId, user?.id ?? null);
     const [completion] = user ? await db.select({ id: seriesCompletions.id }).from(seriesCompletions)
       .where(and(eq(seriesCompletions.userId, user.id), eq(seriesCompletions.movieId, movieId))).limit(1) : [];
-    return NextResponse.json({ seasons, catalogComplete: film.seriesCatalogComplete, completed: Boolean(completion), canEdit: ['admin', 'moderator'].includes(user?.role || ''), authenticated: Boolean(user) }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return NextResponse.json({ seasons, catalogComplete: film.seriesCatalogComplete, completed: Boolean(completion), canEdit: canModerate(user), authenticated: Boolean(user) }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return failure(error); }
 }
 
@@ -46,11 +48,15 @@ export async function POST(req: NextRequest) {
     const movieId = positive(body.movieId);
     const action = String(body.action || '');
     const editing = ['saveSeason', 'deleteSeason', 'saveEpisode', 'publish'].includes(action);
-    if (editing && !['admin', 'moderator'].includes(user.role)) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
+    if (editing && !canModerate(user)) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
     let newlyCompleted = false;
     await db.transaction(async tx => {
       // Same lock order as watch/rate/comment. Editors and viewers serialize per title.
       await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+      if (editing) {
+        const [current] = await tx.select().from(users).where(eq(users.id,user.id));
+        if (!canModerate(current)) throw new RequestError('Недостаточно прав',403);
+      }
       const [film] = await tx.select().from(movies).where(eq(movies.id, movieId)).for('update');
       if (!film || !isSeries(film.category)) throw new InputError('Сериал не найден');
       if (action === 'rateSeason' || action === 'rateEpisode') {
@@ -102,6 +108,7 @@ export async function POST(req: NextRequest) {
         if (body.complete && (!seasons.length || seasons.some((s, i) => s.number !== i + 1 || !s.episodes.length || s.episodes.some((e, j) => e.number !== j + 1)))) throw new InputError('Нужны все сезоны и серии подряд, начиная с 1');
         await tx.update(movies).set({ seriesCatalogComplete: body.complete }).where(eq(movies.id, movieId));
       } else throw new InputError('Неизвестное действие');
+      if (editing) await writeAdminAudit(tx,user,`series.${action}`,'movie',movieId,film.title);
       if (editing && action !== 'publish') {
         const [count] = await tx.select({ value: sql<number>`count(*)::int` }).from(seriesEpisodes).innerJoin(seriesSeasons, eq(seriesEpisodes.seasonId, seriesSeasons.id)).where(eq(seriesSeasons.movieId, movieId));
         await tx.update(movies).set({ seriesCatalogComplete: false, episodes: count.value }).where(eq(movies.id, movieId));

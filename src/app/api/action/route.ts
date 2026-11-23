@@ -1,3 +1,8 @@
+import { canCreateMaterial, canModerate, isAdministrator } from '@/lib/permissions';
+import { writeAdminAudit } from '@/lib/admin-audit';
+import { manageAccount } from '@/lib/admin-server';
+import { parseMaterialInput } from '@/lib/material-input';
+import { handleMovieSuggestion, lockMaterial, existingMaterial } from '@/lib/movie-suggestions-server';
 import { readJsonObject, RequestError, requestFailure, databaseId, isDatabaseFailure } from '@/lib/request-validation';
 import { imageUrl } from '@/lib/image-storage';
 import { awardPetActivity } from '@/lib/cinema-pet-server';
@@ -14,6 +19,7 @@ import { syncChallengeProgress } from '@/lib/challenges';
 import {
   users,
   movies,
+  movieSuggestions,
   watches,
   ratings,
   comments,
@@ -22,7 +28,6 @@ import {
   favorites,
   friendships,
   notifications,
-  movieSuggestions,
   gameScores,
   messages,
   watchRooms,
@@ -274,15 +279,17 @@ export async function POST(req: NextRequest) {
       };
 
     } else if (action === 'commentSpoiler') {
-      if (!['admin', 'moderator'].includes(user.role)) throw Error('Недостаточно прав');
+      if (!canModerate(user)) throw new RequestError('Недостаточно прав',403);
       const commentId = Number(body.commentId);
       if (!Number.isSafeInteger(commentId) || commentId < 1 || typeof body.spoiler !== 'boolean') throw Error('Некорректный тег спойлера');
       const [target] = await db.select({ userId: comments.userId }).from(comments).where(eq(comments.id, commentId));
       if (!target) throw Error('Комментарий не найден');
       await db.transaction(async tx => {
-        await tx.select({ id: users.id }).from(users).where(eq(users.id, target.userId)).for('update');
+        const accounts = await tx.select().from(users).where(inArray(users.id,[user.id,target.userId])).orderBy(asc(users.id)).for('update');
+        if (!canModerate(accounts.find(account=>account.id===user.id))) throw new RequestError('Недостаточно прав',403);
         const changed = await tx.update(comments).set({ spoiler: body.spoiler }).where(eq(comments.id, commentId)).returning({ id: comments.id });
         if (!changed.length) throw Error('Комментарий не найден');
+        await writeAdminAudit(tx,user,'comment.spoiler','comment',commentId,'Изменена отметка спойлера',{spoiler:body.spoiler});
         await syncUserTitles(tx, target.userId);
       });
     } else if (action === 'titleEquip') {
@@ -321,6 +328,12 @@ export async function POST(req: NextRequest) {
       await db.transaction(async tx => {
         await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
         await tx.select({ id: movies.id }).from(movies).where(eq(movies.id, existing.movieId)).for('update');
+        if (!isOwner) {
+          const [actor] = await tx.select().from(users).where(eq(users.id,user.id));
+          if (!canModerate(actor)) throw new RequestError('Недостаточно прав',403);
+          if (!reason) throw new RequestError('Для удаления чужого комментария укажите причину');
+          await writeAdminAudit(tx,user,'comment.delete','comment',commentId,'Удалён комментарий с ответами',{reason,movieId:existing.movieId,authorId:existing.userId});
+        }
         const descendants = sql`WITH RECURSIVE thread AS (SELECT id FROM ${comments} WHERE id=${commentId} UNION SELECT child.id FROM ${comments} child JOIN thread ON child.parent_id=thread.id) SELECT id FROM thread`;
         await tx.delete(reactions).where(sql`${reactions.commentId} IN (${descendants})`);
         await tx.delete(comments).where(sql`${comments.id} IN (${descendants})`);
@@ -538,306 +551,30 @@ export async function POST(req: NextRequest) {
         link: `/movie/${movieId}`
       });
 
-          } else if (action === 'suggestMovie') {
-      // [ACTION:SUGGEST_MOVIE] User-submitted movie suggestion
-
-      const title = String(body.title || '').trim().slice(0, 150);
-      const year = Number(body.year);
-      const genre = String(body.genre || '').trim().slice(0, 200);
-      const category = String(body.category || '').trim().slice(0, 50);
-      const comment = String(body.comment || '').trim().slice(0, 1000);
-
-      const allowedCategories = [
-        'Фильм',
-        'Сериал',
-        'Мультфильм',
-        'Мультсериал',
-        'Аниме-сериал',
-        'Аниме-фильм'
-      ];
-
-      if (title.length < 2) {
-        throw Error('Название должно содержать минимум 2 символа');
-      }
-
-      if (!Number.isInteger(year) || year < 1888 || year > 2100) {
-        throw Error('Некорректный год выпуска');
-      }
-
-      if (!genre) {
-        throw Error('Укажите жанр');
-      }
-
-      if (!allowedCategories.includes(category)) {
-        throw Error('Выберите категорию');
-      }
-
-      // Максимум 5 активных предложений от пользователя
-      const pending = await db
-        .select({ id: movieSuggestions.id })
-        .from(movieSuggestions)
-        .where(
-          and(
-            eq(movieSuggestions.userId, user.id),
-            eq(movieSuggestions.status, 'pending')
-          )
-        );
-
-      if (pending.length >= 5) {
-        throw Error('У вас уже 5 предложений на рассмотрении');
-      }
-
-      // Проверяем, нет ли материала с таким названием и годом
-      const [existingMovie] = await db
-        .select({ id: movies.id })
-        .from(movies)
-        .where(
-          and(
-            eq(movies.title, title),
-            eq(movies.year, year)
-          )
-        )
-        .limit(1);
-
-      if (existingMovie) {
-        throw Error('Такой материал уже есть в каталоге');
-      }
-
-      // Проверяем повторные предложения
-      const [existingSuggestion] = await db
-        .select({ id: movieSuggestions.id })
-        .from(movieSuggestions)
-        .where(
-          and(
-            eq(movieSuggestions.title, title),
-            eq(movieSuggestions.year, year),
-            ne(movieSuggestions.status, 'rejected')
-          )
-        )
-        .limit(1);
-
-      if (existingSuggestion) {
-        throw Error('Этот материал уже предложен другим пользователем');
-      }
-
-      // Сохраняем предложение
-      const [suggestion] = await db
-        .insert(movieSuggestions)
-        .values({
-          userId: user.id,
-          title,
-          year,
-          genre,
-          category,
-          comment: comment || null,
-          status: 'pending'
-        })
-        .returning({ id: movieSuggestions.id });
-
-      // Уведомляем администраторов и модераторов
-      const moderators = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(
-          sql`${users.role} IN ('admin', 'moderator')`
-        );
-
-      if (moderators.length) {
-        await db.insert(notifications).values(
-          moderators.map(mod => ({
-            userId: mod.id,
-            actorId: user.id,
-            message: `🎬 ${user.username} предложил(а) добавить «${title}»`,
-            link: '/admin?tab=suggestions'
-          }))
-        );
-      }
-
-      result = {
-        ok: true,
-        suggestionId: suggestion.id
-      };
-
-          } else if (action === 'approveSuggestion') {
-      if (!['admin', 'moderator'].includes(user.role)) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
-      const id = Number(body.id), targetMovie = Number(body.movieId);
-      if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(targetMovie) || targetMovie < 1) throw Error('Неверный ID');
-      const [proposed] = await db.select().from(movieSuggestions).where(eq(movieSuggestions.id, id));
-      if (!proposed) throw Error('Предложение не найдено');
-      await db.transaction(async tx => {
-        await tx.select({ id: users.id }).from(users).where(eq(users.id, proposed.userId)).for('update');
-        const [suggestion] = await tx.select().from(movieSuggestions).where(eq(movieSuggestions.id, id)).for('update');
-        const [film] = await tx.select().from(movies).where(eq(movies.id, targetMovie));
-        if (!suggestion || suggestion.status !== 'pending') throw Error('Предложение уже рассмотрено');
-        if (!film || film.year !== suggestion.year || film.title.trim().toLowerCase() !== suggestion.title.trim().toLowerCase()) throw Error('Материал должен совпадать с предложением по названию и году');
-        await tx.update(movieSuggestions).set({ status: 'approved', movieId: targetMovie, reviewedBy: user.id, reviewedAt: new Date() }).where(eq(movieSuggestions.id, id));
-        await awardPetActivity(tx, suggestion.userId, 'catalog', targetMovie);
-        await tx.insert(notifications).values({ userId: suggestion.userId, actorId: user.id, message: `🎬 Предложение «${suggestion.title}» принято в каталог. Попкорн начислен в пределах дневного лимита!`, link: `/movie/${targetMovie}` });
-      });
-    } else if (action === 'rejectSuggestion') {
-      // [ACTION:REJECT_SUGGESTION]
-
-      if (!['admin', 'moderator'].includes(user.role)) {
-        return NextResponse.json(
-          { error: 'Недостаточно прав' },
-          { status: 403 }
-        );
-      }
-
-      const suggestionId = Number(body.id);
-      const reason = String(body.reason || '').trim().slice(0, 500);
-
-      const [suggestion] = await db
-        .select()
-        .from(movieSuggestions)
-        .where(eq(movieSuggestions.id, suggestionId))
-        .limit(1);
-
-      if (!suggestion) {
-        throw Error('Предложение не найдено');
-      }
-
-      if (suggestion.status !== 'pending') {
-        throw Error('Это предложение уже рассмотрено');
-      }
-
-      await db
-        .update(movieSuggestions)
-        .set({
-          status: 'rejected',
-          reviewedBy: user.id,
-          reviewedAt: new Date(),
-          reviewReason: reason || null
-        })
-        .where(eq(movieSuggestions.id, suggestionId));
-
-      await db.insert(notifications).values({
-        userId: suggestion.userId,
-        actorId: user.id,
-        message: `❌ Ваше предложение «${suggestion.title}» отклонено${reason ? ': ' + reason : ''}`,
-        link: '/catalog'
-      });
-
-      result = { ok: true, rejected: true };
-      
+    } else if (['suggestMovie', 'approveSuggestion', 'rejectSuggestion'].includes(action)) {
+      result = await handleMovieSuggestion(user, body);
     } else if (action === 'movieSave') {
-      if (!['admin', 'moderator'].includes(user.role)) {
+      if (body.id ? !canModerate(user) : !canCreateMaterial(user)) {
         return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
       }
 
-      const title = String(body.title || '').trim();
-      const description = String(body.description || '').trim();
-
-      if (!title || !description || !body.poster || !body.category) {
-        throw Error('Заполните название, описание, категорию и обложку');
-      }
-
-  // Период выхода сериалов и аниме-сериалов
-const category = String(body.category || '');
-const isSeries = category.toLowerCase().includes('сериал');
-
-const startYear = Number(body.year);
-if (!Number.isInteger(startYear) || startYear < 1888 || startYear > 2100) throw Error('Укажите корректный год выпуска');
-if (!['Фильм','Сериал','Мультфильм','Мультсериал','Аниме-сериал','Аниме-фильм'].includes(category)) throw Error('Неизвестная категория');
-const duration = body.duration === undefined || body.duration === '' ? 90 : Number(body.duration);
-const episodes = body.episodes === undefined || body.episodes === null || body.episodes === '' ? null : Number(body.episodes);
-if (!Number.isInteger(duration) || duration < 1 || duration > 10000 || (episodes !== null && (!Number.isInteger(episodes) || episodes < 1 || episodes > 100000))) throw Error('Некорректная длительность или количество серий');
-const watchUrl = String(body.watchUrl || '').trim();
-if (watchUrl && !/^https?:\/\//i.test(watchUrl)) throw Error('Ссылка просмотра должна начинаться с HTTP(S)');
-const ongoing = isSeries && body.ongoing === true;
-
-const endYear =
-  isSeries && !ongoing && body.endYear != null && body.endYear !== ''
-    ? Number(body.endYear)
-    : null;
-
-if (endYear !== null) {
-  if (!Number.isInteger(endYear) || endYear < startYear || endYear > 2100) {
-    throw Error('Укажите корректный год окончания сериала');
-  }
-}
-
-      // Возрастной рейтинг
-      const ageRating = String(body.ageRating || '').trim();
-
-      if (ageRating && !/^\d{1,2}\+$/.test(ageRating)) {
-        throw Error('Возрастной рейтинг должен быть в формате 0+, 6+, 12+, 16+ или 18+');
-      }
-
-      if (ageRating && Number(ageRating.slice(0, -1)) > 21) {
-        throw Error('Возрастной рейтинг не может превышать 21+');
-      }
-
-      // Проверка дубликатов при создании
-      if (!body.id) {
-        const [dup] = await db
-          .select({ id: movies.id })
-          .from(movies)
-          .where(
-            and(
-              eq(movies.title, title),
-              eq(movies.year, startYear),
-              eq(movies.category, category)
-            )
-          )
-          .limit(1);
-
-        if (dup) {
-          throw Error(
-            `Материал «${title}» уже существует. Используйте редактирование.`
-          );
+      const input = parseMaterialInput(body);
+      result = await db.transaction(async tx => {
+        const [actor] = await tx.select().from(users).where(eq(users.id,user.id)).for('update');
+        if (body.id ? !canModerate(actor) : !canCreateMaterial(actor)) throw new RequestError('Права изменились. Обновите страницу.',403);
+        await lockMaterial(tx, input);
+        const duplicate = await existingMaterial(tx, input);
+        if (duplicate && duplicate.id !== body.id) throw new RequestError('Такой материал уже существует. Используйте редактирование.', 409);
+        if (body.id) {
+          const updated = await tx.update(movies).set(input).where(eq(movies.id, Number(body.id))).returning({ id: movies.id });
+          if (!updated.length) throw new RequestError('Материал не найден', 404);
+          await writeAdminAudit(tx, actor!, 'movie.update','movie',updated[0].id,input.title);
+          return { ok: true, movieId: updated[0].id, created: false };
         }
-      }
-
-      // Данные для сохранения фильма
-      const input = {
-        title: title.slice(0, 150),
-        originalTitle: String(body.originalTitle || ''),
-        description: description.slice(0, 3000),
-        category,
-        genre: String(body.genre || ''),
-        studio: String(body.studio || ''),
-        ...(typeof body.franchise === 'string' ? { franchise: body.franchise.trim().slice(0, 150) } : {}),
-        ...(typeof body.festivalRecognized === 'boolean' ? { festivalRecognized: body.festivalRecognized } : {}),
-        year: startYear,
-        endYear,
-        ongoing,
-        ageRating: ageRating || null,
-        duration,
-        episodes,
-        mood: String(body.mood || ''),
-        poster: imageUrl(body.poster, true),
-        backdrop: imageUrl(body.backdrop),
-        watchUrl,
-        director: String(body.director || ''),
-        ...(typeof body.cast === 'string' ? { cast: body.cast.trim().slice(0, 4000) } : {}),
-        country: String(body.country || '')
-      };
-
-if (body.id) {
-  const updated = await db
-    .update(movies)
-    .set(input)
-    .where(eq(movies.id, Number(body.id))).returning({ id: movies.id });
-
-  if (!updated.length) throw new RequestError('Материал не найден', 404);
-  result = {
-    ok: true,
-    movieId: Number(body.id),
-    created: false
-  };
-} else {
-  const [createdMovie] = await db
-    .insert(movies)
-    .values(input)
-    .returning({ id: movies.id });
-
-  result = {
-    ok: true,
-    movieId: createdMovie.id,
-    created: true
-  };
-}
+        const [created] = await tx.insert(movies).values(input).returning({ id: movies.id });
+        await writeAdminAudit(tx, actor!, 'movie.create','movie',created.id,input.title);
+        return { ok: true, movieId: created.id, created: true };
+      });
     } else if (action === 'questComplete') {
       // No server-defined daily quests exist: never accept XP rewards from the client.
       throw Error('Ежедневные задания пока недоступны');
@@ -869,6 +606,11 @@ if (body.id) {
 
       if (!Number.isSafeInteger(id) || id < 1) throw Error('Неверный ID материала');
       await db.transaction(async tx => {
+        const [actor] = await tx.select().from(users).where(eq(users.id,user.id)).for('update');
+        if (!isAdministrator(actor)) throw new RequestError('Недостаточно прав',403);
+        const [film] = await tx.select().from(movies).where(eq(movies.id,id)).for('update');
+        if (!film) throw new RequestError('Материал не найден',404);
+        await writeAdminAudit(tx, actor!, 'movie.delete','movie',id,film.title);
         const commentIds = tx.select({ id: comments.id }).from(comments).where(eq(comments.movieId, id));
         await tx.delete(reactions).where(inArray(reactions.commentId, commentIds));
         await tx.delete(comments).where(eq(comments.movieId, id));
@@ -884,16 +626,7 @@ if (body.id) {
         await tx.delete(movies).where(eq(movies.id, id));
       });
     } else if (action === 'role') {
-      if (user.role !== 'admin') {
-        return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
-      }
-
-      const role = String(body.role);
-      if (!['visitor', 'vip', 'moderator', 'admin'].includes(role)) throw Error('Неверная роль');
-      if (Number(body.userId) === user.id) throw Error('Нельзя изменить свою роль');
-
-      const changed = await db.update(users).set({ role }).where(eq(users.id, Number(body.userId))).returning({ id: users.id });
-      if (!changed.length) throw new RequestError('Пользователь не найден',404);
+      result = await manageAccount(user, { ...body, command: 'role' });
     } else {
       throw Error('Неизвестное действие');
     }

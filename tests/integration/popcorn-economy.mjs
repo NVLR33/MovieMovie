@@ -25,7 +25,7 @@ async function handlers() {
 (async()=>{const pg=new PGlite();const RealDate=Date;let clock=RealDate.parse('2026-11-16T12:00:00Z');try{
  await pg.exec(`CREATE ROLE anon;CREATE ROLE authenticated;`);await pg.exec(fs.readFileSync('tests/integration/fixtures/pre-economy-schema.sql','utf8'));
  const bundle=fs.readFileSync('scripts/supabase/01-upgrade.sql','utf8');await pg.exec(bundle);await pg.exec(bundle);
- assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,9);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,11);
  assert.deepEqual((await pg.query(fs.readFileSync('scripts/supabase/02-verify.sql','utf8'))).rows.filter(r=>r.result!=='OK'),[]);
  const schemaAudit=fs.readFileSync('scripts/supabase/03-schema-audit.sql','utf8');
  assert.deepEqual((await pg.query(schemaAudit)).rows.filter(r=>r.result!=='OK'),[]);
@@ -100,12 +100,12 @@ async function handlers() {
  const indexNames=['mg_watch_user_movie','mg_watch_user_date','mg_watch_movie','mg_rating_movie_value','mg_comment_movie_date','mg_notification_user_date','mg_message_pair_date','mg_popcorn_user_history'];
  await pg.exec("DELETE FROM moviemovie_migrations.history WHERE name='20261122-z-system-indexes.sql';"+indexNames.map(name=>'DROP INDEX '+name+';').join('')+'ALTER TABLE mg_users RENAME COLUMN bio TO bio_missing;');
  let incrementalRejected=false;try{await pg.exec(bundle)}catch(error){incrementalRejected=/schema verification failed/.test(error.message)}assert(incrementalRejected);await pg.exec('ROLLBACK');
- assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,8);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,10);
  assert.equal((await pg.query("SELECT to_regclass('mg_popcorn_user_history') AS name")).rows[0].name,null);
  assert.equal((await get()).pet.balance,preserved);
  await pg.exec('ALTER TABLE mg_users RENAME COLUMN bio_missing TO bio');
- await pg.exec(bundle);assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,9);
+ await pg.exec(bundle);assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,11);
  await pg.exec(bundle);pet=(await get()).pet;assert.equal(pet.balance,preserved);assert.equal(pet.productionCarry,carry);assert.equal(pet.economy.lifetime.earned-pet.economy.lifetime.spent,pet.balance);
  for(const invalid of [-1,3600000]){let failed=false;try{await pg.query('UPDATE mg_cinema_pets SET production_carry=$1 WHERE user_id=1',[invalid])}catch{failed=true}assert(failed)}
- console.log('Passed full database audit (31 tables, 214 columns), deliberate drift detection, transactional rollback + pending-index incremental upgrade, optional Storage idempotence/privacy; actual wallet API + PGlite: nine repeatable migrations/readiness, authenticated private cursor history and filters; UTC week rollover; all-part weekly criteria, zero/capped/baseline exclusion, atomic concurrent bonus claims, permanent milestone dedup; injected amount/date/user ignored; fractional collection and speed change conservation; unchanged XP; full balance reconciliation and no reset.');
+ console.log('Passed full database audit (32 tables, 228 columns), deliberate drift detection, transactional rollback + pending-index incremental upgrade, optional Storage idempotence/privacy; actual wallet API + PGlite: eleven repeatable migrations/readiness, authenticated private cursor history and filters; UTC week rollover; all-part weekly criteria, zero/capped/baseline exclusion, atomic concurrent bonus claims, permanent milestone dedup; injected amount/date/user ignored; fractional collection and speed change conservation; unchanged XP; full balance reconciliation and no reset.');
 }finally{global.Date=RealDate;await pg.close()}})().catch(e=>{console.error(e);process.exitCode=1});

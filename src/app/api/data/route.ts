@@ -734,10 +734,11 @@ const myChallenges = allChallenges
 const canModerate = !!me &&
   ['admin', 'moderator'].includes(me.role);
 
-const suggestions = canModerate
+const suggestions = me
   ? await db
       .select()
       .from(movieSuggestions)
+      .where(canModerate ? undefined : eq(movieSuggestions.userId, me.id))
       .orderBy(desc(movieSuggestions.createdAt))
   : [];
 

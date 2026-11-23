@@ -1,3 +1,5 @@
+import { sessionIsCurrent } from '@/lib/permissions';
+import { RequestError } from '@/lib/request-validation';
 import { sessionSecret } from '@/lib/auth-validation';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
@@ -12,7 +14,9 @@ function getSecret() {
 }
 
 export async function setSession(id: number) {
-  const token = await new SignJWT({ id })
+  const [account] = await db.select().from(users).where(eq(users.id,id)).limit(1);
+  if (!account || account.isSuspended) throw new RequestError('Аккаунт заблокирован',403);
+  const token = await new SignJWT({ id, sv: account.sessionVersion })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
@@ -47,7 +51,7 @@ export async function getUser() {
     const { payload } = await jwtVerify(token, getSecret(), { algorithms: ['HS256'] });
     if (!Number.isSafeInteger(payload.id) || Number(payload.id) <= 0) return null;
     const [user] = await db.select().from(users).where(eq(users.id, Number(payload.id))).limit(1);
-    return user || null;
+    return user && sessionIsCurrent(user, payload.sv) ? user : null;
   } catch (e) {
     console.error('[AUTH] getUser error:', e);
     return null;
@@ -56,7 +60,8 @@ export async function getUser() {
 
 export function publicUser(user: typeof users.$inferSelect | null) {
   if (!user) return null;
-  const { passwordHash, providerId, ...safe } = user;
+  const { passwordHash, providerId, suspensionReason, sessionVersion, ...safe } = user;
+  void suspensionReason; void sessionVersion;
   void passwordHash;
   void providerId;
   return safe;
