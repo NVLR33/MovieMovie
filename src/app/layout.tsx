@@ -10,6 +10,8 @@ import '../components/ambient-canvas.css';
 import '../components/cinema-hud.css';
 import '../components/cinema-passport.css';
 import '../components/memory-orbit.css';
+import '../components/collection-showcase.css';
+import '../components/weekly-cinema-pulse.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

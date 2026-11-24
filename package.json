@@ -29,7 +29,10 @@
     "test:ambient:browser": "node tests/integration/browser-ambient.mjs",
     "test:hud:browser": "node tests/integration/browser-hud.mjs",
     "test:passport:browser": "node tests/integration/browser-passport.mjs",
-    "test:orbit:browser": "node tests/integration/browser-orbit.mjs"
+    "test:orbit:browser": "node tests/integration/browser-orbit.mjs",
+    "test:rankings:browser": "node tests/integration/browser-ranking-library.mjs",
+    "test:showcase:browser": "node tests/integration/browser-showcase.mjs",
+    "test:pulse:browser": "node tests/integration/browser-weekly-pulse.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

@@ -1,5 +1,6 @@
 import { createDailyGame } from '@/lib/daily-game';
 import { getWeeklyLeaders } from '@/lib/weekly-leaderboard';
+import { buildWeeklyPulse } from '@/lib/weekly-pulse';
 import { calculateUserTitleProgress, titleCollection } from '@/lib/user-titles';
 import { visibleHiddenTrophies } from '@/lib/hidden-achievements';
 import { buildCommunityCollectibles } from '@/lib/community-collectibles';
@@ -843,6 +844,7 @@ pendingSuggestionsCount,
 
       dailyGame: createDailyGame(films),
       weeklyLeaders: getWeeklyLeaders(people, allWatches),
+      weeklyPulse: buildWeeklyPulse(films, allWatches),
 
       leaderboard: people.map(p => {
         const userWatches =

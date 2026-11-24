@@ -121,3 +121,21 @@ test('favorites supports category/size URL roundtrip and ranks before slicing', 
     assert.equal(ranked.materials[0].id, 150);
   }
 });
+
+test('ranking library builds nine lists with actual denominators and independent watched progress', async () => {
+  const { buildRankingLists } = await import('../src/lib/material-ranking');
+  const input = materials.map((film, index) => ({...film, favoriteCount:index<3?1:0}));
+  const lists = buildRankingLists(input,'Все',new Set([1,2,3,150,999]));
+  assert.equal(lists.length,9);
+  assert.deepEqual(lists.filter(list=>list.options.metric==='rating').map(list=>[list.total,list.watched]),[[10,1],[50,1],[100,1]]);
+  assert.deepEqual(lists.filter(list=>list.options.metric==='views').map(list=>[list.total,list.watched]),[[10,3],[50,3],[100,3]]);
+  assert.deepEqual(lists.filter(list=>list.options.metric==='favorites').map(list=>[list.total,list.watched]),[[3,3],[3,3],[3,3]]);
+  assert.equal(input.length,150);
+});
+test('ranking library category/empty/guest snapshots never fabricate progress or a full top', async () => {
+  const { buildRankingLists }=await import('../src/lib/material-ranking');
+  for(const list of buildRankingLists(materials,'Мультфильм',new Set([1,2]))){assert.equal(list.total,0);assert.equal(list.watched,0);}
+  for(const list of buildRankingLists(materials.slice(0,1),'Аниме-сериал')){assert(list.total<=1);assert.equal(list.watched,0);}
+  const changed = buildRankingLists(materials.slice(1,3),'Все',new Set([1,2,3]));
+  assert.equal(changed[0].watched,2);assert.equal(changed[0].total,2);
+});

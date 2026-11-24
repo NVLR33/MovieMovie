@@ -52,8 +52,13 @@ import { isSeries } from '@/lib/series';
 import DailyGame from './daily-game';
 import type { DailyGameQuestion } from '@/lib/daily-game';
 import type { WeeklyLeader } from '@/lib/weekly-leaderboard';
+import type { WeeklyPulse } from '@/lib/weekly-pulse';
+import WeeklyCinemaPulse from './weekly-cinema-pulse';
 import { formatFilmRating } from '@/lib/rating-display';
 import TopMaterials from './top-materials';
+import HomeTopFive from './home-top-five';
+import CollectionShowcase from './collection-showcase';
+import CollaborativeCollections from './collaborative-collections';
 import CinemaCardStudio from './cinema-card-studio';
 import HiddenTrophies from './hidden-trophies';
 import UserTitleStudio, { UserTitleBadge } from './user-titles';
@@ -142,6 +147,7 @@ type Data = {
 
   leaderboard: Leader[];
   weeklyLeaders: WeeklyLeader[];
+  weeklyPulse: WeeklyPulse | null;
   dailyGame: DailyGameQuestion | null;
   friendsActivity: FriendActivity[];
   unreadMessages: number;
@@ -193,6 +199,7 @@ const blank: Data = {
   scores: [],
   leaderboard: [],
   weeklyLeaders: [],
+  weeklyPulse: null,
   dailyGame: null,
   friendsActivity: [],
   unreadMessages: 0,
@@ -449,7 +456,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
       if (!response.ok) return;
       const snapshot = await response.json();
       if (version === refreshVersion.current && !pendingActions.current.size && Array.isArray(snapshot.films)) {
-        setData(current => ({ ...current, films: snapshot.films, weeklyLeaders: snapshot.weeklyLeaders }));
+        setData(current => ({ ...current, films: snapshot.films, weeklyLeaders: snapshot.weeklyLeaders, weeklyPulse: snapshot.weeklyPulse ?? current.weeklyPulse }));
       }
     } catch { /* Keep the last valid public snapshot; reconnect/fallback will resync. */ }
   };
@@ -1009,10 +1016,10 @@ return (
           </header>
 
           <main className="content" key={path}>
-            {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} />
+            {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} action={action} />
               : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema key={`${searchParams.get('mode')}:${searchParams.get('country')}:${data.user?.id || 'guest'}`} initialMode={searchParams.get('mode') || ''} initialCountry={searchParams.get('country') || ''} films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={go} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
-              : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} />
+              : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} signedIn={!!data.user} />
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} onSeriesUpdated={refresh} />)
               : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
               : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
@@ -1025,7 +1032,7 @@ return (
               : active === 'viewuser' ? <ViewUserProfile key={viewUserId} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
               : active === 'compare' ? <ComparePage key={compareId} data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
               : active === 'wrapped' ? <WrappedPage data={data} go={go} auth={() => setAuthOpen(true)} />
-              : active === 'collab' ? <CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
+              : active === 'collab' ? <CollectionShowcase films={data.films} go={go} watchedIds={watchedIds} signedIn={!!data.user} personal={<CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />} />
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
@@ -1604,9 +1611,8 @@ function CollapsibleText({
 
 // --- Pages ---
 
-function HomePage({ films, data, go, roulette, auth, en }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; }) {
+function HomePage({ films, data, go, roulette, auth, en, action }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; action: (payload: Record<string, unknown>, success?: string) => Promise<boolean>; }) {
   const featured = useMemo(() => films.find(f => (f as any).featured) || films[0], [films]);
-  const homeWatchedIds = useMemo(() => new Set(data.watches.map(watch => watch.movieId)), [data.watches]);
 
   const [capsuleMovie, setCapsuleMovie] = useState<{
   id: number;
@@ -1738,7 +1744,7 @@ const rating = data.ratings.find(x => x.movieId === f.id);
         </div>
       )}
 
-      <TopMaterials films={films} go={go} compact en={en} watchedIds={homeWatchedIds} />
+      <HomeTopFive films={films} go={go} en={en} />
 
       {data.user && data.onThisDay.length > 0 && (
         <div className="otd-section">
@@ -1893,27 +1899,7 @@ const rating = data.ratings.find(x => x.movieId === f.id);
   </>
 )}
 
-      <section className="home-section pulse-section">
-        <SectionTitle kicker={en ? 'CINEMA PULSE' : 'КИНОПУЛЬС'} title={en ? 'This week' : 'На этой неделе'} />
-        <div className="pulse-grid">
-          {[
-            { tag: 'ФИЛЬМ НЕДЕЛИ', icon: '✦', film: [...films].sort((a, b) => b.rating - a.rating)[0], kind: 'best', caption: 'История, в которую влюбились зрители' },
-            { tag: 'САМЫЙ СПОРНЫЙ', icon: '↘', film: films.filter(f => f.ratingCount > 0 && f.rating > 0).sort((a, b) => a.rating - b.rating)[0], kind: 'worst', caption: 'А что скажешь ты?' },
-            { tag: 'СВЕЖЕЕ ПОПОЛНЕНИЕ', icon: '＋', film: [...films].sort((a, b) => b.year - a.year)[0], kind: 'new', caption: 'Недавно добавлено в каталог' },
-            { tag: 'ВЫСОКИЙ РЕЙТИНГ', icon: '★', film: [...films].sort((a, b) => b.rating - a.rating)[1], kind: 'rated', caption: 'Рекомендовано сообществом' }
-          ].filter(item => item.film).map((item, i) => (
-            <button key={i} className={`pulse-card pulse-${item.kind}`} onClick={() => go('/movie/' + item.film!.id)}>
-              <PosterThumb movieId={item.film!.id} src={item.film!.poster} alt="" wrapStyle={{ display: 'block' }} />
-              <div>
-                <span className="eyebrow">{item.icon} {item.tag}</span>
-                <h3>{item.film!.title}</h3>
-                <p>{item.caption}</p>
-                <b><Star size={13} fill="currentColor" /> {formatFilmRating(item.film!)} <ArrowUpRight size={16} /></b>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
+      <WeeklyCinemaPulse films={films} pulse={data.weeklyPulse} watches={data.watches} bookmarks={data.bookmarks} signedIn={!!data.user} action={action} auth={auth} go={go} en={en} />
 
       <section className="home-section">
         <SectionTitle kicker={en ? 'JUST ADDED' : 'ТОЛЬКО ЧТО В КОЛЛЕКЦИИ'} title={en ? 'Fresh discoveries' : 'Свежие находки'} link={en ? 'See all' : 'Смотреть всё'} onClick={() => go('/catalog?sort=new')} />
@@ -4579,33 +4565,8 @@ function WrappedPage({
 }
 
 function CollabLists({ data, go, action, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; auth: () => void; }) {
-  const [title, setTitle] = useState('');
   if (!data.user) return <Gate title="Совместные подборки" description="Создавай списки и выбирай фильмы вместе с друзьями." auth={auth} />;
-  return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">СМОТРИМ ВМЕСТЕ</span><h1>Совместные <em>подборки.</em></h1><p>Голосуй и добавляй фильмы.</p></div>
-      </div>
-      <div className="collab-create">
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Название новой подборки..." />
-        <button className="primary-btn" onClick={() => { if (title) action({ action: 'createList', title }); setTitle(''); }}><Plus size={16} /> Создать</button>
-      </div>
-      <div className="collab-grid">
-        {data.lists?.map((l: any) => (
-          <div key={l.id} className="collab-list">
-            <h3>{l.title}</h3>
-            {l.items?.map((i: any) => (
-              <div key={i.id} className="collab-item">
-                <PosterThumb movieId={i.film?.id} src={i.film?.poster} alt="" />
-                <span>{i.film?.title}</span>
-                <button onClick={() => action({ action: 'voteList', itemId: i.id })}><Heart size={14} /> {i.votes}</button>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </>
-  );
+  return <CollaborativeCollections films={data.films} lists={data.lists || []} go={go} action={action} />;
 }
 
 function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>) => Promise<boolean>; auth: () => void; }) {
