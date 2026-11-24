@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { Sparkles } from 'lucide-react';
 import { browserStorage } from '@/lib/browser-preferences';
 import { paletteTokens, type AmbientPalette } from '@/lib/ambient-palette';
 import { ambientImageSource, imagePalette } from '@/lib/ambient-image';
@@ -24,8 +23,14 @@ function subscribe(callback: () => void) {
 const snapshot = () =>
   memoryPreference ?? browserStorage.getItem(PREFERENCE) !== 'false';
 const serverSnapshot = () => true;
-function useEnabled() {
-  return useSyncExternalStore(subscribe, snapshot, serverSnapshot);
+export function useAmbientPreference() {
+  const enabled = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
+  const setEnabled = (value: boolean) => {
+    memoryPreference = value;
+    browserStorage.setItem(PREFERENCE, String(value));
+    window.dispatchEvent(new Event(EVENT));
+  };
+  return [enabled, setEnabled] as const;
 }
 function clearPalette(root: HTMLElement) {
   delete root.dataset.ambient;
@@ -39,27 +44,6 @@ function apply(root: HTMLElement, palette: AmbientPalette) {
   root.dataset.ambient = 'on';
   root.dataset.ambientStatus = 'ready';
 }
-export function AmbientToggle() {
-  const enabled = useEnabled();
-  return (
-    <button
-      type="button"
-      className="ambient-toggle"
-      aria-label="Атмосфера фильма"
-      aria-pressed={enabled}
-      title="Цвета постера в оформлении сайта. Выбор сохраняется только в этом браузере."
-      onClick={() => {
-        memoryPreference = !enabled;
-        browserStorage.setItem(PREFERENCE, String(!enabled));
-        window.dispatchEvent(new Event(EVENT));
-      }}
-    >
-      <Sparkles size={16} />
-      <span>Атмосфера</span>
-      <b>{enabled ? 'Вкл' : 'Выкл'}</b>
-    </button>
-  );
-}
 export default function AmbientCanvas({
   poster,
   backdrop,
@@ -67,7 +51,7 @@ export default function AmbientCanvas({
   poster?: string | null;
   backdrop?: string | null;
 }) {
-  const enabled = useEnabled(),
+  const [enabled] = useAmbientPreference(),
     current = useRef<AmbientPalette | null>(null);
   const posterSource = ambientImageSource(poster),
     backdropSource = ambientImageSource(backdrop);

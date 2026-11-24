@@ -1,3 +1,4 @@
+import { chooseTheme } from './settings-controls.mjs';
 // Real production HUD and server XP. Never runs against a remote or unmarked DB.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -161,8 +162,10 @@ try {
     'none',
   );
   // Real in-flight data refresh state, finite loading heartbeat and reduced-motion override.
+  const releaseData = [];
+  let holdData = true;
   await page.route('**/api/data', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (holdData) await new Promise((resolve) => releaseData.push(resolve));
     await route.continue();
   });
   await page
@@ -170,8 +173,7 @@ try {
     .click();
   // Theme mutation causes the same full-data refresh as other profile actions.
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.locator('.theme-menu').hover();
-  await page.getByRole('button', { name: 'Светлая', exact: true }).click();
+  await chooseTheme(page, 'Светлая');
   await page.waitForFunction(
     () => document.querySelector('.app-shell')?.dataset.hudBusy === 'true',
   );
@@ -188,15 +190,21 @@ try {
       .evaluate((el) => getComputedStyle(el, '::after').animationName),
     'hud-sync',
   );
-  await page.waitForFunction(
-    () => document.querySelector('.app-shell')?.dataset.hudBusy === 'false',
+  assert(
+    releaseData.length > 0,
+    'Hold the real data refresh until motion checks finish',
   );
-  assert.equal(
-    await page
-      .locator('.hud-level-panel')
-      .evaluate((el) => getComputedStyle(el, '::after').animationName),
-    'none',
-  );
+  holdData = false;
+  for (const release of releaseData) release();
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('.hud-level-panel');
+    return (
+      document.querySelector('.app-shell')?.dataset.hudBusy === 'false' &&
+      panel &&
+      getComputedStyle(panel, '::after').animationName === 'none'
+    );
+  });
+  // The wait checks both states atomically; another real SSE refresh may begin afterwards.
   await page.unroute('**/api/data');
   await page.getByRole('button', { name: 'Готово', exact: true }).click();
   fs.mkdirSync('/tmp/mm-hud-screenshots', { recursive: true });
@@ -204,8 +212,7 @@ try {
     path: '/tmp/mm-hud-screenshots/profile-light-desktop.png',
     fullPage: true,
   });
-  await page.locator('.theme-menu').hover();
-  await page.getByRole('button', { name: 'Тёмная', exact: true }).click();
+  await chooseTheme(page, 'Тёмная');
   await page.waitForFunction(
     () =>
       document.documentElement.dataset.theme === 'dark' &&

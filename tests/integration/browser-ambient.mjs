@@ -1,3 +1,8 @@
+import {
+  chooseTheme,
+  ambientControl,
+  closeSettings,
+} from './settings-controls.mjs';
 // Real production app/Canvas. All SQL mutations are guarded, local and disposable.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -169,9 +174,7 @@ try {
   await openFromCatalogue('Ambient orange and blue');
   await ready();
   assert.equal((await state()).reads, 2);
-  await page
-    .getByRole('button', { name: 'Атмосфера фильма', exact: true })
-    .click();
+  await (await ambientControl(page)).click();
   await page.waitForFunction(
     () => document.documentElement.dataset.ambientStatus === 'off',
   );
@@ -184,20 +187,12 @@ try {
   await page.waitForFunction(
     () => document.documentElement.dataset.ambientStatus === 'off',
   );
-  assert.equal(
-    await page
-      .getByRole('button', { name: 'Атмосфера фильма', exact: true })
-      .getAttribute('aria-pressed'),
-    'false',
-  );
+  assert.equal(await (await ambientControl(page)).isChecked(), false);
   assert.equal((await state()).reads, 0);
-  await page
-    .getByRole('button', { name: 'Атмосфера фильма', exact: true })
-    .click();
+  await (await ambientControl(page)).click();
   await ready();
   // Theme changes recompute contrast-safe surfaces but do not read the poster again.
-  await page.locator('.theme-menu').hover();
-  await page.getByRole('button', { name: 'Светлая', exact: true }).click();
+  await chooseTheme(page, 'Светлая');
   await page.waitForFunction(
     () => document.documentElement.dataset.theme === 'light',
   );
@@ -219,11 +214,10 @@ try {
         () => document.documentElement.scrollWidth <= innerWidth + 1,
       ),
     );
-    const toggle = await page
-      .getByRole('button', { name: 'Атмосфера фильма', exact: true })
-      .boundingBox();
+    const toggle = await (await ambientControl(page)).boundingBox();
     assert(toggle && toggle.width >= 44 && toggle.height >= 40);
   }
+  await closeSettings(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: '/tmp/mm-ambient-screenshots/light-mobile.png',
@@ -236,8 +230,7 @@ try {
     '0s',
   );
   await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.locator('.theme-menu').hover();
-  await page.getByRole('button', { name: 'Тёмная', exact: true }).click();
+  await chooseTheme(page, 'Тёмная');
   await page.waitForFunction(
     () => document.documentElement.dataset.theme === 'dark',
   );
@@ -288,18 +281,11 @@ try {
   await privatePage.waitForFunction(
     () => document.documentElement.dataset.ambientStatus === 'fallback',
   );
-  await privatePage
-    .getByRole('button', { name: 'Атмосфера фильма', exact: true })
-    .click();
+  await (await ambientControl(privatePage)).click();
   await privatePage.waitForFunction(
     () => document.documentElement.dataset.ambientStatus === 'off',
   );
-  assert.equal(
-    await privatePage
-      .getByRole('button', { name: 'Атмосфера фильма', exact: true })
-      .getAttribute('aria-pressed'),
-    'false',
-  );
+  assert.equal(await (await ambientControl(privatePage)).isChecked(), false);
   await restricted.close();
   // Save-Data skips the additional extraction request entirely.
   const saver = await browser.newContext();

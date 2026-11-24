@@ -1,3 +1,4 @@
+import { chooseTheme } from './settings-controls.mjs';
 // Production spatial diary on a disposable marker-guarded local database.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -236,8 +237,7 @@ try {
   await dialog.waitFor({ state: 'detached' });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(() => scrollTo(0, 0));
-  await page.locator('.theme-menu').hover();
-  await page.getByRole('button', { name: 'Светлая', exact: true }).click();
+  await chooseTheme(page, 'Светлая');
   await page.waitForFunction(
     () => document.documentElement.dataset.theme === 'light',
   );

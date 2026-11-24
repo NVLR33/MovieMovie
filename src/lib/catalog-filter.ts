@@ -33,3 +33,15 @@ export function filterCatalog<T extends CatalogMaterial>(films: readonly T[], op
     (watchFilter === 'all' || (watchFilter === 'watched' ? watchedIds.has(film.id) : !watchedIds.has(film.id)))
   ).sort((a, b) => (sort === 'rating' ? b.rating - a.rating : sort === 'new' ? b.year - a.year : sort === 'old' ? a.year - b.year : (b.views || 0) - (a.views || 0)) || a.id - b.id);
 }
+
+/** Disjunctive genre facets: retain every other filter, count each title once per token. */
+export function catalogGenreCounts<T extends CatalogMaterial>(films: readonly T[], options: CatalogOptions, watchedIds: ReadonlySet<number>) {
+  const matches = filterCatalog(films, { ...options, genre: 'Все жанры' }, watchedIds);
+  const counts = new Map<string, number>();
+  for (const film of matches) {
+    for (const genre of new Set(catalogTokens(film.genre).map(token => token.toLocaleLowerCase()))) {
+      counts.set(genre, (counts.get(genre) ?? 0) + 1);
+    }
+  }
+  return { total: matches.length, counts };
+}

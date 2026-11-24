@@ -1,3 +1,4 @@
+import { chooseTheme } from './settings-controls.mjs';
 // Real production app + disposable marker-guarded local SQL only.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -130,6 +131,9 @@ try {
     () => document.querySelector('.home-five-track').scrollLeft > 0,
   );
   await five.getByRole('button', { name: 'По рейтингу', exact: true }).click();
+  await page.waitForFunction(
+    () => document.querySelector('.home-five-track').scrollLeft === 0,
+  );
   assert.equal(
     await five.locator('.home-five-track').evaluate((el) => el.scrollLeft),
     0,
@@ -160,7 +164,9 @@ try {
     favoriteRows = library.locator('.ranking-tone-favorites');
   assert.match(
     await ratingRows.nth(2).locator('.ranking-list-progress').innerText(),
-    /3 из 12/,
+    new RegExp(
+      `3 из ${snapshot.films.filter((film) => film.category === category && film.ratingCount > 0 && film.rating > 0).length}`,
+    ),
   );
   assert.match(
     await favoriteRows.first().locator('.ranking-list-progress').innerText(),
@@ -186,7 +192,13 @@ try {
   );
   await ratingRows.nth(2).click();
   await page.waitForURL('**/top?metric=rating&limit=100&category=*');
-  assert.equal(await page.locator('.material-rank-item').count(), 12);
+  assert.equal(
+    await page.locator('.material-rank-item').count(),
+    snapshot.films.filter(
+      (film) =>
+        film.category === category && film.ratingCount > 0 && film.rating > 0,
+    ).length,
+  );
   await page.getByRole('button', { name: 'По любимому', exact: true }).click();
   await page.waitForFunction(
     () => new URLSearchParams(location.search).get('metric') === 'favorites',
@@ -229,8 +241,7 @@ try {
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(() => scrollTo(0, 0));
-  await page.locator('.theme-menu').hover();
-  await page.getByRole('button', { name: 'Светлая', exact: true }).click();
+  await chooseTheme(page, 'Светлая');
   await page.waitForFunction(
     () => document.documentElement.dataset.theme === 'light',
   );

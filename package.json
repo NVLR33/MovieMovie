@@ -32,7 +32,11 @@
     "test:orbit:browser": "node tests/integration/browser-orbit.mjs",
     "test:rankings:browser": "node tests/integration/browser-ranking-library.mjs",
     "test:showcase:browser": "node tests/integration/browser-showcase.mjs",
-    "test:pulse:browser": "node tests/integration/browser-weekly-pulse.mjs"
+    "test:pulse:browser": "node tests/integration/browser-weekly-pulse.mjs",
+    "test:settings:browser": "node tests/integration/browser-settings.mjs",
+    "test:series:browser": "node tests/integration/browser-series-navigation.mjs",
+    "test:catalog:browser": "node tests/integration/browser-catalog-discovery.mjs",
+    "test:design:browser": "node tests/integration/browser-design-system.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",
