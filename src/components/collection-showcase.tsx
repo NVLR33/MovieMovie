@@ -7,6 +7,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
+import MediaPoster, { MediaRating, MediaAge } from './media-poster';
 import { useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
@@ -16,10 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clapperboard,
-  Film as FilmIcon,
   Layers3,
   Search,
-  Star,
   Users,
   X,
 } from 'lucide-react';
@@ -30,7 +29,6 @@ import {
   filterCinemaCollections,
   type CinemaCollection,
 } from '@/lib/collection-showcase';
-import { formatFilmRating } from '@/lib/rating-display';
 const labels = {
   all: 'Все подборки',
   studio: 'Студии',
@@ -54,37 +52,22 @@ function Poster({
   watched: boolean;
   navigate: Navigate;
 }) {
-  const [failed, setFailed] = useState(false);
   return (
     <a
       href={`/movie/${film.id}`}
-      className="showcase-film"
+      className="showcase-film cinema-card"
       onClick={(event) => navigate(event, `/movie/${film.id}`)}
       aria-label={`${film.title}, ${film.year}${watched ? ', просмотрено' : ''}`}
     >
-      <span className="showcase-poster">
-        {film.poster && !failed ? (
-          <img
-            src={film.poster}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-            onError={() => setFailed(true)}
-          />
-        ) : (
-          <FilmIcon size={30} />
-        )}
-        <span className="showcase-score">
-          <Star size={10} />
-          {formatFilmRating(film)}
-        </span>
+      <MediaPoster src={film.poster} className="showcase-poster">
+        <MediaRating film={film} className="showcase-score" />
+        <MediaAge value={film.ageRating} />
         {watched && (
           <span className="showcase-watched" title="Просмотрено">
             <Check size={13} />
           </span>
         )}
-      </span>
+      </MediaPoster>
       <strong>{film.title}</strong>
       <small>
         {film.year} · {film.category}

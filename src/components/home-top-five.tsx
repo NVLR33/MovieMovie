@@ -1,6 +1,11 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
-import { useMemo, useRef, useState, type MouseEvent } from 'react';
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from 'react';
 import {
   ArrowRight,
   ChevronLeft,
@@ -16,28 +21,14 @@ import {
   rankMaterials,
   type MaterialMetric,
 } from '@/lib/material-ranking';
+import MediaPoster, { MediaAge } from './media-poster';
 import { formatFilmRating } from '@/lib/rating-display';
 
 function Cover({ film }: { film: Film }) {
-  const [failed, setFailed] = useState(false);
   return (
-    <span className="home-five-poster">
-      {film.poster && !failed ? (
-        <img
-          src={film.poster}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <FilmIcon size={35} aria-hidden="true" />
-      )}
-      {film.ageRating && (
-        <small className="home-five-age">{film.ageRating}</small>
-      )}
-    </span>
+    <MediaPoster src={film.poster} className="home-five-poster">
+      <MediaAge value={film.ageRating} className="home-five-age" />
+    </MediaPoster>
   );
 }
 export default function HomeTopFive({
@@ -73,9 +64,11 @@ export default function HomeTopFive({
     event.preventDefault();
     go(url);
   };
+  useLayoutEffect(() => {
+    track.current?.scrollTo({ left: 0, behavior: 'instant' });
+  }, [metric]);
   const select = (value: MaterialMetric) => {
     setMetric(value);
-    if (track.current) track.current.scrollLeft = 0;
   };
   const shift = (direction: number) => {
     const list = track.current;
@@ -194,7 +187,7 @@ export default function HomeTopFive({
           {top.map((film, index) => (
             <li key={film.id}>
               <a
-                className="home-five-card"
+                className="home-five-card cinema-card"
                 href={`/movie/${film.id}`}
                 aria-label={`${en ? 'Place' : 'Место'} ${index + 1}. ${film.title}. ${film.year}, ${film.category}. ${metric === 'rating' ? `${en ? 'Rating' : 'Рейтинг'} ${formatFilmRating(film)}` : metric === 'views' ? `${en ? 'Page visits' : 'Посещения страницы'} ${number(film.views || 0)}` : `${en ? 'Users who favorited' : 'Добавили в любимое'} ${number(film.favoriteCount || 0)}`}${film.ageRating ? `. ${film.ageRating}` : ''}`}
                 onClick={(event) => navigate(event, `/movie/${film.id}`)}
@@ -204,7 +197,7 @@ export default function HomeTopFive({
                     {index + 1}
                   </span>
                   <Cover key={`${film.id}:${film.poster}`} film={film} />
-                  <span className="home-five-score">
+                  <span className="home-five-score cinema-rating">
                     {metric === 'rating' ? (
                       <>
                         <Star size={11} fill="currentColor" />

@@ -1,3 +1,4 @@
+import { chooseTheme } from './settings-controls.mjs';
 // Production weekly chart + optimistic controls; fixture-guarded disposable SQL only.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -229,10 +230,10 @@ try {
     );
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await pulse.locator('.weekly-pulse-rest').focus();
+  await pulse.locator('.weekly-pulse-grid').focus();
   await page.keyboard.press('ArrowRight');
   await page.waitForFunction(
-    () => document.querySelector('.weekly-pulse-rest').scrollLeft > 0,
+    () => document.querySelector('.weekly-pulse-grid').scrollLeft > 0,
   );
   await pulse.locator('.weekly-pulse-lead').first().scrollIntoViewIfNeeded();
   await page.screenshot({
@@ -240,8 +241,7 @@ try {
   });
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.evaluate(() => scrollTo(0, 0));
-  await page.locator('.theme-menu').hover();
-  await page.getByRole('button', { name: 'Светлая', exact: true }).click();
+  await chooseTheme(page, 'Светлая');
   await page.waitForFunction(
     () => document.documentElement.dataset.theme === 'light',
   );
@@ -275,7 +275,7 @@ try {
   await page.waitForFunction(
     () => document.querySelectorAll('.weekly-pulse-card').length === 2,
   );
-  assert.equal(await pulse.locator('.weekly-pulse-rest').count(), 0);
+  assert.equal(await pulse.locator('.weekly-pulse-small').count(), 0);
   await context.unroute('**/api/data');
   await context.route('**/api/data', async (route) => {
     const response = await route.fetch(),
@@ -296,7 +296,7 @@ try {
   await guest.close();
   assert.deepEqual(errors, []);
   console.log(
-    'Passed production weekly pulse: aggregate/private-data parity, rolling-window old/future exclusion, real top10/3+7 composition, optimistic save rollback/persistence, mark-watch persistence, public SSE chart update, guest gate, keyboard rail, 8 widths/dark/light, material link, small and empty snapshots. Screenshots /tmp/mm-weekly-pulse-screenshots',
+    'Passed production weekly pulse: aggregate/private-data parity, rolling-window old/future exclusion, real top10/shared catalog-card composition, optimistic save rollback/persistence, mark-watch persistence, public SSE chart update, guest gate, keyboard rail, 8 widths/dark/light, material link, small and empty snapshots. Screenshots /tmp/mm-weekly-pulse-screenshots',
   );
 } finally {
   await browser.close();

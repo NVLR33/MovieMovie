@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
 import { useMemo, type MouseEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -11,10 +10,10 @@ import {
   Crown,
   Eye,
   Heart,
-  Film as FilmIcon,
   Star,
   Trophy,
 } from 'lucide-react';
+import MediaPoster from './media-poster';
 import type { Film } from '@/lib/data';
 import { formatFilmRating } from '@/lib/rating-display';
 import {
@@ -208,15 +207,7 @@ function RankedMaterials({ films, go, en = false, watchedIds }: RankingProps) {
                   {index === 0 && <Crown size={13} />}
                   <b>{String(index + 1).padStart(2, '0')}</b>
                 </span>
-                <span className="material-poster">
-                  {film.poster ? (
-                    <img src={film.poster} alt="" loading="lazy" />
-                  ) : (
-                    <FilmIcon
-                      size={24}
-                      aria-label={en ? 'No poster' : 'Без постера'}
-                    />
-                  )}{' '}
+                <MediaPoster src={film.poster} className="material-poster">
                   {watchedIds?.has(film.id) && (
                     <span
                       className="material-watched"
@@ -225,7 +216,7 @@ function RankedMaterials({ films, go, en = false, watchedIds }: RankingProps) {
                       <CheckCircle2 size={14} />
                     </span>
                   )}
-                </span>
+                </MediaPoster>
                 <span className="material-info">
                   <strong>{film.title}</strong>
                   <span className="material-subtitle">

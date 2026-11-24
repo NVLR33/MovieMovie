@@ -2,7 +2,9 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { MobileNavigation, MobileMovieActions, MobileRatingSheet } from './mobile-experience';
-import AmbientCanvas, { AmbientToggle } from './ambient-canvas';
+import AmbientCanvas from './ambient-canvas';
+import MediaPoster, { MediaAge, MediaRating } from './media-poster';
+import SiteSettings from './site-settings';
 import { ExperienceHud, ProfileHud, ProfileLevel } from './cinema-hud';
 import CinemaPassport from './cinema-passport';
 import MemoryOrbit from './memory-orbit';
@@ -14,7 +16,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState,
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Home, Clapperboard, Compass, Trophy, Gamepad2, Users, Bookmark, Shield, Search,
-  Bell, Sun, Moon, ChevronDown, ChevronRight, ArrowUpRight, ArrowRight, Play,
+  Bell, ChevronDown, ChevronRight, ArrowUpRight, ArrowRight, Play,
   Plus, Star, Clock3, CalendarDays, Sparkles, Shuffle, Heart, MessageCircle,
   Send, Settings2, LogOut, X, Film, Flame, Eye, SlidersHorizontal, Check,
   Pencil, Trash2, Upload, Copy, Share2, Crown, Zap, Award, GripVertical,
@@ -37,7 +39,7 @@ import {
 import BrandLogo from './brand-logo';
 import { playerEmbedUrl } from '@/lib/player-url';
 import { resolveSiteRoute } from '@/lib/site-routes';
-import { catalogTokens, filterCatalog, parseCatalogOptions } from '@/lib/catalog-filter';
+import { catalogTokens, filterCatalog, parseCatalogOptions, catalogGenreCounts, type CatalogOptions } from '@/lib/catalog-filter';
 import { CATALOG_MOODS, parseCatalogMood } from '@/lib/catalog-moods';
 import { tiltPoster, resetTilt, MagneticButton, ReviewDrawer, MovieContextBar, RatingCelebration, AchievementReveal } from './cinema-interactions';
 import { useLiveUpdates } from './use-live-updates';
@@ -58,6 +60,7 @@ import { formatFilmRating } from '@/lib/rating-display';
 import TopMaterials from './top-materials';
 import HomeTopFive from './home-top-five';
 import CollectionShowcase from './collection-showcase';
+import CatalogDiscovery, { CatalogActiveFilters } from './catalog-discovery';
 import CollaborativeCollections from './collaborative-collections';
 import CinemaCardStudio from './cinema-card-studio';
 import HiddenTrophies from './hidden-trophies';
@@ -176,7 +179,6 @@ type Data = {
 // --- Constants & Helpers ---
 const categories = ['Все', 'Фильм', 'Сериал', 'Мультфильм', 'Мультсериал', 'Аниме-сериал', 'Аниме-фильм'];
 const genres = ['Все жанры', 'Фантастика', 'Драма', 'Приключения', 'Анимация', 'Боевик', 'Комедия', 'Аниме', 'Детектив', 'Фэнтези', 'Биография'];
-const themes = ['dark', 'light', 'pink', 'purple', 'yellow'];
 const blank: Data = {
   films: [],
   user: null,
@@ -353,7 +355,6 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [seasonMode, setSeasonMode] = useState('auto');
   const [seasonAnimations, setSeasonAnimations] = useState(true);
   const [seasonGlow, setSeasonGlow] = useState(true);
-  const [seasonMenuOpen, setSeasonMenuOpen] = useState(false);
   const [seasonReady, setSeasonReady] = useState(false);
   const [search, setSearch] = useState('');
   const searchInput = useRef<HTMLInputElement>(null);
@@ -493,7 +494,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     setPreferencesReady(true);
   }, []);
   useEffect(() => { if (preferencesReady) { document.documentElement.dataset.theme = theme; browserStorage.setItem('mg_theme', theme); } }, [theme, preferencesReady]);
-  useEffect(() => { if (preferencesReady) browserStorage.setItem('mg_lang', lang); }, [lang, preferencesReady]);
+  useEffect(() => { if (preferencesReady) { browserStorage.setItem('mg_lang', lang); document.documentElement.lang = lang; } }, [lang, preferencesReady]);
 
   // Загружаем сезонные настройки из браузера
 useEffect(() => {
@@ -625,8 +626,9 @@ useEffect(() => {
     );
   };
   
-  const changeTheme = (t: string) => { setTheme(t); if (data.user) action({ action: 'profile', theme: t }); };
-  const changeLang = () => { const next = lang === 'ru' ? 'en' : 'ru'; setLang(next); if (data.user) action({ action: 'profile', language: next }); };
+  const changeTheme = async (t: string) => { setTheme(t); return data.user ? action({ action: 'profile', theme: t }) : true; };
+  const changeLang = async (next: string) => { setLang(next); return data.user ? action({ action: 'profile', language: next }) : true; };
+  const resetSiteSettings = async () => { setTheme('dark'); setLang('ru'); setSeasonMode('auto'); setSeasonAnimations(true); setSeasonGlow(true); return data.user ? action({ action: 'profile', theme: 'dark', language: 'ru' }) : true; };
 
   const en = lang === 'en';
   const words = {
@@ -865,111 +867,7 @@ return (
             <div className="top-actions">
               {data.user && <ExperienceHud key={data.user.id} xp={serverData.user?.xp ?? null} go={go} en={en} />}
               <span className={`live-connection live-${liveStatus}`} role="status" title={liveStatus === 'live' ? 'Живые обновления подключены' : 'Восстанавливаем живые обновления; резервное обновление включено'}><i /><span>{liveStatus === 'live' ? 'Live' : 'Соединение…'}</span></span>
-              <div className="language-switch" onClick={changeLang}>
-                {lang.toUpperCase()} <ChevronDown size={12} />
-              </div>
-
-              <div className="theme-menu">
-                <button className="icon-button" title="Сменить тему" onClick={() => changeTheme(themes[(themes.indexOf(theme) + 1) % themes.length])}>
-                  {theme === 'light' ? <Sun size={19} /> : <Moon size={19} />}
-                </button>
-                <div className="theme-pop">
-                  {themes.map(t => (
-                    <button key={t} onClick={() => changeTheme(t)}>
-                      <i className={`theme-dot ${t}`} />
-                      {({ dark: 'Тёмная', light: 'Светлая', pink: 'Розовая', purple: 'Фиолетовая', yellow: 'Жёлтая' } as Record<string, string>)[t]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Сезонное оформление */}
-<div className="season-theme-menu">
-  <button
-    type="button"
-    className="icon-button"
-    title="Сезонное оформление"
-    onClick={() => setSeasonMenuOpen(v => !v)}
-  >
-    <span style={{ fontSize: 20 }}>
-      {seasonMode === 'off'
-        ? '🚫'
-        : ({
-            winter: '❄️',
-            spring: '🌸',
-            summer: '☀️',
-            autumn: '🍂',
-          } as Record<string, string>)[
-            seasonMode === 'auto'
-              ? getCalendarSeason()
-              : seasonMode
-          ]}
-    </span>
-  </button>
-
-  {seasonMenuOpen && (
-    <div className="season-theme-pop">
-      <div className="season-theme-title">
-        ✨ Сезонная атмосфера
-      </div>
-
-      {[
-        { id: 'auto', label: '🔄 Автоматически' },
-        { id: 'off', label: '🚫 Выключено' },
-        { id: 'winter', label: '❄️ Зима' },
-        { id: 'spring', label: '🌸 Весна' },
-        { id: 'summer', label: '☀️ Лето' },
-        { id: 'autumn', label: '🍂 Осень' },
-      ].map(option => (
-        <button
-          type="button"
-          key={option.id}
-          className={
-            seasonMode === option.id
-              ? 'season-option active'
-              : 'season-option'
-          }
-          onClick={() => {
-            setSeasonMode(option.id);
-            setSeasonMenuOpen(false);
-          }}
-        >
-          {option.label}
-
-          {seasonMode === option.id && <Check size={15} />}
-        </button>
-      ))}
-
-      <div className="season-theme-divider" />
-
-      <button
-        type="button"
-        className="season-option"
-        onClick={() => setSeasonAnimations(v => !v)}
-      >
-        ✨ Анимации
-
-        <span>
-          {seasonAnimations ? 'Вкл.' : 'Выкл.'}
-        </span>
-      </button>
-
-
-      <button
-  type="button"
-  className="season-option"
-  onClick={() => setSeasonGlow(v => !v)}
->
-  💡 Свечение
-
-  <span>
-    {seasonGlow ? 'Вкл.' : 'Выкл.'}
-  </span>
-</button>
-      
-    </div>
-  )}
-</div>
+              <SiteSettings key={path} onOpen={() => { setNoticeOpen(false); setProfileOpen(false); setSearchFocused(false); }} theme={theme} lang={lang} season={seasonMode} calendarSeason={getCalendarSeason()} animations={seasonAnimations} glow={seasonGlow} signedIn={!!data.user} onTheme={changeTheme} onLang={changeLang} onSeason={setSeasonMode} onAnimations={setSeasonAnimations} onGlow={setSeasonGlow} onReset={resetSiteSettings} onSync={async () => data.user ? action({ action: 'profile', theme, language: lang }) : true} onProfile={() => go('/profile')} />
 
               <div className="popover-anchor">
                 <button className="icon-button notice-button" onClick={() => { setNoticeOpen(!noticeOpen); setProfileOpen(false); if (unread) action({ action: 'notifyRead' }); }}>
@@ -1453,18 +1351,6 @@ function heroTitleStyle(title: string): React.CSSProperties {
 function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; go: (url: string) => void; rank?: number; watched?: boolean; clean?: boolean; }) {
   const primaryGenre = film.genre.split(',')[0]?.trim();
 
-  const ageRating = String(film.ageRating || '').trim();
-
-const ageNumber = parseInt(ageRating, 10);
-
-const ageTone =
-  !Number.isFinite(ageNumber) ? 'unknown' :
-  ageNumber <= 6 ? 'green' :
-  ageNumber <= 12 ? 'blue' :
-  ageNumber <= 15 ? 'yellow' :
-  ageNumber <= 17 ? 'orange' :
-  'red';
-
   // если watched не передан — берем из глобального контекста
   const watchedIds = useWatchedIds();
   const isWatched = watched ?? watchedIds.has(film.id);
@@ -1474,7 +1360,7 @@ const ageTone =
 
   return (
     <div
-      className={`film-card tone-${formatFilmRating(film) === '—' ? 'unrated' : tone(film.rating)}`}
+      className={`film-card cinema-card tone-${formatFilmRating(film) === '—' ? 'unrated' : tone(film.rating)}`}
       role="button"
       tabIndex={0}
       onClick={() => go('/movie/' + film.id)}
@@ -1486,20 +1372,12 @@ const ageTone =
         }
       }}
     >
-      <div className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
+      <MediaPoster src={film.poster} alt={film.title} className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
         <span className="poster-gloss" aria-hidden="true" />
-        <img src={image(film)} alt={film.title} />
         <span className="card-shade" />
         {rank && <span className="rank-num">{String(rank).padStart(2, '0')}</span>}
-        <span className="card-score"><Star size={12} fill="currentColor" />{formatFilmRating(film)}</span>
-        {ageRating && (
-        <span
-          className={`card-age-rating age-${ageTone}`}
-          title={`Возрастное ограничение: ${ageRating}`}
-        >
-          {ageRating}
-        </span>
-      )}
+        <MediaRating film={film} className="card-score" />
+        <MediaAge value={film.ageRating} />
         {!clean && isWatched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
         {!clean && <button
           type="button"
@@ -1516,7 +1394,7 @@ const ageTone =
             fill={isFavorite ? 'currentColor' : 'none'}
           />
         </button>}
-      </div>
+      </MediaPoster>
       <div className="card-info">
         <h3>{film.title}</h3>
         <p>
@@ -1992,21 +1870,18 @@ function Catalog({
   watchedIds?: Set<number>;
 }) {
   const searchParams = useSearchParams();
-  const initial = parseCatalogOptions(searchParams, searchValue);
-  const [query, setQuery] = useState(initial.query);
-  const [category, setCategory] = useState(initial.category);
-  const [genre, setGenre] = useState(initial.genre);
-  const [studio, setStudio] = useState(initial.studio);
-  const [year, setYear] = useState(initial.year);
-  const [sort, setSort] = useState(initial.sort);
-  const [minRating, setMinRating] = useState(initial.minRating);
-  const [watchFilter, setWatchFilter] = useState(initial.watchFilter);
-  const [mood, setMood] = useState(initial.mood);
+  const [options, setOptions] = useState(() => parseCatalogOptions(searchParams, searchValue));
+  const {query, category, genre, studio, year, sort, minRating, watchFilter, mood} = options;
+  const defaults = parseCatalogOptions({get: () => null});
+  const update = <K extends keyof CatalogOptions,>(key: K, value: CatalogOptions[K]) => setOptions(current => ({...current, [key]: value}));
+  const reset = () => setOptions(defaults);
   const [filtersOpen, setFiltersOpen] = useState(() => ['genre', 'studio', 'year', 'minRating', 'watch', 'sort'].some(key => !!searchParams.get(key)));
   const preciseCount = Number(genre !== 'Все жанры') + Number(studio !== 'Все студии') + Number(year !== 'Любой год') + Number(minRating !== '0') + Number(watchFilter !== 'all');
   const catalogGenres = useMemo(() => [...new Set([...genres, ...films.flatMap(f => catalogTokens(f.genre)), genre])], [films, genre]);
   const catalogStudios = useMemo(() => [...new Set([...films.flatMap(f => catalogTokens(f.studio)), ...(studio !== 'Все студии' ? [studio] : [])])].sort(), [films, studio]);
   const filtered = useMemo(() => filterCatalog(films, { query, category, genre, studio, year, sort, minRating, watchFilter, mood }, watchedIds), [films, query, category, genre, studio, year, sort, minRating, watchFilter, watchedIds, mood]);
+
+  const facets = useMemo(() => catalogGenreCounts(films, options, watchedIds), [films, options, watchedIds]);
 
   return (
     <>
@@ -2038,57 +1913,48 @@ function Catalog({
 
       <div className="catalog-search">
         <Search size={20} />
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder={en ? 'Title, genre, director or keyword...' : 'Название, жанр, режиссёр или ключевое слово...'} />
-        {query && <button onClick={() => setQuery('')}><X size={17} /></button>}
-        <span>ENTER ↵</span>
+        <input aria-label={en ? 'Search catalog' : 'Поиск в каталоге'} value={query} onChange={e => update('query', e.target.value)} placeholder={en ? 'Title, genre, director or keyword...' : 'Название, жанр, режиссёр или ключевое слово...'} />
+        {query && <button type="button" aria-label={en ? 'Clear catalog search' : 'Очистить поиск в каталоге'} onClick={() => update('query', '')}><X size={17} /></button>}
+        <span>{en ? 'Live search' : 'Поиск сразу'}</span>
       </div>
 
-      <div className="catalog-mood-heading"><span className="eyebrow">{en ? 'WHAT IS YOUR MOOD?' : 'КАКОЕ СЕГОДНЯ НАСТРОЕНИЕ?'}</span><button type="button" className="outline-btn small" aria-expanded={filtersOpen} aria-controls="catalog-precise-filters" onClick={() => setFiltersOpen(value => !value)}><SlidersHorizontal size={15} />{en ? 'All filters' : 'Все фильтры'}{preciseCount > 0 && ` · ${preciseCount}`}</button></div>
+      <CatalogDiscovery genre={genre} category={category} counts={facets.counts} total={facets.total} en={en} onGenre={value => update('genre', value)} onCategory={value => update('category', value)} />
+
+      <div className="catalog-mood-heading"><span className="eyebrow">{en ? 'WHAT IS YOUR MOOD?' : 'КАКОЕ СЕГОДНЯ НАСТРОЕНИЕ?'}</span><button type="button" className="outline-btn small catalog-all-filters" aria-label={en ? 'All filters' : 'Все фильтры'} aria-expanded={filtersOpen} aria-controls="catalog-precise-filters" onClick={() => setFiltersOpen(value => !value)}><SlidersHorizontal size={15} />{en ? 'All filters' : 'Все фильтры'}{preciseCount > 0 && ` · ${preciseCount}`}</button></div>
       <div className="catalog-moods" role="group" aria-label={en ? 'Choose a mood' : 'Выбери настроение'}>
-        <button type="button" aria-pressed={mood === 'all'} onClick={() => setMood('all')}>{en ? '✨ Any mood' : '✨ Любое настроение'}</button>
-        {CATALOG_MOODS.map(item => <button key={item.id} type="button" aria-pressed={mood === item.id} onClick={() => setMood(item.id)}>{en ? item.en : item.label}</button>)}
+        <button type="button" aria-pressed={mood === 'all'} onClick={() => update('mood', 'all')}>{en ? '✨ Any mood' : '✨ Любое настроение'}</button>
+        {CATALOG_MOODS.map(item => <button key={item.id} type="button" aria-pressed={mood === item.id} onClick={() => update('mood', mood === item.id ? 'all' : item.id)}>{en ? item.en : item.label}</button>)}
       </div>
       <p className="catalog-mood-note">{en ? 'Based on editorial mood tags; genres are used when a tag is missing.' : 'По настроению, указанному редактором; если его нет — по жанрам. Без скрытых рекомендаций.'}</p>
-      <div className="category-tabs catalog-categories">
-        {categories.map(c => <button key={c} className={category === c ? 'selected' : ''} onClick={() => setCategory(c)}>{c}</button>)}
+      <div id="catalog-precise-filters" className="catalog-filter-panel" hidden={!filtersOpen}>
+        <header><SlidersHorizontal size={18} /><div><h2>{en ? 'Fine-tune your selection' : 'Настроим точнее'}</h2><p>{en ? 'All conditions work together. Results update as you choose.' : 'Все условия работают вместе. Результат меняется сразу.'}</p></div></header>
+        <div className="catalog-filter-fields">
+          <label><span>{en ? 'Genre' : 'Жанр'}</span><select className="catalog-genre-filter" aria-label={en ? 'Genre' : 'Жанр'} value={genre} onChange={e => update('genre', e.target.value)}>
+            {catalogGenres.map(g => <option key={g}>{g}</option>)}
+          </select></label>
+          <label><span>{en ? 'Studio' : 'Студия'}</span><select className="catalog-studio-filter" aria-label={en ? 'Studio' : 'Студия'} value={studio} onChange={e => update('studio', e.target.value)}>
+            <option value="Все студии">{en ? 'All studios' : 'Все студии'}</option>{catalogStudios.map(st => <option key={st}>{st}</option>)}
+          </select></label>
+          <label><span>{en ? 'Year' : 'Год'}</span><select aria-label={en ? 'Year' : 'Год'} value={year} onChange={e => update('year', e.target.value)}>
+            <option value="Любой год">{en ? 'Any year' : 'Любой год'}</option><option value="before1960">{en ? 'Before 1960' : 'До 1960 года'}</option>
+            {[...new Set([...films.map(f => f.year), ...(/^\d{4}$/.test(year) ? [Number(year)] : [])])].sort((a,b) => b-a).map(y => <option key={y}>{y}</option>)}
+          </select></label>
+          <label><span>{en ? 'Minimum rating' : 'Минимальный рейтинг'}</span><select aria-label={en ? 'Minimum rating' : 'Минимальный рейтинг'} value={minRating} onChange={e => update('minRating', e.target.value)}>
+            <option value="0">{en ? 'Any rating' : 'Любой рейтинг'}</option>{['7','8','9'].map(score => <option key={score} value={score}>{en ? 'From' : 'От'} {score}.0</option>)}
+          </select></label>
+          <label><span>{en ? 'Watch status' : 'Статус просмотра'}</span><select aria-label={en ? 'Watch status' : 'Статус просмотра'} value={watchFilter} onChange={e => update('watchFilter', e.target.value)}>
+            <option value="all">{en ? 'All titles' : 'Все материалы'}</option><option value="watched">{en ? 'Watched' : '✓ Просмотренные'}</option><option value="unwatched">{en ? 'Unwatched' : '○ Непросмотренные'}</option>
+          </select></label>
+        </div>
       </div>
 
-      <div id="catalog-precise-filters" className="filter-bar catalog-filters" hidden={!filtersOpen}>
-        <span><SlidersHorizontal size={17} /> {en ? 'Filters' : 'Фильтры'}</span>
-        <select className="catalog-genre-filter" aria-label={en ? 'Genre' : 'Жанр'} value={genre} onChange={e => setGenre(e.target.value)}>
-          {catalogGenres.map(g => <option key={g}>{g}</option>)}
-        </select>
-        <select className="catalog-studio-filter" aria-label={en ? 'Studio' : 'Студия'} value={studio} onChange={e => setStudio(e.target.value)}>
-          <option>Все студии</option>
-          {catalogStudios.map(st => <option key={st}>{st}</option>)}
-        </select>
-        <select aria-label={en ? 'Year' : 'Год'} value={year} onChange={e => setYear(e.target.value)}>
-          <option>Любой год</option>
-          <option value="before1960">До 1960 года</option>
-          {[...new Set([...films.map(f => f.year), ...( /^\d{4}$/.test(year) ? [Number(year)] : [])])].sort((a, b) => b - a).map(y => <option key={y}>{y}</option>)}
-        </select>
-        <select aria-label={en ? 'Minimum rating' : 'Минимальный рейтинг'} value={minRating} onChange={e => setMinRating(e.target.value)}>
-          <option value="0">Любой рейтинг</option>
-          <option value="7">От 7.0</option>
-          <option value="8">От 8.0</option>
-          <option value="9">От 9.0</option>
-        </select>
-        <select aria-label={en ? 'Watch status' : 'Статус просмотра'} value={watchFilter} onChange={e => setWatchFilter(e.target.value)}>
-          <option value="all">Все материалы</option>
-          <option value="watched">✓ Просмотренные</option>
-          <option value="unwatched">○ Непросмотренные</option>
-        </select>
-        <span className="filter-spacer" />
-        <span className="result-count">{en ? 'Found' : 'Найдено'}: {filtered.length}</span>
-        <select aria-label={en ? 'Sort order' : 'Сортировка'} value={sort} onChange={e => setSort(e.target.value)}>
-          <option value="popular">Популярные</option>
-          <option value="rating">По рейтингу</option>
-          <option value="new">Сначала новые</option>
-          <option value="old">Сначала старые</option>
-        </select>
+      <CatalogActiveFilters options={options} en={en} onRemove={key => update(key, defaults[key])} onReset={reset} />
+      <div className="catalog-results-toolbar">
+        <p className="catalog-result-summary" role="status" aria-live="polite">{en ? 'Found' : 'Найдено'}: <strong>{filtered.length}</strong><span>{en ? 'titles in your selection' : 'историй по твоему выбору'}</span></p>
+        <label className="catalog-sort"><span>{en ? 'Sort order' : 'Сортировка'}</span><select aria-label={en ? 'Sort order' : 'Сортировка'} value={sort} onChange={e => update('sort', e.target.value)}>
+          <option value="popular">{en ? 'Popular' : 'Популярные'}</option><option value="rating">{en ? 'By rating' : 'По рейтингу'}</option><option value="new">{en ? 'Newest first' : 'Сначала новые'}</option><option value="old">{en ? 'Oldest first' : 'Сначала старые'}</option>
+        </select></label>
       </div>
-
-      <p className="catalog-result-summary" role="status">{en ? 'Found' : 'Найдено'}: {filtered.length}{mood !== 'all' && ` · ${CATALOG_MOODS.find(item => item.id === mood)?.[en ? 'en' : 'label']}`}</p>
       {filtered.length ? (
         <FilmGrid films={filtered} go={go} watchedIds={watchedIds} />
       ) : (
@@ -2096,9 +1962,7 @@ function Catalog({
           <Search size={36} />
           <h3>{en ? 'Nothing found yet' : 'Пока ничего не найдено'}</h3>
           <p>{en ? 'Try another search or clear your filters.' : 'Попробуй другой запрос или сбрось фильтры.'}</p>
-          <button className="outline-btn" onClick={() => { setQuery(''); setCategory('Все'); setGenre('Все жанры'); setStudio('Все студии'); setYear('Любой год'); setMinRating('0'); setWatchFilter('all'); setMood('all'); setSort('popular'); }}>
-            {en ? 'Clear filters' : 'Сбросить фильтры'}
-          </button>
+          <button type="button" className="outline-btn" onClick={reset}>{en ? 'Show the whole catalog' : 'Показать весь каталог'}</button>
         </div>
       )}
     </>
@@ -2190,7 +2054,7 @@ function MovieDetailContent({
       <MobileMovieActions title={film.title} rating={myRating} saved={saved} rate={() => setMobileRatingOpen(true)} reviews={() => setReviewsOpen(true)} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       {mobileRatingOpen && <MobileRatingSheet rating={myRating} title={film.title} save={rate} close={closeMobileRating} />}
       <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
-      <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button><AmbientToggle /></div>
+      <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button></div>
 
       <div className={`detail-hero tone-${tone(film.rating)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
         <div className="detail-poster" ref={posterAnchor}>
