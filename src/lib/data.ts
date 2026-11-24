@@ -1,3 +1,4 @@
+import { movieReadFields } from '@/lib/movie-read-fields';
 import { cache } from 'react';
 import { summarizeRatings } from '@/lib/rating-summary';
 import { db } from '@/db';
@@ -18,7 +19,7 @@ export function getTitleMinutes(film:{duration:number;episodes:number|null;categ
 // React cache deduplicates metadata/page reads within a render, without stale cross-request data.
 export const getOverview = cache(async () => {
   const [films, favoriteGroups, ratingGroups] = await Promise.all([
-    db.select().from(movies).orderBy(desc(movies.createdAt)),
+    db.select(movieReadFields).from(movies).orderBy(desc(movies.createdAt)),
     db.select({ movieId: favorites.movieId, count: sql<number>`count(*)::int` })
       .from(favorites).groupBy(favorites.movieId),
     db.select({ movieId: ratings.movieId, value: ratings.value, count: sql<number>`count(*)::int` })

@@ -36,7 +36,8 @@
     "test:settings:browser": "node tests/integration/browser-settings.mjs",
     "test:series:browser": "node tests/integration/browser-series-navigation.mjs",
     "test:catalog:browser": "node tests/integration/browser-catalog-discovery.mjs",
-    "test:design:browser": "node tests/integration/browser-design-system.mjs"
+    "test:design:browser": "node tests/integration/browser-design-system.mjs",
+    "test:trailers:compat": "node tests/integration/trailer-schema-compat.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

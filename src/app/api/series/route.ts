@@ -1,3 +1,4 @@
+import { movieReadFields } from '@/lib/movie-read-fields';
 import { writeAdminAudit } from '@/lib/admin-audit';
 import { canModerate } from '@/lib/permissions';
 import { readJsonObject, RequestError, requestFailure } from '@/lib/request-validation';
@@ -29,7 +30,7 @@ function failure(error: unknown) {
 export async function GET(req: NextRequest) {
   try {
     const movieId = positive(Number(req.nextUrl.searchParams.get('movieId')));
-    const [film] = await db.select().from(movies).where(eq(movies.id, movieId)).limit(1);
+    const [film] = await db.select(movieReadFields).from(movies).where(eq(movies.id, movieId)).limit(1);
     if (!film || !isSeries(film.category)) return NextResponse.json({ error: 'Сериал не найден' }, { status: 404 });
     const user = await getUser();
     const seasons = await loadSeries(db, movieId, user?.id ?? null);
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
         const [current] = await tx.select().from(users).where(eq(users.id,user.id));
         if (!canModerate(current)) throw new RequestError('Недостаточно прав',403);
       }
-      const [film] = await tx.select().from(movies).where(eq(movies.id, movieId)).for('update');
+      const [film] = await tx.select(movieReadFields).from(movies).where(eq(movies.id, movieId)).for('update');
       if (!film || !isSeries(film.category)) throw new InputError('Сериал не найден');
       if (action === 'rateSeason' || action === 'rateEpisode') {
         const id = positive(body.id);

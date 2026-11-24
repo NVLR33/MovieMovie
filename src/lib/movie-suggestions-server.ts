@@ -1,3 +1,5 @@
+import { requireTrailerSchema } from './trailer-schema';
+import { movieReadFields } from '@/lib/movie-read-fields';
 import { writeAdminAudit } from './admin-audit';
 import { canModerate } from './permissions';
 import { and, eq, sql } from 'drizzle-orm';
@@ -67,7 +69,7 @@ export async function handleMovieSuggestion(actor: Actor, body: Record<string, u
     // Compatibility: a legacy proposal can be explicitly linked to an existing matching title.
     if (body.movieId !== undefined) {
       movieId = databaseId(body.movieId);
-      const [film] = await tx.select().from(movies).where(eq(movies.id, movieId));
+      const [film] = await tx.select(movieReadFields).from(movies).where(eq(movies.id, movieId));
       if (!film || film.year !== suggestion.year || film.category !== suggestion.category || film.title.trim().toLowerCase() !== suggestion.title.trim().toLowerCase()) throw new RequestError('Материал должен совпадать с предложением по названию, году и категории');
     } else {
       const raw = body.material ?? suggestion.material;
@@ -76,6 +78,7 @@ export async function handleMovieSuggestion(actor: Actor, body: Record<string, u
       await lockMaterial(tx, material);
       const existing = await existingMaterial(tx, material);
       if (existing) throw new RequestError('Материал уже есть в каталоге. Свяжите заявку с существующим материалом вместо повторной публикации.', 409);
+      await requireTrailerSchema(tx);
       const [film] = await tx.insert(movies).values(material).returning({ id: movies.id });
       movieId = film.id;
       created = true;

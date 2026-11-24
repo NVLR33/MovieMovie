@@ -1,3 +1,4 @@
+import { requireTrailerSchema } from '@/lib/trailer-schema';
 import { db } from '@/db';
 import { users, adminAudit } from '@/db/schema';
 import { eq, and, gte, sql } from 'drizzle-orm';
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
       );
     // Durable per-editor budget, serialized across instances; failed attempts count too.
     await db.transaction(async (tx) => {
+      await requireTrailerSchema(tx);
       const [actor] = await tx
         .select()
         .from(users)

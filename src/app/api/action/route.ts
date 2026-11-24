@@ -1,3 +1,5 @@
+import { requireTrailerSchema } from '@/lib/trailer-schema';
+import { movieReadFields } from '@/lib/movie-read-fields';
 import { canCreateMaterial, canModerate, isAdministrator } from '@/lib/permissions';
 import { writeAdminAudit } from '@/lib/admin-audit';
 import { manageAccount } from '@/lib/admin-server';
@@ -533,7 +535,7 @@ export async function POST(req: NextRequest) {
     } else if (action === 'share') {
       const target = Number(body.userId);
 
-      const [film] = await db.select().from(movies).where(eq(movies.id, movieId));
+      const [film] = await db.select(movieReadFields).from(movies).where(eq(movies.id, movieId));
       if (!film) throw Error('Материал не найден');
 
       const [friend] = await db.select().from(users).where(eq(users.id, target));
@@ -562,6 +564,7 @@ export async function POST(req: NextRequest) {
       result = await db.transaction(async tx => {
         const [actor] = await tx.select().from(users).where(eq(users.id,user.id)).for('update');
         if (body.id ? !canModerate(actor) : !canCreateMaterial(actor)) throw new RequestError('Права изменились. Обновите страницу.',403);
+        await requireTrailerSchema(tx);
         await lockMaterial(tx, input);
         const duplicate = await existingMaterial(tx, input);
         if (duplicate && duplicate.id !== body.id) throw new RequestError('Такой материал уже существует. Используйте редактирование.', 409);
@@ -608,7 +611,7 @@ export async function POST(req: NextRequest) {
       await db.transaction(async tx => {
         const [actor] = await tx.select().from(users).where(eq(users.id,user.id)).for('update');
         if (!isAdministrator(actor)) throw new RequestError('Недостаточно прав',403);
-        const [film] = await tx.select().from(movies).where(eq(movies.id,id)).for('update');
+        const [film] = await tx.select(movieReadFields).from(movies).where(eq(movies.id,id)).for('update');
         if (!film) throw new RequestError('Материал не найден',404);
         await writeAdminAudit(tx, actor!, 'movie.delete','movie',id,film.title);
         const commentIds = tx.select({ id: comments.id }).from(comments).where(eq(comments.movieId, id));

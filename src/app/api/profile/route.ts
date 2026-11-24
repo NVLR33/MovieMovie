@@ -1,3 +1,4 @@
+import { movieReadFields } from '@/lib/movie-read-fields';
 import { databaseId, requestFailure } from '@/lib/request-validation';
 import { calculateUserTitleProgress, titleCollection } from '@/lib/user-titles';
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     db.select().from(ratings).where(eq(ratings.userId, userId)),
     db.select().from(comments).where(eq(comments.userId, userId)),
     db.select().from(bookmarks).where(eq(bookmarks.userId, userId)),
-    db.select().from(movies),
+    db.select(movieReadFields).from(movies),
     db.select({ titleId: userTitleAwards.titleId }).from(userTitleAwards).where(eq(userTitleAwards.userId, userId)),
   ]);
 
