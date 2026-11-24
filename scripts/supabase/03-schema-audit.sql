@@ -175,6 +175,7 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_movies', 'poster', 'text', true, false),
   ('mg_movies', 'backdrop', 'text', false, false),
   ('mg_movies', 'watch_url', 'text', false, false),
+  ('mg_movies', 'trailer_url', 'text', true, true),
   ('mg_movies', 'director', 'text', false, false),
   ('mg_movies', 'cast', 'text', true, true),
   ('mg_movies', 'franchise', 'text', true, true),

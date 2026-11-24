@@ -1,9 +1,13 @@
 'use client';
+
+import MediaPoster, {MediaAge,MediaRating} from './media-poster';
+import {TrailerSurface, TrailerDialog} from './trailer-preview';
+import {MaterialViewControls,useMaterialView} from './material-view';
+import {materialTone,trailerSource,MAX_TRAILER_BYTES} from '@/lib/trailers';
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { MobileNavigation, MobileMovieActions, MobileRatingSheet } from './mobile-experience';
 import AmbientCanvas from './ambient-canvas';
-import MediaPoster, { MediaAge, MediaRating } from './media-poster';
 import SiteSettings from './site-settings';
 import { ExperienceHud, ProfileHud, ProfileLevel } from './cinema-hud';
 import CinemaPassport from './cinema-passport';
@@ -218,7 +222,6 @@ const blank: Data = {
 };
 const image = (f: FilmType) => f.poster || '/posters/dune.jpg';
 const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(f.category) ? f.duration * (f.episodes || 1) : f.duration;
-const tone = (r: number) => r >= 8.5 ? 'gold' : r >= 7 ? 'teal' : r >= 5 ? 'blue' : 'red';
 const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
 function initials(s: string) { return s.slice(0, 2).toUpperCase(); }
 function titleFor(user: User | null, watches: number) {
@@ -1360,7 +1363,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
 
   return (
     <div
-      className={`film-card cinema-card tone-${formatFilmRating(film) === '—' ? 'unrated' : tone(film.rating)}`}
+      className={`film-card tone-${materialTone(film)}`}
       role="button"
       tabIndex={0}
       onClick={() => go('/movie/' + film.id)}
@@ -1372,12 +1375,13 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
         }
       }}
     >
-      <MediaPoster src={film.poster} alt={film.title} className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
+      <TrailerSurface trailerUrl={film.trailerUrl} className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
         <span className="poster-gloss" aria-hidden="true" />
+        <MediaPoster src={image(film)} alt={film.title} />
         <span className="card-shade" />
         {rank && <span className="rank-num">{String(rank).padStart(2, '0')}</span>}
         <MediaRating film={film} className="card-score" />
-        <MediaAge value={film.ageRating} />
+        <MediaAge value={film.ageRating}/>
         {!clean && isWatched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
         {!clean && <button
           type="button"
@@ -1394,7 +1398,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
             fill={isFavorite ? 'currentColor' : 'none'}
           />
         </button>}
-      </MediaPoster>
+      </TrailerSurface>
       <div className="card-info">
         <h3>{film.title}</h3>
         <p>
@@ -1403,6 +1407,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
             ? `${film.episodes} сер.`
             : `${film.duration} мин`}
         </p>
+        <p className="card-list-description">{film.description}</p>
         {!clean && <div className="card-tags">
           {primaryGenre && (
             <button type="button" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(primaryGenre)); }}>
@@ -1420,9 +1425,10 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
   );
 }
 
-function FilmGrid({ films, go, watchedIds, clean = false }: { films: FilmType[]; go: (url: string) => void; watchedIds?: Set<number>; clean?: boolean; }) {
+function FilmGrid({ films, go, watchedIds, clean = false, selectable = false }: { films: FilmType[]; go: (url: string) => void; watchedIds?: Set<number>; clean?: boolean; selectable?: boolean; }) {
+  const [view] = useMaterialView();
   return (
-    <div className="film-grid">
+    <div className={`film-grid material-view-${selectable ? view : 'cards'}`}>
       {films.map(f => <FilmCard key={f.id} film={f} go={go} clean={clean} watched={watchedIds?.has(f.id)} />)}
     </div>
   );
@@ -1949,6 +1955,7 @@ function Catalog({
       </div>
 
       <CatalogActiveFilters options={options} en={en} onRemove={key => update(key, defaults[key])} onReset={reset} />
+      <MaterialViewControls en={en} />
       <div className="catalog-results-toolbar">
         <p className="catalog-result-summary" role="status" aria-live="polite">{en ? 'Found' : 'Найдено'}: <strong>{filtered.length}</strong><span>{en ? 'titles in your selection' : 'историй по твоему выбору'}</span></p>
         <label className="catalog-sort"><span>{en ? 'Sort order' : 'Сортировка'}</span><select aria-label={en ? 'Sort order' : 'Сортировка'} value={sort} onChange={e => update('sort', e.target.value)}>
@@ -1956,7 +1963,7 @@ function Catalog({
         </select></label>
       </div>
       {filtered.length ? (
-        <FilmGrid films={filtered} go={go} watchedIds={watchedIds} />
+        <FilmGrid films={filtered} go={go} watchedIds={watchedIds} selectable />
       ) : (
         <div className="empty-state">
           <Search size={36} />
@@ -2023,6 +2030,7 @@ function MovieDetailContent({
   const movieComments = useMemo(() => data.comments.filter(c => c.movieId === film.id), [data.comments, film.id]);
   const topComments = useMemo(() => movieComments.filter(c => !c.parentId), [movieComments]);
 
+  const [trailerOpen,setTrailerOpen] = useState(false);
   const related = useMemo(() => {
     const genres = new Set(film.genre.split(',').map(x => x.trim()).filter(Boolean));
     return data.films
@@ -2051,12 +2059,13 @@ function MovieDetailContent({
 
   return (
     <div className="movie-detail-page">
+      {trailerOpen && film.trailerUrl && <TrailerDialog url={film.trailerUrl} title={film.title} close={()=>setTrailerOpen(false)} />}
       <MobileMovieActions title={film.title} rating={myRating} saved={saved} rate={() => setMobileRatingOpen(true)} reviews={() => setReviewsOpen(true)} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       {mobileRatingOpen && <MobileRatingSheet rating={myRating} title={film.title} save={rate} close={closeMobileRating} />}
       <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button></div>
 
-      <div className={`detail-hero tone-${tone(film.rating)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
+      <div className={`detail-hero tone-${materialTone(film)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
         <div className="detail-poster" ref={posterAnchor}>
           <PosterThumb movieId={film.id} src={image(film)} alt={film.title} wrapStyle={{ display: 'block' }} />
         </div>
@@ -2092,6 +2101,7 @@ function MovieDetailContent({
           </div>
 
           <div className="detail-actions">
+            {trailerSource(film.trailerUrl) && <button className="outline-btn" onClick={()=>setTrailerOpen(true)}><Play size={16}/>Трейлер</button>}
 <button
   className={isWatched ? 'outline-btn watched-done' : 'primary-btn'}
   onClick={() =>
@@ -3506,6 +3516,7 @@ function MovieForm({
     element.showModal();
     return () => { element.close(); document.body.style.overflow = overflow; };
   }, []);
+  const [trailerUploading,setTrailerUploading] = useState(false);
   const [form, setForm] = useState({
     title: initial.title || '',
     originalTitle: initial.originalTitle || '',
@@ -3523,6 +3534,7 @@ function MovieForm({
     poster: initial.poster || '',
     backdrop: initial.backdrop || '',
     watchUrl: initial.watchUrl || '',
+    trailerUrl: initial.trailerUrl || '',
     director: initial.director || '',
     cast: initial.cast || '',
     franchise: initial.franchise || '',
@@ -3615,13 +3627,37 @@ function MovieForm({
     }
   };
 
+  const uploadTrailer = async (file?: File) => {
+    if (!file || uploadPending.current || pending.current) return;
+    if (!['video/mp4', 'video/webm'].includes(file.type) || !file.size || file.size > MAX_TRAILER_BYTES) {
+      notify('Нужен MP4 или WebM, от 1 байта до 40 МБ');
+      return;
+    }
+    uploadPending.current = true;
+    setTrailerUploading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/trailers', {
+        method: 'POST', headers: { 'Content-Type': file.type }, body: file,
+      });
+      const result = await response.json();
+      if (!response.ok || !result.url) throw new Error(result.error || 'Ошибка загрузки');
+      field('trailerUrl', result.url);
+      notify('Трейлер загружен. Сохрани материал.');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Не удалось загрузить трейлер');
+    } finally {
+      uploadPending.current = false;
+      setTrailerUploading(false);
+    }
+  };
   return (
     <dialog className="material-editor-dialog" ref={dialog} aria-labelledby="material-editor-title" onCancel={event => { event.preventDefault(); requestClose(); }} onClick={event => { if (event.target === event.currentTarget) requestClose(); }}>
       <div
         className="glass-modal editor-modal"
         onClick={e => e.stopPropagation()}
       >
-        <button type="button" aria-label="Закрыть форму материала" className="modal-close" disabled={busy || uploading} onClick={requestClose}>
+        <button type="button" aria-label="Закрыть форму материала" className="modal-close" disabled={busy || uploading || trailerUploading} onClick={requestClose}>
           <X size={20} />
         </button>
 
@@ -3633,7 +3669,7 @@ function MovieForm({
         <details className="material-preview"><summary>Предпросмотр карточки</summary><div>{form.poster && <img src={form.poster} alt="Предпросмотр постера" />}<section><h3>{form.title || 'Название материала'}</h3><small>{form.category} · {form.year} · {form.duration} мин</small><p>{form.description || 'Здесь появится описание'}</p></section></div></details>
 
         <form onSubmit={submit} className="editor-form">
-          <fieldset disabled={busy || uploading} className="material-fields">
+          <fieldset disabled={busy || uploading || trailerUploading} className="material-fields">
 
           <div className="form-two">
             <label>
@@ -3833,6 +3869,17 @@ function MovieForm({
             </label>
           </div>
 
+          <div className="material-trailer-field">
+            <label htmlFor="material-trailer-url">Трейлер</label>
+            <input id="material-trailer-url" aria-describedby="material-trailer-help" type="url" value={form.trailerUrl} maxLength={4096} onChange={e => field('trailerUrl', e.target.value)} placeholder="HTTPS: MP4/WebM, YouTube, Rutube или VK embed" />
+            <small id="material-trailer-help">Отдельно от ссылки на фильм. На компьютере — короткий предпросмотр без звука; на телефоне — кнопка «Трейлер». Rutube/VK открываются по кнопке, без фоновой загрузки.</small>
+            {mode !== 'suggest' && <label className="upload-button">
+              {trailerUploading ? 'Загрузка трейлера…' : 'Загрузить MP4 / WebM (до 40 МБ)'}
+              <input type="file" accept="video/mp4,video/webm" disabled={trailerUploading} aria-label="Загрузить трейлер" onChange={e => {
+                const file = e.target.files?.[0]; e.target.value = ''; void uploadTrailer(file);
+              }} />
+            </label>}
+          </div>
           <label>
             Обложка *
             <span className="label-help">
@@ -3894,7 +3941,7 @@ function MovieForm({
           {uploading && <p role="status">Загружаем изображение…</p>}
           <button
             className="primary-btn auth-submit"
-            disabled={busy || uploading}
+            disabled={busy || uploading || trailerUploading}
           >
             {busy ? 'Сохранение…' : mode === 'suggest' ? 'Отправить предложение' : suggestion ? 'Одобрить и открыть материал' : 'Сохранить материал'}
             <Check size={17} />

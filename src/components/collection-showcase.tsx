@@ -1,4 +1,8 @@
 'use client';
+
+import MediaPoster from './media-poster';
+import { TrailerSurface } from './trailer-preview';
+import { materialTone } from '@/lib/trailers';
 /* eslint-disable @next/next/no-img-element */
 import {
   useMemo,
@@ -7,7 +11,6 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
-import MediaPoster, { MediaRating, MediaAge } from './media-poster';
 import { useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
@@ -19,6 +22,7 @@ import {
   Clapperboard,
   Layers3,
   Search,
+  Star,
   Users,
   X,
 } from 'lucide-react';
@@ -29,6 +33,7 @@ import {
   filterCinemaCollections,
   type CinemaCollection,
 } from '@/lib/collection-showcase';
+import { formatFilmRating } from '@/lib/rating-display';
 const labels = {
   all: 'Все подборки',
   studio: 'Студии',
@@ -55,19 +60,22 @@ function Poster({
   return (
     <a
       href={`/movie/${film.id}`}
-      className="showcase-film cinema-card"
+      className={`showcase-film tone-${materialTone(film)}`}
       onClick={(event) => navigate(event, `/movie/${film.id}`)}
       aria-label={`${film.title}, ${film.year}${watched ? ', просмотрено' : ''}`}
     >
-      <MediaPoster src={film.poster} className="showcase-poster">
-        <MediaRating film={film} className="showcase-score" />
-        <MediaAge value={film.ageRating} />
+      <TrailerSurface trailerUrl={film.trailerUrl} className="showcase-poster">
+        <MediaPoster src={film.poster} alt="" />
+        <span className="showcase-score">
+          <Star size={10} />
+          {formatFilmRating(film)}
+        </span>
         {watched && (
           <span className="showcase-watched" title="Просмотрено">
             <Check size={13} />
           </span>
         )}
-      </MediaPoster>
+      </TrailerSurface>
       <strong>{film.title}</strong>
       <small>
         {film.year} · {film.category}

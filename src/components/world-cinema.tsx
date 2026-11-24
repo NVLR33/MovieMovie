@@ -1,6 +1,10 @@
 'use client';
+
+import MediaPoster from './media-poster';
+import { TrailerSurface } from './trailer-preview';
+import { materialTone } from '@/lib/trailers';
 import { useMemo, useState } from 'react';
-import { Globe2, MapPin, RotateCcw, ZoomIn } from 'lucide-react';
+import { Globe2, MapPin, RotateCcw, Star, ZoomIn } from 'lucide-react';
 import type { Film } from '@/lib/data';
 import geography from '@/data/world-map.json';
 import {
@@ -10,7 +14,7 @@ import {
   countryName,
   parseFilmCountries,
 } from '@/lib/cinema-countries';
-import MediaPoster, { MediaRating, MediaAge } from './media-poster';
+import { formatFilmRating } from '@/lib/rating-display';
 
 const LEGEND = ['0', '1–2', '3–5', '6–11', '12+'];
 export default function WorldCinema({
@@ -442,7 +446,7 @@ export default function WorldCinema({
               {results.slice(0, limit).map((film) => (
                 <a
                   key={film.id}
-                  className="world-film cinema-card"
+                  className={`world-film tone-${materialTone(film)}`}
                   href={`/movie/${film.id}`}
                   onClick={(event) => {
                     if (
@@ -457,13 +461,19 @@ export default function WorldCinema({
                     go(`/movie/${film.id}`);
                   }}
                 >
-                  <MediaPoster src={film.poster} className="world-film-poster">
-                    <MediaRating film={film} />
-                    <MediaAge value={film.ageRating} />
+                  <TrailerSurface
+                    trailerUrl={film.trailerUrl}
+                    className="world-film-poster"
+                  >
+                    <MediaPoster src={film.poster} alt="" />
+                    <span className="world-film-score">
+                      <Star size={12} />
+                      {formatFilmRating(film)}
+                    </span>
                     {watchedIds.has(film.id) && (
                       <b>{en ? 'Watched' : 'Просмотрено'}</b>
                     )}
-                  </MediaPoster>
+                  </TrailerSurface>
                   <h3>{film.title}</h3>
                   <p>
                     {film.year} · {film.category}

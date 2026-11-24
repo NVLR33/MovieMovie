@@ -1,4 +1,8 @@
 'use client';
+
+import MediaPoster from './media-poster';
+import { TrailerSurface } from './trailer-preview';
+import { materialTone } from '@/lib/trailers';
 import {
   useLayoutEffect,
   useMemo,
@@ -21,14 +25,16 @@ import {
   rankMaterials,
   type MaterialMetric,
 } from '@/lib/material-ranking';
-import MediaPoster, { MediaAge } from './media-poster';
 import { formatFilmRating } from '@/lib/rating-display';
 
 function Cover({ film }: { film: Film }) {
   return (
-    <MediaPoster src={film.poster} className="home-five-poster">
-      <MediaAge value={film.ageRating} className="home-five-age" />
-    </MediaPoster>
+    <TrailerSurface trailerUrl={film.trailerUrl} className="home-five-poster">
+      <MediaPoster src={film.poster} alt="" />
+      {film.ageRating && (
+        <small className="home-five-age">{film.ageRating}</small>
+      )}
+    </TrailerSurface>
   );
 }
 export default function HomeTopFive({
@@ -187,7 +193,7 @@ export default function HomeTopFive({
           {top.map((film, index) => (
             <li key={film.id}>
               <a
-                className="home-five-card cinema-card"
+                className={`home-five-card tone-${materialTone(film)}`}
                 href={`/movie/${film.id}`}
                 aria-label={`${en ? 'Place' : 'Место'} ${index + 1}. ${film.title}. ${film.year}, ${film.category}. ${metric === 'rating' ? `${en ? 'Rating' : 'Рейтинг'} ${formatFilmRating(film)}` : metric === 'views' ? `${en ? 'Page visits' : 'Посещения страницы'} ${number(film.views || 0)}` : `${en ? 'Users who favorited' : 'Добавили в любимое'} ${number(film.favoriteCount || 0)}`}${film.ageRating ? `. ${film.ageRating}` : ''}`}
                 onClick={(event) => navigate(event, `/movie/${film.id}`)}
@@ -197,7 +203,7 @@ export default function HomeTopFive({
                     {index + 1}
                   </span>
                   <Cover key={`${film.id}:${film.poster}`} film={film} />
-                  <span className="home-five-score cinema-rating">
+                  <span className="home-five-score">
                     {metric === 'rating' ? (
                       <>
                         <Star size={11} fill="currentColor" />
