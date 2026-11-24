@@ -230,10 +230,10 @@ try {
     );
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await pulse.locator('.weekly-pulse-grid').focus();
+  await pulse.locator('.weekly-pulse-rest').focus();
   await page.keyboard.press('ArrowRight');
   await page.waitForFunction(
-    () => document.querySelector('.weekly-pulse-grid').scrollLeft > 0,
+    () => document.querySelector('.weekly-pulse-rest').scrollLeft > 0,
   );
   await pulse.locator('.weekly-pulse-lead').first().scrollIntoViewIfNeeded();
   await page.screenshot({
@@ -296,7 +296,7 @@ try {
   await guest.close();
   assert.deepEqual(errors, []);
   console.log(
-    'Passed production weekly pulse: aggregate/private-data parity, rolling-window old/future exclusion, real top10/shared catalog-card composition, optimistic save rollback/persistence, mark-watch persistence, public SSE chart update, guest gate, keyboard rail, 8 widths/dark/light, material link, small and empty snapshots. Screenshots /tmp/mm-weekly-pulse-screenshots',
+    'Passed production weekly pulse: aggregate/private-data parity, rolling-window old/future exclusion, real top10/3+7 composition, optimistic save rollback/persistence, mark-watch persistence, public SSE chart update, guest gate, keyboard rail, 8 widths/dark/light, material link, small and empty snapshots. Screenshots /tmp/mm-weekly-pulse-screenshots',
   );
 } finally {
   await browser.close();

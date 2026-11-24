@@ -15,7 +15,7 @@ import '../components/weekly-cinema-pulse.css';
 import '../components/site-settings.css';
 import '../components/series-navigation.css';
 import '../components/catalog-discovery.css';
-import '../components/design-system.css';
+import '../components/material-cards.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

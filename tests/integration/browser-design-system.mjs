@@ -91,163 +91,208 @@ try {
       id,
     ]);
   }
-  fs.mkdirSync('/tmp/mm-design-screenshots', { recursive: true });
-  const capture = {
-    animations: 'disabled',
-    style:
-      '.topbar,.mobile-bottom-nav,.mobile-movie-actions{visibility:hidden!important;}',
-  };
-  async function open(path) {
-    await page.goto(base + path);
-    await page.locator('.hud-xp-chip').waitFor();
-    await page.evaluate(() => document.fonts.ready);
-  }
-  async function styles(card, title) {
-    return page
-      .locator(card)
-      .first()
-      .evaluate((el, title) => {
-        const s = getComputedStyle(el),
-          poster = el.querySelector('.cinema-poster'),
-          p = poster && getComputedStyle(poster),
-          heading = el.querySelector(title),
-          h = heading && getComputedStyle(heading),
-          badge = el.querySelector('.cinema-rating'),
-          b = badge && getComputedStyle(badge);
-        return {
-          radius: s.borderRadius,
-          bg: s.backgroundColor,
-          ratio: p?.aspectRatio,
-          font: h?.fontFamily,
-          size: h?.fontSize,
-          line: h?.lineHeight,
-          badgeRadius: b?.borderRadius,
-          badgeSize: b?.fontSize,
-        };
-      }, title);
-  }
-  let reference;
-  for (const theme of ['dark', 'light']) {
-    await open('/catalog?studio=' + studio);
-    await page.locator('.film-card').first().waitFor();
-    await chooseTheme(page, theme === 'dark' ? 'Тёмная' : 'Светлая');
-    reference = await styles('.film-card', '.card-info h3');
-    assert.equal(reference.radius, '14px');
-    assert.equal(reference.size, '13px');
-    assert.equal(reference.badgeRadius, '8px');
-    await page
-      .locator('.film-card')
-      .filter({ hasText: 'Единый дизайн 5' })
-      .scrollIntoViewIfNeeded();
-    await page
-      .locator('.cinema-poster[data-poster-state="fallback"]')
-      .waitFor();
-    assert.equal(
-      await page.locator('.film-grid .cinema-poster-fallback').count(),
-      1,
-    );
-    for (const width of [320, 390, 760, 1024, 1440, 1920]) {
-      await page.setViewportSize({ width, height: 1000 });
-      assert(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth + 1,
-        ),
-        `Catalog overflow ${width}`,
-      );
-    }
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    for (const [path, card, title, name] of [
-      ['/', '.home-five-card', '.home-five-caption strong', 'top-five'],
-      ['/', '.weekly-pulse-card', '.weekly-pulse-title h3', 'pulse'],
-      ['/collab?view=studio', '.showcase-film', 'strong', 'collections'],
-      ['/world', '.world-film', 'h3', 'world'],
-    ]) {
-      await open(path);
-      await page.locator(card).first().waitFor();
-      assert.deepEqual(
-        await styles(card, title),
-        reference,
-        `Catalog contract ${name}/${theme}`,
-      );
-      for (const width of [320, 360, 390, 600, 760, 1024, 1280, 1920]) {
-        await page.setViewportSize({ width, height: 1000 });
-        await page.waitForFunction(
-          () => document.documentElement.scrollWidth <= innerWidth + 1,
-        );
-        assert.equal(
-          (await styles(card, title)).ratio,
-          reference.ratio,
-          `${name} poster ratio at ${width}`,
-        );
-      }
-      await page.setViewportSize({ width: 1440, height: 1000 });
-      const section =
-        name === 'top-five'
-          ? '.home-five'
-          : name === 'pulse'
-            ? '.weekly-cinema-pulse'
-            : name === 'collections'
-              ? '.collection-shelf'
-              : '.world-results';
-      await page
-        .locator(section)
-        .first()
-        .screenshot({
-          path: `/tmp/mm-design-screenshots/${name}-${theme}.png`,
-          ...capture,
-        });
-      await page.setViewportSize({ width: 390, height: 844 });
-      await page
-        .locator(section)
-        .first()
-        .screenshot({
-          path: `/tmp/mm-design-screenshots/${name}-${theme}-mobile.png`,
-          ...capture,
-        });
-      if (name === 'collections')
-        assert.equal(
-          await page
-            .locator('.collection-shelf')
-            .first()
-            .evaluate((el) => getComputedStyle(el).color),
-          await page.evaluate(() => getComputedStyle(document.body).color),
-        );
-      if (name === 'top-five')
-        assert.equal(
-          await page
-            .locator('.home-five-number')
-            .first()
-            .evaluate((el) => getComputedStyle(el).fontSize),
-          '12px',
-        );
-    }
-  }
-  // The common primitive must reset its fallback when data supplies a new source; failure is not a broken-image icon.
-  await open('/catalog?studio=' + studio);
-  const broken = page
-    .locator('.film-card')
-    .filter({ hasText: 'Единый дизайн 5' });
-  await broken.locator('[data-poster-state="fallback"]').waitFor();
-  await db.query('update mg_movies set poster=$1 where id=$2', [
-    '/brand/moviemovie-logo.png',
-    ids[5],
+  assert.equal(
+    (
+      await fetch(base + '/api/trailers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'video/mp4' },
+        body: 'no',
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (
+      await context.request.post(base + '/api/trailers', {
+        headers: { 'Content-Type': 'video/mp4' },
+        data: 'no',
+      })
+    ).status(),
+    403,
+  );
+  fs.mkdirSync('/tmp/mm-cards-screenshots', { recursive: true });
+  // Five genuine tones plus one broken image, all isolated fixture data.
+  for (let n = 0; n < 5; n++)
+    await db.query('update mg_ratings set value=$1 where movie_id=$2', [
+      [3, 5, 7, 9, 9][n],
+      ids[n],
+    ]);
+  await db.query('delete from mg_ratings where movie_id=$1', [ids[4]]);
+  await db.query('update mg_movies set trailer_url=$1 where id=$2', [
+    'https://media.example.test/trailer.mp4',
+    ids[0],
   ]);
+  await page.route('https://media.example.test/**', async (route) => {
+    await new Promise((r) => setTimeout(r, 1500));
+    await route.abort().catch(() => {});
+  });
+  const open = async (path) => {
+    await page.goto(base + path);
+    await page.locator('.content').waitFor();
+  };
+  const card = (n) =>
+    page.locator('.film-card').filter({ hasText: 'Единый дизайн ' + n });
+  await open('/catalog?studio=' + studio);
+  await card(0).waitFor();
+  for (const [n, tone] of ['red', 'blue', 'teal', 'gold', 'unrated'].entries())
+    assert((await card(n).getAttribute('class')).includes('tone-' + tone));
+  await card(5).locator('[data-poster-state="fallback"]').waitFor();
+  for (const theme of ['dark', 'light']) {
+    await chooseTheme(page, theme === 'dark' ? 'Тёмная' : 'Светлая');
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const mode of ['cards', 'compact', 'list']) {
+        await page
+          .locator('.material-view-control button')
+          .nth(['cards', 'compact', 'list'].indexOf(mode))
+          .click();
+        await page.locator('.material-view-' + mode).waitFor();
+        const issues = await card(0).evaluate((el) => {
+          const a = el.querySelector('.card-score').getBoundingClientRect(),
+            b = el.querySelector('.card-favorite-btn').getBoundingClientRect(),
+            p = el.querySelector('.poster-wrap').getBoundingClientRect();
+          return {
+            overlap:
+              a.left < b.right &&
+              a.right > b.left &&
+              a.top < b.bottom &&
+              a.bottom > b.top,
+            overflow:
+              Math.max(
+                document.documentElement.scrollWidth,
+                document.body.scrollWidth,
+              ) >
+              innerWidth + 2,
+            scoreInside:
+              a.left >= p.left &&
+              a.right <= p.right + 1 &&
+              a.bottom <= p.bottom + 1,
+            height: a.height,
+          };
+        });
+        assert(!issues.overlap, JSON.stringify({ width, mode, issues }));
+        assert(!issues.overflow, JSON.stringify({ width, mode, issues }));
+        assert(issues.scoreInside);
+        assert(issues.height < 40);
+        if (width === 390 || width === 1440)
+          await page.screenshot({
+            path: `/tmp/mm-cards-screenshots/catalog-${theme}-${width}-${mode}.png`,
+            animations: 'disabled',
+          });
+      }
+    }
+  }
   await page.reload();
-  await broken.locator('[data-poster-state="image"] img').waitFor();
+  await page.locator('.material-view-list').waitFor();
+  await page.locator('.material-view-control button').first().click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await card(0).locator('.poster-wrap').hover();
+  await page.waitForTimeout(850);
+  assert.equal(
+    await page.locator('.trailer-preview').count(),
+    0,
+    'reduced motion suppresses previews',
+  );
+  await page.mouse.move(0, 0);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await card(0).locator('.poster-wrap').hover();
+  await page.locator('.trailer-preview video').waitFor({ state: 'attached' });
+  assert(
+    await page.locator('.trailer-preview video').evaluate((el) => el.muted),
+  );
+  await page.mouse.move(0, 0);
+  await page.locator('.trailer-preview').waitFor({ state: 'detached' });
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await db.query("update mg_users set role='admin' where id=$1", [userId]);
+  const material = {
+    action: 'movieSave',
+    id: ids[0],
+    title: 'Единый дизайн 0',
+    description: 'Проверка трейлера',
+    category: 'Фильм',
+    genre: 'Драма',
+    studio,
+    year: 2024,
+    duration: 100,
+    poster: '/brand/moviemovie-logo.png',
+    country: 'Россия',
+    trailerUrl: 'https://media.example.test/trailer.mp4',
+  };
   assert.equal(
-    await broken.evaluate((el) => getComputedStyle(el).transitionDuration),
-    '0s',
+    (
+      await context.request.post(base + '/api/action', {
+        data: {
+          ...material,
+          trailerUrl: 'https://example.test/arbitrary.html',
+        },
+      })
+    ).status(),
+    400,
   );
-  await page.emulateMedia({ forcedColors: 'active' });
-  await broken.focus();
   assert.equal(
-    await broken.evaluate((el) => getComputedStyle(el).outlineStyle),
-    'solid',
+    (
+      await context.request.post(base + '/api/action', { data: material })
+    ).status(),
+    200,
   );
+  assert.equal(
+    (await db.query('select trailer_url from mg_movies where id=$1', [ids[0]]))
+      .rows[0].trailer_url,
+    material.trailerUrl,
+  );
+  await open('/movie/' + ids[0]);
+  const trailerButton = page.getByRole('button', {
+    name: 'Трейлер',
+    exact: true,
+  });
+  await trailerButton.click();
+  await page.locator('.trailer-dialog[open] video').waitFor();
+  await page.keyboard.press('Escape');
+  await page.locator('.trailer-dialog').waitFor({ state: 'detached' });
+  assert(await trailerButton.evaluate((el) => el === document.activeElement));
+  await open('/');
+  await page.locator('.home-five-number').first().waitFor();
+  assert(
+    await page
+      .locator('.home-five-number')
+      .first()
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize) > 60),
+  );
+  await page
+    .locator('.weekly-pulse-podium .weekly-pulse-card')
+    .first()
+    .waitFor();
+  assert.equal(
+    await page.locator('.weekly-pulse-podium .weekly-pulse-card').count(),
+    3,
+  );
+  assert(
+    (await page.locator('.weekly-pulse-rest .weekly-pulse-card').count()) > 0,
+  );
+  await page.screenshot({
+    path: '/tmp/mm-cards-screenshots/home-restored.png',
+    fullPage: true,
+    animations: 'disabled',
+  });
+  // Touch must never start background video, but the explicit detail player remains available.
+  const touch = await browser.newContext({
+      isMobile: true,
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    }),
+    mobile = await touch.newPage();
+  await mobile.goto(base + '/catalog?studio=' + studio);
+  await mobile.locator('.film-card').first().waitFor();
+  await mobile
+    .locator('.film-card .poster-wrap')
+    .first()
+    .dispatchEvent('pointerenter', { pointerType: 'touch' });
+  await mobile.waitForTimeout(800);
+  assert.equal(await mobile.locator('.trailer-preview').count(), 0);
+  await touch.close();
   assert.deepEqual(errors, []);
   console.log(
-    'Passed shared catalog design contract: radius/background/poster ratio/Rubik title/metadata/rating badge parity on catalog, pulse, top-five, collections and atlas; both themes, 8 widths, readable themed shelves, compact ranks, real broken-poster fallback/recovery, reduced motion and forced colors. Screenshots /tmp/mm-design-screenshots',
+    'Passed card-only contract: restored home podium/ranks; 5 rating tones; no score/favorite overlap at 4 widths in 3 views and 2 themes; persisted layout; broken-poster fallback; reduced-motion/touch; muted hover with teardown; accessible detail trailer dialog. Screenshots /tmp/mm-cards-screenshots',
   );
 } finally {
   await browser.close();
@@ -258,6 +303,6 @@ try {
       ]);
     await db.query('delete from mg_movies where id=any($1::int[])', [ids]);
   }
-  if (userId) await db.query('delete from mg_users where id=$1', [userId]);
+  if(userId){await db.query('delete from mg_admin_audit where actor_id=$1',[userId]);await db.query('delete from mg_users where id=$1',[userId]);}
   await db.end();
 }

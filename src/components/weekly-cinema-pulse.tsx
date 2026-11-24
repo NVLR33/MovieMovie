@@ -1,4 +1,8 @@
 'use client';
+
+import MediaPoster from './media-poster';
+import { TrailerSurface } from './trailer-preview';
+import { materialTone } from '@/lib/trailers';
 import { useMemo, useState, type MouseEvent } from 'react';
 import {
   Activity,
@@ -6,15 +10,18 @@ import {
   Bookmark,
   Check,
   Eye,
+  Film as FilmIcon,
+  Star,
   Users,
 } from 'lucide-react';
 import type { Film } from '@/lib/data';
 import type { WeeklyPulse } from '@/lib/weekly-pulse';
-import MediaPoster, { MediaRating, MediaAge } from './media-poster';
+import { formatFilmRating } from '@/lib/rating-display';
 type Action = (
   payload: Record<string, unknown>,
   success?: string,
 ) => Promise<boolean>;
+
 function PulseCard({
   film,
   place,
@@ -88,19 +95,21 @@ function PulseCard({
   };
   return (
     <article
-      className={`weekly-pulse-card cinema-card ${lead ? 'weekly-pulse-lead' : 'weekly-pulse-small'}`}
+      className={`weekly-pulse-card ${lead ? 'weekly-pulse-lead' : 'weekly-pulse-small'} tone-${materialTone(film)}`}
       aria-label={`${en ? 'Place' : 'Место'} ${place}: ${film.title}`}
     >
-      <div className="weekly-pulse-poster-area">
+      <div className="weekly-pulse-poster">
         <a
           href={`/movie/${film.id}`}
           onClick={navigate}
           aria-label={`${en ? 'Open' : 'Открыть'} ${film.title}`}
         >
-          <MediaPoster src={film.poster} className="weekly-pulse-poster">
-            <MediaRating film={film} className="weekly-pulse-rating" />
-            <MediaAge value={film.ageRating} className="weekly-pulse-age" />
-          </MediaPoster>
+          <TrailerSurface
+            trailerUrl={film.trailerUrl}
+            className="weekly-trailer-surface"
+          >
+            <MediaPoster src={film.poster} alt="" />
+          </TrailerSurface>
         </a>
         <span
           className="weekly-pulse-place"
@@ -119,6 +128,9 @@ function PulseCard({
         >
           {saved ? <Check size={16} /> : <Bookmark size={16} />}
         </button>
+        {film.ageRating && (
+          <small className="weekly-pulse-age">{film.ageRating}</small>
+        )}
       </div>
       <div className="weekly-pulse-info">
         <a
@@ -128,9 +140,24 @@ function PulseCard({
         >
           <h3>{film.title}</h3>
         </a>
-        <p className="weekly-pulse-meta">
-          {film.year} · {film.category}
-        </p>
+        {lead && (
+          <p className="weekly-pulse-meta">
+            {film.year} · {film.category}
+            <br />
+            {film.duration > 0
+              ? `${film.duration} ${en ? 'min' : 'мин'}${film.episodes ? ` · ${film.episodes} ${en ? 'eps' : 'эп.'}` : ''}`
+              : film.genre}
+          </p>
+        )}
+        <span className="weekly-pulse-rating">
+          <Star size={12} />
+          {formatFilmRating(film)}
+          {lead && film.ratingCount > 0 && (
+            <small>
+              {number(film.ratingCount)} {en ? 'votes' : 'оценок'}
+            </small>
+          )}
+        </span>
         <span className="weekly-pulse-viewers">
           <Users size={12} />
           <b>{number(viewers)}</b>
@@ -138,8 +165,8 @@ function PulseCard({
             {viewerLabel} / {en ? '7 days' : '7 дней'}
           </small>
         </span>
-        {
-          <div className="weekly-pulse-actions">
+        {lead && (
+          <>
             <button
               type="button"
               className="weekly-pulse-watch"
@@ -166,9 +193,17 @@ function PulseCard({
               {en ? 'Open and rate' : 'Открыть и оценить'}
               <ArrowUpRight size={13} />
             </a>
-          </div>
-        }
+          </>
+        )}
       </div>
+      {lead && (
+        <p className="weekly-pulse-description">
+          {film.description ||
+            (en
+              ? 'A new story is waiting for your discovery.'
+              : 'Ещё одна история, которую стоит открыть для себя.')}
+        </p>
+      )}
     </article>
   );
 }
@@ -270,16 +305,29 @@ export default function WeeklyCinemaPulse({
       {entries.length ? (
         <>
           <ol
-            className="weekly-pulse-grid"
-            tabIndex={0}
-            aria-label={
-              en
-                ? 'Weekly discoveries; scroll horizontally on mobile'
-                : 'Открытия недели; на телефоне доступна горизонтальная прокрутка'
-            }
+            className="weekly-pulse-podium"
+            aria-label={en ? 'Weekly leaders' : 'Лидеры недели'}
           >
-            {entries.map((entry, index) => card(entry, index, index < 3))}
+            {entries
+              .slice(0, 3)
+              .map((entry, index) => card(entry, index, true))}
           </ol>
+          {entries.length > 3 && (
+            <ol
+              className="weekly-pulse-rest"
+              start={4}
+              tabIndex={0}
+              aria-label={
+                en
+                  ? 'More weekly discoveries; scroll horizontally'
+                  : 'Остальные открытия недели; доступна горизонтальная прокрутка'
+              }
+            >
+              {entries
+                .slice(3)
+                .map((entry, index) => card(entry, index + 3, false))}
+            </ol>
+          )}
           <p className="weekly-pulse-footnote">
             {en
               ? 'Current watch marks, not streaming statistics or page visits. Each viewer counts once per title.'

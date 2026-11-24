@@ -586,6 +586,25 @@ END
 $apply_migration$;
 
 
+-- ========== 20261122-zzzzz-trailers.sql ==========
+DO $apply_migration$
+BEGIN
+  IF EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzzzz-trailers.sql' AND checksum <> '7131c34e549b3fb175eab795a1852860013ce4814d3bd03ed7ed29e37ae8d6b3') THEN
+    RAISE EXCEPTION 'Applied migration checksum mismatch: 20261122-zzzzz-trailers.sql';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzzzz-trailers.sql') THEN
+    EXECUTE $file_7131c34e549b3fb1$
+-- Additive only. Videos stay in object storage; this field stores a reference.
+ALTER TABLE public.mg_movies ADD COLUMN IF NOT EXISTS trailer_url text NOT NULL DEFAULT '';
+
+$file_7131c34e549b3fb1$;
+    INSERT INTO moviemovie_migrations.history(name, checksum)
+    VALUES ('20261122-zzzzz-trailers.sql', '7131c34e549b3fb175eab795a1852860013ce4814d3bd03ed7ed29e37ae8d6b3');
+  END IF;
+END
+$apply_migration$;
+
+
 -- Fail closed on incompatible legacy schema before committing any migration.
 DO $verify_schema$
 DECLARE failed text;
@@ -768,6 +787,7 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_movies', 'poster', 'text', true, false),
   ('mg_movies', 'backdrop', 'text', false, false),
   ('mg_movies', 'watch_url', 'text', false, false),
+  ('mg_movies', 'trailer_url', 'text', true, true),
   ('mg_movies', 'director', 'text', false, false),
   ('mg_movies', 'cast', 'text', true, true),
   ('mg_movies', 'franchise', 'text', true, true),
