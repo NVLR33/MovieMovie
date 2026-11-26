@@ -1,7 +1,6 @@
 'use client';
 
-import MediaPoster from './media-poster';
-import { TrailerSurface } from './trailer-preview';
+import MaterialCover from './material-cover';
 import { materialTone } from '@/lib/trailers';
 /* eslint-disable @next/next/no-img-element */
 import {
@@ -22,7 +21,6 @@ import {
   Clapperboard,
   Layers3,
   Search,
-  Star,
   Users,
   X,
 } from 'lucide-react';
@@ -33,7 +31,6 @@ import {
   filterCinemaCollections,
   type CinemaCollection,
 } from '@/lib/collection-showcase';
-import { formatFilmRating } from '@/lib/rating-display';
 const labels = {
   all: 'Все подборки',
   studio: 'Студии',
@@ -64,22 +61,13 @@ function Poster({
       onClick={(event) => navigate(event, `/movie/${film.id}`)}
       aria-label={`${film.title}, ${film.year}${watched ? ', просмотрено' : ''}`}
     >
-      <TrailerSurface
-        film={film}
-        trailerUrl={film.trailerUrl}
-        className="showcase-poster"
-      >
-        <MediaPoster src={film.poster} alt="" />
-        <span className="showcase-score">
-          <Star size={10} />
-          {formatFilmRating(film)}
-        </span>
+      <MaterialCover film={film} className="showcase-poster">
         {watched && (
           <span className="showcase-watched" title="Просмотрено">
             <Check size={13} />
           </span>
         )}
-      </TrailerSurface>
+      </MaterialCover>
       <strong>{film.title}</strong>
       <small>
         {film.year} · {film.category}
@@ -295,8 +283,8 @@ export default function CollectionShowcase({
               <Layers3 size={30} />
               <h1>Подборка пока недоступна</h1>
               <p>
-                В каталоге больше нет материалов с этой связью. Вернись к другим
-                историям.
+                В каталоге больше нет материалов с этой связью. Вернись к
+                другим историям.
               </p>
             </div>
           )}
@@ -396,7 +384,9 @@ export default function CollectionShowcase({
                 <div className="showcase-empty">
                   <Layers3 size={32} />
                   <h2>
-                    {query ? 'Ничего не нашлось' : 'Новые подборки ещё впереди'}
+                    {query
+                      ? 'Ничего не нашлось'
+                      : 'Новые подборки ещё впереди'}
                   </h2>
                   <p>
                     {query

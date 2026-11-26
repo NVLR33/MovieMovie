@@ -82,6 +82,7 @@ jobs:
           run_suite test:city-series:browser
           run_suite test:cine-day:browser
           run_suite test:roulette:browser
+          run_suite test:playback:browser
           run_suite test:ui
       - uses: actions/upload-artifact@v4
         if: failure()

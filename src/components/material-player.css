@@ -1,0 +1,142 @@
+.material-player {
+  width: min(1060px, 96vw);
+  max-height: 92dvh;
+  padding: 18px;
+  overflow: auto;
+  color: var(--text);
+  background: var(--panel, #151722);
+  border: 1px solid var(--border-hi, #454855);
+  border-radius: 18px;
+}
+.material-player::backdrop {
+  background: #03050bdd;
+  backdrop-filter: blur(8px);
+}
+.material-player header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+.material-player header small {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+.material-player h2 {
+  margin: 6px 0 0;
+  font-size: clamp(17px, 3vw, 25px);
+  overflow-wrap: anywhere;
+}
+.material-player header button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+.material-player-consent {
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+  padding: clamp(20px, 5vw, 55px);
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.material-player-consent > svg {
+  color: var(--accent);
+}
+.material-player-consent p {
+  max-width: 650px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.material-player-screen {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16/9;
+  width: 100%;
+  background: #000;
+  overflow: hidden;
+  border-radius: 10px;
+}
+.material-player-screen video,
+.material-player-screen iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.material-player-screen > div {
+  padding: 20px;
+  text-align: center;
+}
+.material-player-screen p {
+  margin: 15px 0;
+}
+.material-player footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  margin-top: 14px;
+}
+.material-player footer p {
+  flex-basis: 100%;
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 11px;
+}
+.material-player footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 12px;
+  min-height: 44px;
+}
+.material-player footer button {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 44px;
+}
+.material-player-field {
+  display: grid;
+  gap: 8px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.material-player-field small {
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 11px;
+}
+.series-episode-editor {
+  flex-wrap: wrap;
+}
+.series-episode-editor .episode-playback-field {
+  flex-basis: 100%;
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+}
+.series-episode-editor .episode-playback-field small {
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .material-player {
+    padding: 12px;
+    width: 96vw;
+  }
+  .material-player-consent {
+    padding: 20px 12px;
+  }
+}

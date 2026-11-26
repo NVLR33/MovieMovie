@@ -1,3 +1,4 @@
+import { requirePlaybackSchema } from './playback-schema';
 import { requireTrailerSchema } from './trailer-schema';
 import { movieReadFields } from '@/lib/movie-read-fields';
 import { writeAdminAudit } from './admin-audit';
@@ -79,6 +80,7 @@ export async function handleMovieSuggestion(actor: Actor, body: Record<string, u
       const existing = await existingMaterial(tx, material);
       if (existing) throw new RequestError('Материал уже есть в каталоге. Свяжите заявку с существующим материалом вместо повторной публикации.', 409);
       await requireTrailerSchema(tx);
+      await requirePlaybackSchema(tx);
       const [film] = await tx.insert(movies).values(material).returning({ id: movies.id });
       movieId = film.id;
       created = true;

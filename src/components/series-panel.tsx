@@ -1,4 +1,5 @@
 'use client';
+import MaterialPlayer from './material-player';
 
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -611,6 +612,7 @@ export default function SeriesPanel({
                             }
                           />
                         </div>
+                        <MaterialPlayer url={episode.playbackUrl} title={`Сезон ${season.number} · Эпизод ${episode.number}${episode.title ? ` · ${episode.title}` : ''}`} className="outline-btn small" />
                         {editing && snapshot.canEdit && (
                           <form
                             className="series-episode-editor"
@@ -621,6 +623,7 @@ export default function SeriesPanel({
                                 action: 'saveEpisode',
                                 id: episode.id,
                                 title: String(form.get('title') || ''),
+                                playbackUrl: String(form.get('playbackUrl') || ''),
                               });
                             }}
                           >
@@ -631,12 +634,17 @@ export default function SeriesPanel({
                               maxLength={160}
                               placeholder="Название эпизода (необязательно)"
                             />
+                            <label className="episode-playback-field">
+                              Источник просмотра эпизода
+                              <input type="url" name="playbackUrl" defaultValue={episode.playbackUrl || ''} maxLength={4096} aria-label={`Источник: сезон ${season.number}, эпизод ${episode.number}`} placeholder="HTTPS: VK, Rutube или MP4" />
+                              <small>Только контент с разрешением на показ. Публичная ссылка, не HTML и не секретный токен.</small>
+                            </label>
                             <button
                               disabled={busy}
                               className="outline-btn small"
                               type="submit"
                             >
-                              Сохранить название
+                              Сохранить эпизод
                             </button>
                           </form>
                         )}

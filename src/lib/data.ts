@@ -54,6 +54,7 @@ export type Film = {
   poster: string;
   backdrop: string | null;
   watchUrl: string | null;
+  playbackUrl?: string | null;
   trailerUrl?: string | null;
   director: string | null;
   cast?: string | null;

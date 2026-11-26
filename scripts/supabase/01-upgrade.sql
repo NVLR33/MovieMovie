@@ -605,6 +605,26 @@ END
 $apply_migration$;
 
 
+-- ========== 20261122-zzzzzz-playback.sql ==========
+DO $apply_migration$
+BEGIN
+  IF EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzzzzz-playback.sql' AND checksum <> '36db0dd67bc5f2b2469d46c4912558573de1d1cecf039ae9f08137c6ef512f7e') THEN
+    RAISE EXCEPTION 'Applied migration checksum mismatch: 20261122-zzzzzz-playback.sql';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM moviemovie_migrations.history WHERE name = '20261122-zzzzzz-playback.sql') THEN
+    EXECUTE $file_36db0dd67bc5f2b2$
+-- References only: MovieMovie never fetches, stores or proxies the video stream.
+ALTER TABLE public.mg_movies ADD COLUMN IF NOT EXISTS playback_url text NOT NULL DEFAULT '';
+ALTER TABLE public.mg_series_episodes ADD COLUMN IF NOT EXISTS playback_url text NOT NULL DEFAULT '';
+
+$file_36db0dd67bc5f2b2$;
+    INSERT INTO moviemovie_migrations.history(name, checksum)
+    VALUES ('20261122-zzzzzz-playback.sql', '36db0dd67bc5f2b2469d46c4912558573de1d1cecf039ae9f08137c6ef512f7e');
+  END IF;
+END
+$apply_migration$;
+
+
 -- Fail closed on incompatible legacy schema before committing any migration.
 DO $verify_schema$
 DECLARE failed text;
@@ -787,6 +807,7 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_movies', 'poster', 'text', true, false),
   ('mg_movies', 'backdrop', 'text', false, false),
   ('mg_movies', 'watch_url', 'text', false, false),
+  ('mg_movies', 'playback_url', 'text', true, true),
   ('mg_movies', 'trailer_url', 'text', true, true),
   ('mg_movies', 'director', 'text', false, false),
   ('mg_movies', 'cast', 'text', true, true),
@@ -831,6 +852,7 @@ WITH expected_tables(table_name, rls) AS (VALUES
   ('mg_series_episodes', 'season_id', 'integer', true, false),
   ('mg_series_episodes', 'number', 'integer', true, false),
   ('mg_series_episodes', 'title', 'text', true, true),
+  ('mg_series_episodes', 'playback_url', 'text', true, true),
   ('mg_series_seasons', 'id', 'integer', true, true),
   ('mg_series_seasons', 'movie_id', 'integer', true, false),
   ('mg_series_seasons', 'number', 'integer', true, false),

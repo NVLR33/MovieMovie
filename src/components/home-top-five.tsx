@@ -1,9 +1,7 @@
 'use client';
 import { isSeries } from '@/lib/series';
-import { ageRatingTone } from '@/lib/age-rating';
 
-import MediaPoster from './media-poster';
-import { TrailerSurface } from './trailer-preview';
+import MaterialCover from './material-cover';
 import { materialTone } from '@/lib/trailers';
 import {
   useLayoutEffect,
@@ -30,20 +28,7 @@ import {
 import { formatFilmRating } from '@/lib/rating-display';
 
 function Cover({ film }: { film: Film }) {
-  return (
-    <TrailerSurface
-      film={film}
-      trailerUrl={film.trailerUrl}
-      className="home-five-poster"
-    >
-      <MediaPoster src={film.poster} alt="" />
-      {film.ageRating && (
-        <small className={`home-five-age age-${ageRatingTone(film.ageRating)}`}>
-          {film.ageRating}
-        </small>
-      )}
-    </TrailerSurface>
-  );
+  return <MaterialCover film={film} className="home-five-poster" />;
 }
 export default function HomeTopFive({
   films,
@@ -211,26 +196,23 @@ export default function HomeTopFive({
                     {index + 1}
                   </span>
                   <Cover key={`${film.id}:${film.poster}`} film={film} />
-                  <span className="home-five-score">
-                    {metric === 'rating' ? (
-                      <>
-                        <Star size={11} fill="currentColor" />
-                        {formatFilmRating(film)}
-                      </>
-                    ) : metric === 'views' ? (
-                      <>
-                        <Eye size={12} />
-                        {number(film.views || 0)}
-                      </>
-                    ) : (
-                      <>
-                        <Heart size={11} fill="currentColor" />
-                        {number(film.favoriteCount || 0)}
-                      </>
-                    )}
-                  </span>
                 </span>
                 <span className="home-five-caption">
+                  {metric !== 'rating' && (
+                    <span className="home-five-score">
+                      {metric === 'views' ? (
+                        <>
+                          <Eye size={12} />
+                          {number(film.views || 0)}
+                        </>
+                      ) : (
+                        <>
+                          <Heart size={11} fill="currentColor" />
+                          {number(film.favoriteCount || 0)}
+                        </>
+                      )}
+                    </span>
+                  )}
                   <strong>{film.title}</strong>
                   <small>
                     {film.year} · {film.category}

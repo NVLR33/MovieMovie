@@ -4,7 +4,7 @@ export function isSeries(category: string) { return (SERIES_CATEGORIES as readon
 export function validSeriesRating(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0.5 && value <= 10 && Number.isInteger(value * 2);
 }
-export type SeriesEpisode = { id: number; number: number; title: string; rating: number | null };
+export type SeriesEpisode = { id: number; number: number; title: string; rating: number | null; playbackUrl?: string };
 export type SeriesSeason = { id: number; number: number; title: string; rating: number | null; episodes: SeriesEpisode[] };
 export type SeriesSnapshot = { seasons: SeriesSeason[]; catalogComplete: boolean; completed: boolean; canEdit: boolean; authenticated: boolean };
 

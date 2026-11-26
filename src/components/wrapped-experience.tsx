@@ -1,5 +1,6 @@
 
 'use client';
+import MaterialCover from './material-cover';
 
 import {
   useCallback,
@@ -266,27 +267,13 @@ function Poster({
   className?: string;
   style?: CSSProperties;
 }) {
-  const [failed, setFailed] = useState(false);
-
   return (
     <div
       className={`ww-poster ${className}`}
       style={style}
       title={movie?.title || 'moviemovie'}
     >
-      {movie?.poster && !failed ? (
-        <img
-          src={movie.poster}
-          alt={movie.title}
-          loading="lazy"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <div className="ww-poster-fallback">
-          <Clapperboard size={28} />
-          <span>{movie?.title || 'moviemovie'}</span>
-        </div>
-      )}
+      <MaterialCover film={movie || {}} style={{width: '100%'}} alt={movie?.title || ''} badges={false} preview={false} />
     </div>
   );
 }
@@ -1512,7 +1499,8 @@ function WrappedStyles() {
 
       .ww-intro-poster {
         width: 100%;
-        height: 100%;
+        height: auto;
+        aspect-ratio: 2/3;
         opacity: .9;
       }
 
@@ -1797,7 +1785,7 @@ function WrappedStyles() {
 
       .ww-best-poster-wrap .ww-poster {
         width: 100%;
-        height: 100%;
+        height: auto;
       }
 
       .ww-best-info {
@@ -2064,7 +2052,8 @@ function WrappedStyles() {
       }
 
       .ww-final-posters .ww-poster {
-        height: 100%;
+        height: auto;
+        aspect-ratio: 2/3;
         border-radius: 7px;
       }
 

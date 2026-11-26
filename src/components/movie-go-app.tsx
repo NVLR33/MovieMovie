@@ -4,8 +4,10 @@ import CinemaRoulette from './cinema-roulette';
 import CineDayBanner from './cine-day-banner';
 import type { CineDay } from '@/lib/cine-day';
 import CityCinema, {CinemaSearchLink} from './city-cinema';
-import MediaPoster, {MediaAge,MediaRating} from './media-poster';
-import {TrailerSurface, TrailerDialog} from './trailer-preview';
+import MaterialPlayer from './material-player';
+import { playbackSource } from '@/lib/playback-source';
+import MaterialCover, {type CoverFilm} from './material-cover';
+import {TrailerDialog} from './trailer-preview';
 import {MaterialViewControls,useMaterialView} from './material-view';
 import {materialTone,trailerSource,MAX_TRAILER_BYTES} from '@/lib/trailers';
 /* eslint-disable @next/next/no-img-element */
@@ -225,7 +227,6 @@ const blank: Data = {
   challenges: [],
   season: null
 };
-const image = (f: FilmType) => f.poster || '/posters/dune.jpg';
 const titleMinutes = (f: FilmType) => ['Сериал', 'Мультсериал', 'Аниме-сериал'].includes(f.category) ? f.duration * (f.episodes || 1) : f.duration;
 const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
 function initials(s: string) { return s.slice(0, 2).toUpperCase(); }
@@ -268,6 +269,7 @@ function Avatar({ name, src, size = 36, frame = 'none' }: { name: string; src?: 
  */
 function PosterThumb({
   movieId,
+  film,
   src,
   alt = '',
   wrapClassName,
@@ -276,6 +278,7 @@ function PosterThumb({
   showBadge = false, // <-- по умолчанию НЕ показываем галочку
 }: {
   movieId?: number | null;
+  film?: CoverFilm;
   src?: string | null;
   alt?: string;
   wrapClassName?: string;
@@ -287,20 +290,15 @@ function PosterThumb({
   const watchedIds = useWatchedIds();
   const watched = showBadge && typeof movieId === 'number' && watchedIds.has(movieId);
 
-  const finalSrc = src || '/posters/dune.jpg';
-
   return (
-    <span
-      className={wrapClassName}
-      style={{
-        position: 'relative',
-        display: 'inline-block',
-        flex: 'none',
-        ...wrapStyle,
-      }}
+    <MaterialCover
+      film={film || {poster: src}}
+      alt={alt}
+      className={`poster-thumb ${wrapClassName || ''} ${imgClassName || ''}`}
+      style={wrapStyle}
+      badges={false}
+      preview={false}
     >
-      <img className={imgClassName} src={finalSrc} alt={alt} />
-
       {watched && (
         <span
           title="Просмотрено"
@@ -323,7 +321,7 @@ function PosterThumb({
           <CheckCircle2 size={14} />
         </span>
       )}
-    </span>
+    </MaterialCover>
   );
 }
 
@@ -778,7 +776,7 @@ return (
 
                     return results.length ? results.map(f => (
                       <button key={f.id} className="hot-search-item" onClick={() => { go('/movie/' + f.id); setSearch(''); }}>
-                        <PosterThumb movieId={f.id} src={f.poster} alt={f.title} />
+                        <PosterThumb film={f} movieId={f.id} src={f.poster} alt={f.title} />
                         <div className="hot-item-info">
                           <b>{f.title}</b>
                           <small>{f.year} · {f.category}</small>
@@ -1162,12 +1160,9 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
         }
       }}
     >
-      <TrailerSurface film={film} trailerUrl={film.trailerUrl} className="poster-wrap">
-        <MediaPoster src={image(film)} alt={film.title} />
+      <MaterialCover film={film} className="poster-wrap" alt={film.title}>
         <span className="card-shade" />
         {rank && <span className="rank-num">{String(rank).padStart(2, '0')}</span>}
-        <MediaRating film={film} className="card-score" />
-        <MediaAge value={film.ageRating}/>
         {!clean && isWatched && <span className="card-watched-badge"><CheckCircle2 size={14} /></span>}
         {!clean && <button
           type="button"
@@ -1185,7 +1180,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
             fill={isFavorite ? 'currentColor' : 'none'}
           />
         </button>}
-      </TrailerSurface>
+      </MaterialCover>
       <div className="card-info">
         <h3>{film.title}</h3>
         <p>
@@ -1503,13 +1498,7 @@ const rating = data.ratings.find(x => x.movieId === f.id);
           </div>
 
           <div className="capsule-memory">
-            {capsuleMovie.poster && (
-              <img
-                src={capsuleMovie.poster}
-                alt={capsuleMovie.title}
-                className="capsule-poster"
-              />
-            )}
+            <MaterialCover film={capsuleMovie} preview={false} badges={false} alt={capsuleMovie.title} className="capsule-poster" />
 
             <div className="capsule-memory-info">
               <span className="capsule-date">
@@ -1850,7 +1839,7 @@ function MovieDetailContent({
 
       <div className={`detail-hero tone-${materialTone(film)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
         <div className="detail-poster" ref={posterAnchor}>
-          <TrailerSurface film={film} className="detail-series-cover"><MediaPoster src={image(film)} alt={film.title}/></TrailerSurface>
+          <MaterialCover film={film} preview={false} className="detail-series-cover" alt={film.title}/>
         </div>
 
         <div className="detail-intro">
@@ -1884,6 +1873,7 @@ function MovieDetailContent({
           </div>
 
           <div className="detail-actions">
+            <MaterialPlayer url={film.playbackUrl} title={film.title} />
             {!isSeries(film.category) && <CinemaSearchLink title={film.title}/>}
             {trailerSource(film.trailerUrl) && <button className="outline-btn" onClick={()=>setTrailerOpen(true)}><Play size={16}/>Трейлер</button>}
 <button
@@ -3120,7 +3110,7 @@ function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: R
                     src={questions[round].poster}
                     alt="Загадочный постер"
                     imgClassName="game-poster"
-                    wrapStyle={{ display: 'block', width: '100%' }}
+                    wrapStyle={{ display: 'block' }}
                   />
                 )}
 
@@ -3318,6 +3308,7 @@ function MovieForm({
     poster: initial.poster || '',
     backdrop: initial.backdrop || '',
     watchUrl: initial.watchUrl || '',
+    playbackUrl: initial.playbackUrl || '',
     trailerUrl: initial.trailerUrl || '',
     director: initial.director || '',
     cast: initial.cast || '',
@@ -3450,7 +3441,7 @@ function MovieForm({
         <p>{mode === 'suggest' ? 'Заполни карточку как для каталога. После одобрения она станет материалом, а ты получишь уведомление. Одновременно — до 5 заявок.' : suggestion ? `Заявка от ${suggestion.author?.username || 'пользователя'}. Исправь данные перед публикацией. Материал и решение сохранятся вместе.` : 'Поля со звёздочкой обязательны.'}</p>
         {suggestion && !suggestion.material && <p className="suggestion-legacy">Это старая краткая заявка. Дополните обязательные поля — повторно отправлять её не нужно.</p>}
         {mode === 'suggest' && suggestions.length > 0 && <details className="my-suggestions"><summary>Мои предложения · {suggestions.filter(s => s.status === 'pending').length} на рассмотрении</summary>{suggestions.slice(0, 20).map(s => <div key={s.id}><b>{s.title} · {s.year}</b><span>{s.status === 'pending' ? 'На рассмотрении' : s.status === 'approved' ? 'Принято' : 'Отклонено'}</span>{s.reviewReason && <p>{s.reviewReason}</p>}{s.movieId && <a href={`/movie/${s.movieId}`}>Открыть материал →</a>}</div>)}</details>}
-        <details className="material-preview"><summary>Предпросмотр карточки</summary><div>{form.poster && <img src={form.poster} alt="Предпросмотр постера" />}<section><h3>{form.title || 'Название материала'}</h3><small>{form.category} · {form.year} · {form.duration} мин</small><p>{form.description || 'Здесь появится описание'}</p></section></div></details>
+        <details className="material-preview"><summary>Предпросмотр карточки</summary><div><MaterialCover film={form} preview={false} className="editor-cover" alt="Предпросмотр постера" /><section><h3>{form.title || 'Название материала'}</h3><small>{form.category} · {form.year} · {form.duration} мин</small><p>{form.description || 'Здесь появится описание'}</p></section></div></details>
 
         <form onSubmit={submit} className="editor-form">
           <fieldset disabled={busy || uploading || trailerUploading} className="material-fields">
@@ -3644,13 +3635,20 @@ function MovieForm({
 
           <div className="form-two">
             <label>
-              Ссылка на просмотр
+              Внешняя ссылка «Где посмотреть»
               <input
                 type="url"
                 value={form.watchUrl}
                 onChange={e => field('watchUrl', e.target.value)}
               />
             </label>
+          </div>
+
+          <div className="material-player-field">
+            <label htmlFor="material-playback-url">Источник просмотра на сайте</label>
+            <input id="material-playback-url" type="url" maxLength={4096} value={form.playbackUrl} onChange={e => field('playbackUrl', e.target.value)} placeholder="HTTPS: видео VK, Rutube или прямой MP4" aria-describedby="material-playback-help" />
+            <small id="material-playback-help">Отдельно от трейлера и внешней ссылки. Только свои видео или контент с разрешением на показ. Вставляйте ссылку, не HTML-код. Видео хранится у источника; ссылка будет доступна посетителям. Не используйте секретные или временные персональные ссылки.</small>
+            {form.playbackUrl && <small role="status">{playbackSource(form.playbackUrl) ? `Источник распознан: ${playbackSource(form.playbackUrl)!.provider}. Подключается только после согласия зрителя.` : 'Неподдерживаемый источник. Нужна ссылка на видео VK, Rutube или прямой MP4.'}</small>}
           </div>
 
           <div className="material-trailer-field">
@@ -3889,7 +3887,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
               <div className="history-list">
                 {profile.recentWatches.map((w, i) => w.film && (
                   <button key={i} onClick={() => go('/movie/' + w.film!.id)}>
-                    <PosterThumb movieId={w.film!.id} src={w.film!.poster} alt="" />
+                    <PosterThumb film={w.film!} movieId={w.film!.id} src={w.film!.poster} alt="" />
                     <span><b>{w.film!.title}</b><small>{new Date(w.watchedAt).toLocaleDateString('ru-RU')} · {w.film!.category}</small></span>
                     <ChevronRight size={16} />
                   </button>
@@ -4011,7 +4009,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
                       <p>{m.body}</p>
                       {m.film && (
                         <button className="shared-film-card" onClick={() => go('/movie/' + m.film!.id)}>
-                          <PosterThumb movieId={m.film!.id} src={m.film!.poster} alt="" />
+                          <PosterThumb film={m.film!} movieId={m.film!.id} src={m.film!.poster} alt="" />
                           <div><b>{m.film!.title}</b><small>{m.film!.year} · {m.film!.category}</small></div>
                           <ArrowUpRight size={14} />
                         </button>
@@ -4034,7 +4032,7 @@ function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) =>
                     <div className="chat-share-list">
                       {shareFilms.map(f => (
                         <button key={f.id} onClick={() => sendMessage(f.id)} className="chat-share-item">
-                          <PosterThumb movieId={f.id} src={f.poster} alt="" />
+                          <PosterThumb film={f} movieId={f.id} src={f.poster} alt="" />
                           <div><b>{f.title}</b><small>{f.year} · ★ {formatFilmRating(f)}</small></div>
                           <Send size={14} />
                         </button>
@@ -4124,7 +4122,7 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
               <p>{m.body}</p>
               {m.film && (
                 <button className="shared-film-card" onClick={() => { close(); go('/movie/' + m.film!.id); }}>
-                  <PosterThumb movieId={m.film!.id} src={m.film!.poster} alt="" />
+                  <PosterThumb film={m.film!} movieId={m.film!.id} src={m.film!.poster} alt="" />
                   <div><b>{m.film!.title}</b><small>{m.film!.year} · {m.film!.category}</small></div>
                   <ArrowUpRight size={14} />
                 </button>
@@ -4144,7 +4142,7 @@ function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data:
             <div className="chat-share-list">
               {shareFilms.map(f => (
                 <button key={f.id} onClick={() => sendMessage(f.id)} className="chat-share-item">
-                  <PosterThumb movieId={f.id} src={f.poster} alt="" />
+                  <PosterThumb film={f} movieId={f.id} src={f.poster} alt="" />
                   <div><b>{f.title}</b><small>★ {formatFilmRating(f)}</small></div>
                   <Send size={13} />
                 </button>
@@ -4203,7 +4201,7 @@ function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: num
         <SectionTitle title="Главные споры" />
         {disputes.length ? disputes.map((d, i) => (
           <div key={i} className="compare-row">
-            <PosterThumb movieId={d.film?.id} src={d.film?.poster} alt="" />
+            <PosterThumb film={d.film || undefined} movieId={d.film?.id} src={d.film?.poster} alt="" />
             <div className="compare-info"><b>{d.film?.title}</b></div>
             <div className="compare-scores">
               <div className="mine"><span>Ты</span><b>{d.my}</b></div>
@@ -4217,7 +4215,7 @@ function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: num
         <SectionTitle title="Единодушие" />
         {agreements.length ? agreements.map((d, i) => (
           <div key={i} className="compare-row">
-            <PosterThumb movieId={d.film?.id} src={d.film?.poster} alt="" />
+            <PosterThumb film={d.film || undefined} movieId={d.film?.id} src={d.film?.poster} alt="" />
             <div className="compare-info"><b>{d.film?.title}</b></div>
             <div className="compare-scores">
               <div className="mine"><span>Ты</span><b>{d.my}</b></div>
@@ -4528,7 +4526,7 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
             <div className="wrc-film-grid">
               {filtered.map(f => (
                 <button key={f.id} className={`wrc-film-item ${selected?.id === f.id ? 'selected' : ''}`} onClick={() => setSelected(f)}>
-                  <PosterThumb movieId={f.id} src={f.poster} alt="" />
+                  <PosterThumb film={f} movieId={f.id} src={f.poster} alt="" />
                   <span>{f.title}</span>
                   {selected?.id === f.id && <Check size={14} />}
                 </button>
@@ -4538,7 +4536,7 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
 
           {selected && (
             <div className="wrc-selected">
-              <PosterThumb movieId={selected.id} src={selected.poster} alt="" />
+              <PosterThumb film={selected} movieId={selected.id} src={selected.poster} alt="" />
               <div><b>{selected.title}</b><small>{selected.year} · {selected.category} · {selected.duration} мин</small></div>
             </div>
           )}

@@ -1,3 +1,4 @@
+import { assertMaterialCovers } from './material-cover-contract.mjs';
 import { chooseTheme } from './settings-controls.mjs';
 // Production weekly chart + optimistic controls; fixture-guarded disposable SQL only.
 import assert from 'node:assert/strict';
@@ -116,6 +117,7 @@ try {
     () => document.querySelectorAll('.weekly-pulse-card').length === 10,
   );
   assert.equal(await pulse.locator('.weekly-pulse-lead').count(), 3);
+  await assertMaterialCovers(page, '.weekly-cinema-pulse');
   assert.equal(await pulse.locator('.weekly-pulse-small').count(), 7);
   assert.deepEqual(
     await pulse.locator('.weekly-pulse-place').allTextContents(),
@@ -130,7 +132,7 @@ try {
       exact: true,
     });
   assert.match(await leader.innerText(), /25/);
-  assert.match(await leader.locator('.weekly-pulse-rating').innerText(), /—/);
+  assert.match(await leader.locator('.cover-score').innerText(), /—/);
   // A failed optimistic save must roll back. No second client store or fabricated XP.
   let release;
   await context.route('**/api/action', async (route) => {

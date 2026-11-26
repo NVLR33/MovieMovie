@@ -1,3 +1,5 @@
+import { playbackUrl } from '@/lib/playback-source';
+import { requirePlaybackSchema } from '@/lib/playback-schema';
 import { movieReadFields } from '@/lib/movie-read-fields';
 import { writeAdminAudit } from '@/lib/admin-audit';
 import { canModerate } from '@/lib/permissions';
@@ -60,6 +62,7 @@ export async function POST(req: NextRequest) {
       }
       const [film] = await tx.select(movieReadFields).from(movies).where(eq(movies.id, movieId)).for('update');
       if (!film || !isSeries(film.category)) throw new InputError('Сериал не найден');
+      if (editing) await requirePlaybackSchema(tx, true);
       if (action === 'rateSeason' || action === 'rateEpisode') {
         const id = positive(body.id);
         const value = body.value;
@@ -102,7 +105,11 @@ export async function POST(req: NextRequest) {
         const [episode] = await tx.select({ id: seriesEpisodes.id }).from(seriesEpisodes).innerJoin(seriesSeasons, eq(seriesEpisodes.seasonId, seriesSeasons.id))
           .where(and(eq(seriesEpisodes.id, id), eq(seriesSeasons.movieId, movieId)));
         if (!episode) throw new InputError('Эпизод не найден');
-        await tx.update(seriesEpisodes).set({ title: title(body.title) }).where(eq(seriesEpisodes.id, id));
+        let source: string | undefined;
+        if (body.playbackUrl !== undefined) {
+          try { source = playbackUrl(body.playbackUrl); } catch (error) { throw new InputError(error instanceof Error ? error.message : 'Некорректный источник просмотра'); }
+        }
+        await tx.update(seriesEpisodes).set({ title: title(body.title), ...(source !== undefined ? {playbackUrl: source} : {}) }).where(eq(seriesEpisodes.id, id));
       } else if (action === 'publish') {
         if (typeof body.complete !== 'boolean') throw new InputError('Укажите полноту списка');
         const seasons = await loadSeries(tx, movieId, null);
@@ -110,7 +117,7 @@ export async function POST(req: NextRequest) {
         await tx.update(movies).set({ seriesCatalogComplete: body.complete }).where(eq(movies.id, movieId));
       } else throw new InputError('Неизвестное действие');
       if (editing) await writeAdminAudit(tx,user,`series.${action}`,'movie',movieId,film.title);
-      if (editing && action !== 'publish') {
+      if (['saveSeason', 'deleteSeason'].includes(action)) {
         const [count] = await tx.select({ value: sql<number>`count(*)::int` }).from(seriesEpisodes).innerJoin(seriesSeasons, eq(seriesEpisodes.seasonId, seriesSeasons.id)).where(eq(seriesSeasons.movieId, movieId));
         await tx.update(movies).set({ seriesCatalogComplete: false, episodes: count.value }).where(eq(movies.id, movieId));
       }

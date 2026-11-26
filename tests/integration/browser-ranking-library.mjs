@@ -1,3 +1,4 @@
+import { assertMaterialCovers } from './material-cover-contract.mjs';
 import { chooseTheme } from './settings-controls.mjs';
 // Real production app + disposable marker-guarded local SQL only.
 import assert from 'node:assert/strict';
@@ -151,6 +152,7 @@ try {
   await five.getByRole('link', { name: 'Весь топ-10', exact: true }).click();
   await page.waitForURL('**/top?metric=rating&limit=10');
   await page.locator('.material-rank-item').first().waitFor();
+  await assertMaterialCovers(page);
   await page.goto(indexUrl);
   const library = page.locator('.ranking-library');
   await library.waitFor();

@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
+import MaterialCover from './material-cover';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -747,7 +747,7 @@ function WorkspaceBody({
                         className="admin-poster"
                         onClick={() => go(`/movie/${f.id}`)}
                       >
-                        <img src={f.poster} alt={f.title} />
+                        <MaterialCover film={f} badges={false} preview={false} alt={f.title} />
                       </button>
                       <div className="admin-material-info">
                         <button

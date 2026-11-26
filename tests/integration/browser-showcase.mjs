@@ -1,3 +1,4 @@
+import { assertMaterialCovers } from './material-cover-contract.mjs';
 import { chooseTheme } from './settings-controls.mjs';
 // Production collections UI, disposable local SQL with mandatory fixture marker only.
 import assert from 'node:assert/strict';
@@ -87,6 +88,7 @@ try {
     exact: true,
   });
   await shelf.waitFor();
+  await assertMaterialCovers(page, '.collection-shelf');
   assert.equal(await shelf.locator('.showcase-film').count(), 8);
   await shelf.getByText('Просмотрено 1 из 26', { exact: true }).waitFor();
   fs.mkdirSync('/tmp/mm-showcase-screenshots', { recursive: true });

@@ -1,8 +1,6 @@
 'use client';
-import { ageRatingTone } from '@/lib/age-rating';
 
-import MediaPoster from './media-poster';
-import { TrailerSurface } from './trailer-preview';
+import MaterialCover from './material-cover';
 import { materialTone } from '@/lib/trailers';
 import { useMemo, useState, type MouseEvent } from 'react';
 import {
@@ -12,12 +10,10 @@ import {
   Check,
   Eye,
   Film as FilmIcon,
-  Star,
   Users,
 } from 'lucide-react';
 import type { Film } from '@/lib/data';
 import type { WeeklyPulse } from '@/lib/weekly-pulse';
-import { formatFilmRating } from '@/lib/rating-display';
 type Action = (
   payload: Record<string, unknown>,
   success?: string,
@@ -105,20 +101,8 @@ function PulseCard({
           onClick={navigate}
           aria-label={`${en ? 'Open' : 'Открыть'} ${film.title}`}
         >
-          <TrailerSurface
-            film={film}
-            trailerUrl={film.trailerUrl}
-            className="weekly-trailer-surface"
-          >
-            <MediaPoster src={film.poster} alt="" />
-          </TrailerSurface>
+          <MaterialCover film={film} className="weekly-trailer-surface" />
         </a>
-        <span
-          className="weekly-pulse-place"
-          aria-label={`${en ? 'Place' : 'Место'} ${place}`}
-        >
-          #{place}
-        </span>
         <button
           type="button"
           className="weekly-pulse-save"
@@ -130,15 +114,15 @@ function PulseCard({
         >
           {saved ? <Check size={16} /> : <Bookmark size={16} />}
         </button>
-        {film.ageRating && (
-          <small
-            className={`weekly-pulse-age age-${ageRatingTone(film.ageRating)}`}
-          >
-            {film.ageRating}
-          </small>
-        )}
       </div>
       <div className="weekly-pulse-info">
+        <span
+          className="weekly-pulse-place"
+          aria-label={`${en ? 'Place' : 'Место'} ${place}`}
+        >
+          #{place}
+        </span>
+
         <a
           className="weekly-pulse-title"
           href={`/movie/${film.id}`}
@@ -155,15 +139,11 @@ function PulseCard({
               : film.genre}
           </p>
         )}
-        <span className="weekly-pulse-rating">
-          <Star size={12} />
-          {formatFilmRating(film)}
-          {lead && film.ratingCount > 0 && (
-            <small>
-              {number(film.ratingCount)} {en ? 'votes' : 'оценок'}
-            </small>
-          )}
-        </span>
+        {lead && film.ratingCount > 0 && (
+          <small className="weekly-pulse-votes">
+            {number(film.ratingCount)} {en ? 'votes' : 'оценок'}
+          </small>
+        )}
         <span className="weekly-pulse-viewers">
           <Users size={12} />
           <b>{number(viewers)}</b>

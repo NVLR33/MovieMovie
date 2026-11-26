@@ -36,7 +36,8 @@ import {
   type RouletteFilters,
   type RouletteMode,
 } from '@/lib/roulette';
-import MediaPoster, { MediaRating } from './media-poster';
+import { MediaRating } from './media-poster';
+import MaterialCover from './material-cover';
 
 const modes = {
   surprise: {
@@ -81,7 +82,8 @@ const modes = {
     title: 'Вечер для хорошего кино',
     titleEn: 'Make a night of it',
     note: 'Только полнометражное кино с известной длительностью в пределах лимита. Без сериалов.',
-    noteEn: 'Feature films with a known runtime within your limit. No series.',
+    noteEn:
+      'Feature films with a known runtime within your limit. No series.',
   },
 };
 type Props = {
@@ -149,7 +151,8 @@ function SpinStage({
     };
   }, [spinning, draw?.serial]);
   useEffect(() => {
-    if (draw?.phase === 'done') result.current?.focus({ preventScroll: true });
+    if (draw?.phase === 'done')
+      result.current?.focus({ preventScroll: true });
   }, [draw?.phase, draw?.serial]);
   const spin = () => {
     if (spinLock.current) return;
@@ -188,7 +191,9 @@ function SpinStage({
         {!draw ? (
           <div className="rr-invitation">
             <span>{en ? theme.subEn : theme.sub}</span>
-            <b>{en ? 'What will you discover?' : 'Какая история ждёт тебя?'}</b>
+            <b>
+              {en ? 'What will you discover?' : 'Какая история ждёт тебя?'}
+            </b>
             <small>
               {en
                 ? 'Choose a mode. We will handle the choice.'
@@ -211,7 +216,11 @@ function SpinStage({
                     className={`rr-slot ${index === ROULETTE_WINNER_INDEX && !spinning ? 'is-winner' : ''}`}
                     key={index}
                   >
-                    <MediaPoster src={film.poster} alt="" />
+                    <MaterialCover
+                      film={film}
+                      preview={false}
+                      badges={false}
+                    />
                   </div>
                 ))}
               </div>
@@ -250,8 +259,8 @@ function SpinStage({
             } as CSSProperties
           }
         >
-          <MediaPoster
-            src={winner.poster}
+          <MaterialCover
+            film={winner}
             alt={winner.title}
             className="rr-result-poster"
           />
@@ -406,7 +415,8 @@ export default function CinemaRoulette({
     () => [...new Set(films.map((f) => f.category))].sort(),
     [films],
   );
-  const personal = !signedIn && (mode === 'unwatched' || mode === 'watchlist'),
+  const personal =
+      !signedIn && (mode === 'unwatched' || mode === 'watchlist'),
     theme = modes[mode];
   const update = <K extends keyof RouletteFilters>(
     key: K,
@@ -524,7 +534,9 @@ export default function CinemaRoulette({
               value={filters.category}
               onChange={(e) => update('category', e.target.value)}
             >
-              <option value="all">{en ? 'All formats' : 'Все форматы'}</option>
+              <option value="all">
+                {en ? 'All formats' : 'Все форматы'}
+              </option>
               {categories.map((value) => (
                 <option key={value}>{value}</option>
               ))}
