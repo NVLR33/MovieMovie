@@ -1,3 +1,4 @@
+import { assertMaterialCovers } from './material-cover-contract.mjs';
 // Browser smoke against a real production Next server, not the React/network fixture.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -24,7 +25,7 @@ try{
  page.on('pageerror',error=>errors.push(error.message));
  page.on('console',message=>{if(message.type()==='error'&&/hydration|Minified React error|TypeError|ReferenceError/i.test(message.text()))errors.push(message.text())});
  page.on('response',response=>{if(response.url().startsWith(base)&&response.status()>=500)failures.push(`${response.status()} ${response.url()}`)});
- const open=async path=>{const response=await page.goto(base+path);assert.equal(response.status(),200,path);await page.waitForTimeout(450)};
+ const open=async path=>{const response=await page.goto(base+path);assert.equal(response.status(),200,path);await page.waitForTimeout(450);if(await page.locator('[data-material-cover]').count())await assertMaterialCovers(page)};
  const pages=['/','/catalog','/world','/top','/profile','/watchlist','/favorites','/leaderboard','/achievements','/challenges','/games','/friends','/wrapped','/collab','/watchroom','/chat','/admin','/about-admin','/movie/1','/movie/2',`/user/${me.id}`,`/compare/${me.id}`,'/room/ABC123?movie=2'];
  for(const path of pages){await open(path);assert((await page.locator('main').innerText()).trim().length>0,'Empty route '+path)}
  assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);

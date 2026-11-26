@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
+import MaterialCover from './material-cover';
 import { useMemo, useState } from 'react';
 import { Heart, Plus } from 'lucide-react';
 import type { Film } from '@/lib/data';
@@ -10,7 +10,12 @@ type Action = (
 type List = {
   id: number;
   title: string;
-  items?: { id: number; movieId: number; votes: number | null; film?: Film }[];
+  items?: {
+    id: number;
+    movieId: number;
+    votes: number | null;
+    film?: Film;
+  }[];
 };
 function ListCard({
   list,
@@ -90,9 +95,12 @@ function ListCard({
               disabled={!item.film}
               onClick={() => item.film && go(`/movie/${item.film.id}`)}
             >
-              {item.film?.poster && (
-                <img src={item.film.poster} alt="" loading="lazy" />
-              )}
+              <MaterialCover
+                film={item.film || {}}
+                badges={false}
+                preview={false}
+                className="collab-cover"
+              />
               <span>{item.film?.title || 'Материал недоступен'}</span>
             </button>
             <button
@@ -148,8 +156,8 @@ function ListCard({
         </button>
         {!candidates.length && (
           <small role="status">
-            Нет подходящих материалов. Попробуй другое название: уже добавленные
-            скрыты.
+            Нет подходящих материалов. Попробуй другое название: уже
+            добавленные скрыты.
           </small>
         )}
       </form>
@@ -185,8 +193,8 @@ export default function CollaborativeCollections({
         <span className="eyebrow">СМОТРИМ ВМЕСТЕ</span>
         <h2>Киновечер начинается с выбора.</h2>
         <p>
-          Создавай списки, добавляй материалы из каталога и голосуй за следующий
-          просмотр. Списки общие для участников сайта.
+          Создавай списки, добавляй материалы из каталога и голосуй за
+          следующий просмотр. Списки общие для участников сайта.
         </p>
       </header>
       <form

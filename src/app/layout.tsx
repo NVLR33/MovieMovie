@@ -18,6 +18,8 @@ import '../components/catalog-discovery.css';
 import '../components/material-cards.css';
 import '../components/responsive-repairs.css';
 import '../components/cinema-roulette.css';
+import '../components/material-cover.css';
+import '../components/material-player.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

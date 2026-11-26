@@ -13,7 +13,7 @@ test('migration inventory has the additive upgrades in deterministic order', () 
     '20261122-custom-titles.sql', '20261122-hidden-achievements.sql',
     '20261122-movie-cast.sql', '20261122-private-rewards.sql',
     '20261122-series-achievements.sql', '20261122-virtual-pet.sql', '20261122-wallet-economy.sql', '20261122-z-system-indexes.sql', '20261122-zz-realtime.sql', '20261122-zzz-full-suggestions.sql',
-    '20261122-zzzz-admin-workspace.sql', '20261122-zzzzz-trailers.sql',
+    '20261122-zzzz-admin-workspace.sql', '20261122-zzzzz-trailers.sql', '20261122-zzzzzz-playback.sql',
   ]);
   for (const file of files) {
     assert.equal(file.checksum, createHash('sha256').update(file.sql).digest('hex'));

@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
+import MaterialCover from './material-cover';
 import { useEffect, useRef, useState } from 'react';
 import { Check, Clock3, Search, X } from 'lucide-react';
 import { filterSuggestions, matchingSuggestionMovie, type MovieSuggestion } from '@/lib/movie-suggestions';
@@ -51,7 +51,7 @@ export default function SuggestionsQueue({ suggestions, films, review, go, actio
     <div className="suggestions-list">{filtered.map(s => {
       const existing = matchingSuggestionMovie(s, films);
       return <article className="suggestion-card suggestion-rich-card" key={s.id}>
-        <div className="suggestion-poster">{s.material?.poster ? <img src={s.material.poster} alt={`Постер: ${s.title}`} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} /> : <span>НЕТ<br />ПОСТЕРА</span>}</div>
+        <MaterialCover film={{poster:s.material?.poster, title:s.title}} badges={false} preview={false} className="suggestion-poster" alt={`Постер: ${s.title}`} />
         <div className="suggestion-card-content"><div className="suggestion-card-top"><div><span className="eyebrow">{s.category} · {s.year}</span><h3>{s.title}</h3>{s.material?.originalTitle && <small>{s.material.originalTitle}</small>}<p>{s.genre || 'Жанр не указан'}</p></div><span className={`suggestion-status ${s.status}`}>{labels[s.status]}</span></div>
           <div className="suggestion-author"><button type="button" className="text-link" onClick={() => go(`/user/${s.userId}`)}>{s.author?.username || 'Пользователь'}</button><small>{new Date(s.createdAt).toLocaleDateString('ru-RU')}</small></div>
           {s.material ? <><p className="suggestion-metadata">{[s.material.country, s.material.director, `${s.material.duration} мин`, s.material.episodes ? `${s.material.episodes} серий` : '', s.material.ageRating].filter(Boolean).join(' · ')}</p><details className="suggestion-details"><summary>Описание и данные заявки</summary><p>{s.material.description}</p><dl>{[['Студия', s.material.studio], ['Актёры', s.material.cast], ['Франшиза', s.material.franchise], ['Ссылка на просмотр', s.material.watchUrl]].filter(([, value]) => value).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></details></> : <p className="suggestion-legacy">{s.status === 'pending' ? 'Старая краткая заявка — перед публикацией нужно дополнить описание и обложку.' : 'Историческая краткая заявка.'}</p>}

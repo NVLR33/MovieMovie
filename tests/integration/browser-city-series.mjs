@@ -1,3 +1,4 @@
+import { assertMaterialCovers } from './material-cover-contract.mjs';
 // Production build; optional browser tools and marker-guarded disposable SQL only.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -233,6 +234,7 @@ try {
           return issues;
         });
         assert.deepEqual(issues, [], `${theme}/${width}/view${mode}`);
+        await assertMaterialCovers(page, '.film-grid');
       }
     }
   }
@@ -333,7 +335,7 @@ try {
           b = el.getBoundingClientRect(),
           s = getComputedStyle(el),
           badge = el.parentElement
-            .querySelector('.home-five-score')
+            .querySelector('.cover-score')
             .getBoundingClientRect();
         return (
           !el.classList.contains('series-poster') &&

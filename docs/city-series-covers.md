@@ -5,7 +5,7 @@
 Targeted additions; existing site composition, navigation, home podium and material view choices remain intact. No migration, production connection, deployment, external geocoder or showtime API is introduced.
 
 - Own-profile statistics tabs wrap instead of becoming a tightly clipped horizontal scroller. Scoped padding leaves room for outlines; hover/focus does not translate tabs. Existing public-profile responsive repairs remain separate.
-- Shared `TrailerSurface` uses the same standard full-bleed cover for episodic categories and feature films, without backing sheets or an episode banner over the artwork. Applied to catalog, home five, weekly pulse, collections, world and detail posters. Feature films are not decorated. Existing muted hover previews retain their lifecycle/reduced-motion behavior.
+- Shared `MaterialCover` (with `TrailerSurface` for previews) uses the same standard full-bleed cover for episodic categories and feature films, without backing sheets or an episode banner over the artwork. Applied to catalog, home five, weekly pulse, collections, world and detail posters. Feature films are not decorated. Existing muted hover previews retain their lifecycle/reduced-motion behavior.
 - `getOverview` batches catalog season counts in one grouped query (not a query per poster). A missing count is not replaced with an assumed season. Episode numbers come from declared material metadata. Season entries remain available in detail navigation; episode counts remain in card metadata rather than covering the artwork.
 
 ## City choice and privacy
@@ -30,7 +30,19 @@ The new “premiere frame” hover resolves into a crisp inner rim and a broad, 
 
 Legacy seasonal hover rules previously replaced the rating glow with a seasonal shadow, and disabling seasonal glow suppressed card shadows entirely. The material-card layer now wins the former cascade; the seasonal-glow switch no longer disables this unrelated interaction feedback.
 
-Validation: 260 unit tests, typecheck, lint and production build pass. City/series, material design, ranking library, weekly pulse and showcase production-browser suites pass against the isolated fixture database. Browser regressions assert standard full-bleed geometry, badge isolation across three densities/five widths/two themes, retained metadata and age colors, stationary/unfiltered artwork, absence of old effects, keyboard focus, reduced motion, and a visible halo with seasonal glow disabled. No production deployment or database migration was performed.
+Validation: 264 unit tests, typecheck, lint and production build pass. City/series, material design, ranking library, weekly pulse and showcase production-browser suites pass against the isolated fixture database. Browser regressions assert standard full-bleed geometry, badge isolation across three densities/five widths/two themes, retained metadata and age colors, stationary/unfiltered artwork, absence of old effects, keyboard focus, reduced motion, and a visible halo with seasonal glow disabled. No production deployment or database migration was performed.
+
+## Shared covers across the site
+
+`material-cover.tsx` and the final `material-cover.css` layer now own the catalog-style cover: 2:3 proportions, full-bleed crop, 2px rating-colored frame, neutral score chip at the upper left, and classification-colored age chip at the lower left. Catalog cards keep their one outer perimeter rather than gaining a duplicate poster border. All surfaces share error handling and the stationary rating halo; no missing artwork is replaced by an unrelated movie's poster.
+
+Migrated surfaces include catalog and profile grids, home top-five, full rankings, weekly pulse, studio/actor/genre and collaborative collections, world results, material detail, roulette, profile passport and memories, search/chat/history/comparison/watchroom thumbnails, submission/editor/admin previews, time capsule and wrapped artwork. Decorative panorama backdrops, avatars, branding and exported share images are not material-poster cards and retain their purpose-specific treatment.
+
+The layout of sections, ranking numbers/metrics, navigation, favorites/watchlist actions, personal diary ratings and trailer lifecycle are preserved. Home ranking metrics remain in the caption when they are not the audience rating; weekly place numbers stay in the information block, leaving catalog-aligned score/age corners clear. Very small covers (under 80px of inner width) hide overlay chips instead of rendering illegible text. Tiny list thumbnails and decorative/game covers explicitly omit chips; the common frame and fallback remain. No additional network requests are made for metadata absent from a surface's existing data.
+
+`material-cover-contract.mjs` checks common geometry, border ownership, image fill, chip placement/background and lack of nested navigation in realistic browser fixtures. The production 23-route smoke also runs this contract across rendered covers. The UI fixture loads the same final cover CSS and checks that the retired tilt/gloss never returns; reduced-motion epsilon durations from the global accessibility rule are treated as effectively immediate.
+
+Additional validation passed: ranking, weekly pulse, collection, passport, memory orbit, roulette, public-profile, admin, suggestions, mobile and actual-app UI suites. A public-profile legacy 42px thumbnail-height override was found by the shared contract and corrected to the common 2:3 ratio.
 
 ## Original validation
 

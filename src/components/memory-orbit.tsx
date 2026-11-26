@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
+import MaterialCover from './material-cover';
 import {
   useEffect,
   useId,
@@ -12,7 +12,6 @@ import { createPortal } from 'react-dom';
 import {
   ArrowUpRight,
   CalendarDays,
-  Clapperboard,
   GripVertical,
   List,
   Orbit,
@@ -211,7 +210,12 @@ function MemoryDialog({
         </button>
       </header>
       <div className="orbit-memory-identity">
-        {entry.film.poster && <img src={entry.film.poster} alt="" />}
+        <MaterialCover
+          film={entry.film}
+          badges={false}
+          preview={false}
+          className="memory-dialog-cover"
+        />
         <div>
           <h2 id={title}>{entry.film.title}</h2>
           <p>
@@ -461,18 +465,12 @@ export default function MemoryOrbit({
                         });
                       }}
                     >
-                      <span className="orbit-poster">
-                        {entry.film.poster ? (
-                          <img
-                            src={entry.film.poster}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            draggable={false}
-                          />
-                        ) : (
-                          <Clapperboard size={34} />
-                        )}
+                      <MaterialCover
+                        film={entry.film}
+                        badges={false}
+                        preview={false}
+                        className="orbit-poster"
+                      >
                         <span className="orbit-score">
                           <Star size={12} />
                           {entry.rating === null ? '—' : entry.rating + '/10'}
@@ -483,7 +481,7 @@ export default function MemoryOrbit({
                             Личная классика
                           </span>
                         )}
-                      </span>
+                      </MaterialCover>
                       <span className="orbit-caption">
                         <b>{entry.film.title}</b>
                         <small>{entry.dateLabel}</small>
@@ -548,7 +546,8 @@ export default function MemoryOrbit({
           </button>
         )}
         <small>
-          Даты по UTC · повторные сеансы не выдумываем · прокрутка без перехвата
+          Даты по UTC · повторные сеансы не выдумываем · прокрутка без
+          перехвата
         </small>
       </footer>
       {current && (

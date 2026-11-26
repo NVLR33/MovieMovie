@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, getTableColumns, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { seriesSeasons, seriesEpisodes, seasonRatings, episodeRatings, seriesCompletions, notifications } from '@/db/schema';
 import { seriesProgress, type SeriesSeason } from './series';
@@ -10,7 +10,7 @@ export async function loadSeries(reader: Reader, movieId: number, userId: number
   const seasons = await reader.select().from(seriesSeasons).where(eq(seriesSeasons.movieId, movieId)).orderBy(seriesSeasons.number);
   if (!seasons.length) return [];
   const seasonIds = seasons.map(s => s.id);
-  const episodes = await reader.select().from(seriesEpisodes).where(inArray(seriesEpisodes.seasonId, seasonIds)).orderBy(seriesEpisodes.number);
+  const episodes = await reader.select({...getTableColumns(seriesEpisodes), playbackUrl: sql<string>`coalesce(to_jsonb(${seriesEpisodes})->>'playback_url', '')`.as('playback_url')}).from(seriesEpisodes).where(inArray(seriesEpisodes.seasonId, seasonIds)).orderBy(seriesEpisodes.number);
   const ownSeasons = userId === null ? [] : await reader.select({ seasonId: seasonRatings.seasonId, value: seasonRatings.value }).from(seasonRatings)
     .where(and(eq(seasonRatings.userId, userId), inArray(seasonRatings.seasonId, seasonIds)));
   const ownEpisodes = userId === null || !episodes.length ? [] : await reader.select({ episodeId: episodeRatings.episodeId, value: episodeRatings.value }).from(episodeRatings)
@@ -18,7 +18,7 @@ export async function loadSeries(reader: Reader, movieId: number, userId: number
   const seasonValues = new Map(ownSeasons.map(r => [r.seasonId, r.value]));
   const episodeValues = new Map(ownEpisodes.map(r => [r.episodeId, r.value]));
   return seasons.map(season => ({ id: season.id, number: season.number, title: season.title, rating: seasonValues.get(season.id) ?? null,
-    episodes: episodes.filter(e => e.seasonId === season.id).map(e => ({ id: e.id, number: e.number, title: e.title, rating: episodeValues.get(e.id) ?? null })),
+    episodes: episodes.filter(e => e.seasonId === season.id).map(e => ({ id: e.id, number: e.number, title: e.title, playbackUrl: e.playbackUrl, rating: episodeValues.get(e.id) ?? null })),
   }));
 }
 

@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
+import MaterialCover from './material-cover';
 import {
   lazy,
   Suspense,
@@ -139,8 +139,8 @@ export default function CinemaPassport({
             />
           </Suspense>
           <div className="passport-attribution">
-            Natural Earth / world-atlas · упрощённая географическая справка, не
-            утверждение о границах.
+            Natural Earth / world-atlas · упрощённая географическая справка,
+            не утверждение о границах.
           </div>
         </article>
         <article className="passport-widget passport-genres hud-sync-tile">
@@ -277,10 +277,13 @@ export default function CinemaPassport({
                   {day.active ? <Check size={13} /> : '·'}
                 </i>
                 <small>
-                  {new Date(day.day * 86_400_000).toLocaleDateString('ru-RU', {
-                    weekday: 'short',
-                    timeZone: 'UTC',
-                  })}
+                  {new Date(day.day * 86_400_000).toLocaleDateString(
+                    'ru-RU',
+                    {
+                      weekday: 'short',
+                      timeZone: 'UTC',
+                    },
+                  )}
                 </small>
                 <span className="hud-sr-only">
                   {new Date(day.day * 86_400_000).toISOString().slice(0, 10)}:{' '}
@@ -312,11 +315,12 @@ export default function CinemaPassport({
               className="passport-story"
               onClick={() => go(`/movie/${stats.discovery!.id}`)}
             >
-              {stats.discovery.poster ? (
-                <img src={stats.discovery.poster} alt="" loading="lazy" />
-              ) : (
-                <Ticket size={30} />
-              )}
+              <MaterialCover
+                film={stats.discovery}
+                badges={false}
+                preview={false}
+                className="passport-cover"
+              />
               <span>
                 <small>
                   НОВОЕ НАПРАВЛЕНИЕ ·{' '}
@@ -333,8 +337,8 @@ export default function CinemaPassport({
             <div className="passport-empty compact">
               <b>Новые направления ещё появятся</b>
               <p>
-                В текущем каталоге нет непросмотренной истории из новой для тебя
-                страны.
+                В текущем каталоге нет непросмотренной истории из новой для
+                тебя страны.
               </p>
               <button type="button" onClick={() => go('/world?mode=watched')}>
                 Исследовать атлас <ArrowUpRight size={14} />
@@ -356,11 +360,12 @@ export default function CinemaPassport({
               className="passport-story"
               onClick={() => go(`/movie/${stats.newest!.id}`)}
             >
-              {stats.newest.poster ? (
-                <img src={stats.newest.poster} alt="" loading="lazy" />
-              ) : (
-                <Ticket size={30} />
-              )}
+              <MaterialCover
+                film={stats.newest}
+                badges={false}
+                preview={false}
+                className="passport-cover"
+              />
               <span>
                 <small>НЕДАВНО В ТВОЁМ ДНЕВНИКЕ</small>
                 <b>{stats.newest.title}</b>

@@ -1,3 +1,4 @@
+import { requirePlaybackSchema } from '@/lib/playback-schema';
 import { requireTrailerSchema } from '@/lib/trailer-schema';
 import { movieReadFields } from '@/lib/movie-read-fields';
 import { canCreateMaterial, canModerate, isAdministrator } from '@/lib/permissions';
@@ -565,11 +566,12 @@ export async function POST(req: NextRequest) {
         const [actor] = await tx.select().from(users).where(eq(users.id,user.id)).for('update');
         if (body.id ? !canModerate(actor) : !canCreateMaterial(actor)) throw new RequestError('Права изменились. Обновите страницу.',403);
         await requireTrailerSchema(tx);
+        await requirePlaybackSchema(tx);
         await lockMaterial(tx, input);
         const duplicate = await existingMaterial(tx, input);
         if (duplicate && duplicate.id !== body.id) throw new RequestError('Такой материал уже существует. Используйте редактирование.', 409);
         if (body.id) {
-          const updated = await tx.update(movies).set(input).where(eq(movies.id, Number(body.id))).returning({ id: movies.id });
+          const updated = await tx.update(movies).set({...input, ...(body.playbackUrl === undefined ? {playbackUrl: undefined} : {})}).where(eq(movies.id, Number(body.id))).returning({ id: movies.id });
           if (!updated.length) throw new RequestError('Материал не найден', 404);
           await writeAdminAudit(tx, actor!, 'movie.update','movie',updated[0].id,input.title);
           return { ok: true, movieId: updated[0].id, created: false };

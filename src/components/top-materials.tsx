@@ -13,7 +13,7 @@ import {
   Star,
   Trophy,
 } from 'lucide-react';
-import MediaPoster from './media-poster';
+import MaterialCover from './material-cover';
 import type { Film } from '@/lib/data';
 import { formatFilmRating } from '@/lib/rating-display';
 import {
@@ -36,7 +36,12 @@ const categoryNames: Record<string, string> = {
   'Аниме-фильм': 'Anime films',
 };
 
-function RankedMaterials({ films, go, en = false, watchedIds }: RankingProps) {
+function RankedMaterials({
+  films,
+  go,
+  en = false,
+  watchedIds,
+}: RankingProps) {
   const params = useSearchParams(),
     router = useRouter(),
     options = parseMaterialTopOptions(params);
@@ -207,7 +212,7 @@ function RankedMaterials({ films, go, en = false, watchedIds }: RankingProps) {
                   {index === 0 && <Crown size={13} />}
                   <b>{String(index + 1).padStart(2, '0')}</b>
                 </span>
-                <MediaPoster src={film.poster} className="material-poster">
+                <MaterialCover film={film} className="material-poster">
                   {watchedIds?.has(film.id) && (
                     <span
                       className="material-watched"
@@ -216,7 +221,7 @@ function RankedMaterials({ films, go, en = false, watchedIds }: RankingProps) {
                       <CheckCircle2 size={14} />
                     </span>
                   )}
-                </MediaPoster>
+                </MaterialCover>
                 <span className="material-info">
                   <strong>{film.title}</strong>
                   <span className="material-subtitle">
@@ -266,7 +271,9 @@ function RankedMaterials({ films, go, en = false, watchedIds }: RankingProps) {
                   )}
                   <span
                     title={
-                      en ? 'Title page visits' : 'Посещения страницы материала'
+                      en
+                        ? 'Title page visits'
+                        : 'Посещения страницы материала'
                     }
                     className={
                       metric === 'views'
@@ -491,7 +498,9 @@ function RankingLibrary({
                   .map((list) => {
                     const { options, total, watched, eligibleCount } = list;
                     const url = materialTopUrl(options),
-                      percent = total ? Math.round((watched / total) * 100) : 0;
+                      percent = total
+                        ? Math.round((watched / total) * 100)
+                        : 0;
                     const title = en
                       ? `Top ${options.limit} · ${name.toLowerCase()}`
                       : `Топ-${options.limit} · ${name.toLowerCase()}`;
@@ -511,7 +520,8 @@ function RankingLibrary({
                           <span className="ranking-list-info">
                             <strong>{title}</strong>
                             <span>
-                              {en ? categoryNames[category] : category} <i>·</i>{' '}
+                              {en ? categoryNames[category] : category}{' '}
+                              <i>·</i>{' '}
                               {en
                                 ? `${number(total)} titles`
                                 : `Материалов: ${number(total)}`}

@@ -1,3 +1,4 @@
+import { playbackUrl } from './playback-source';
 import { trailerUrl } from './trailers';
 import { imageUrl } from './image-storage';
 import { RequestError } from './request-validation';
@@ -34,6 +35,8 @@ export function parseMaterialInput(body: Record<string, unknown>) {
     try { const url = new URL(watchUrl); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw Error(); }
     catch { throw new RequestError('Ссылка просмотра должна начинаться с HTTP(S) и не содержать пароль'); }
   }
+  let playback = '';
+  try { playback = playbackUrl(text(body, 'playbackUrl', 4096)); } catch (error) { throw new RequestError(error instanceof Error ? error.message : 'Некорректный источник просмотра'); }
   let trailer = '';
   try { trailer = trailerUrl(text(body, 'trailerUrl', 4096)); } catch (error) { throw new RequestError(error instanceof Error ? error.message : 'Некорректный трейлер'); }
   const mood = text(body, 'mood', 50);
@@ -43,7 +46,7 @@ export function parseMaterialInput(body: Record<string, unknown>) {
     genre: text(body, 'genre', 200), originalTitle: text(body, 'originalTitle', 200), studio: text(body, 'studio', 300),
     director: text(body, 'director', 300), cast: text(body, 'cast', 4000), country: text(body, 'country', 300),
     franchise: text(body, 'franchise', 150), festivalRecognized: body.festivalRecognized === true,
-    mood: mood ? parseCatalogMood(mood)! : '', poster: imageUrl(body.poster, true), backdrop: imageUrl(body.backdrop), watchUrl, trailerUrl: trailer,
+    mood: mood ? parseCatalogMood(mood)! : '', poster: imageUrl(body.poster, true), backdrop: imageUrl(body.backdrop), watchUrl, playbackUrl: playback, trailerUrl: trailer,
   };
 }
 export type MaterialInput = ReturnType<typeof parseMaterialInput>;

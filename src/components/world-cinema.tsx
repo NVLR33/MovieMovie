@@ -1,10 +1,9 @@
 'use client';
 
-import MediaPoster from './media-poster';
-import { TrailerSurface } from './trailer-preview';
+import MaterialCover from './material-cover';
 import { materialTone } from '@/lib/trailers';
 import { useMemo, useState } from 'react';
-import { Globe2, MapPin, RotateCcw, Star, ZoomIn } from 'lucide-react';
+import { Globe2, MapPin, RotateCcw, ZoomIn } from 'lucide-react';
 import type { Film } from '@/lib/data';
 import geography from '@/data/world-map.json';
 import {
@@ -14,7 +13,6 @@ import {
   countryName,
   parseFilmCountries,
 } from '@/lib/cinema-countries';
-import { formatFilmRating } from '@/lib/rating-display';
 
 const LEGEND = ['0', '1–2', '3–5', '6–11', '12+'];
 export default function WorldCinema({
@@ -184,7 +182,9 @@ export default function WorldCinema({
             setLimit(12);
           }}
         >
-          <option value="Все">{en ? 'All categories' : 'Все категории'}</option>
+          <option value="Все">
+            {en ? 'All categories' : 'Все категории'}
+          </option>
           {[...new Set(films.map((f) => f.category))].sort().map((c) => (
             <option key={c}>{c}</option>
           ))}
@@ -257,7 +257,9 @@ export default function WorldCinema({
                     ? `${countryName(shape.code, en)}: ${count}`
                     : shape.name
                 }
-                aria-pressed={shape.code ? selected === shape.code : undefined}
+                aria-pressed={
+                  shape.code ? selected === shape.code : undefined
+                }
                 onMouseEnter={() => setHover(shape.code || '')}
                 onMouseLeave={() => setHover('')}
                 onFocus={() => setHover(shape.code || '')}
@@ -461,20 +463,11 @@ export default function WorldCinema({
                     go(`/movie/${film.id}`);
                   }}
                 >
-                  <TrailerSurface
-                    film={film}
-                    trailerUrl={film.trailerUrl}
-                    className="world-film-poster"
-                  >
-                    <MediaPoster src={film.poster} alt="" />
-                    <span className="world-film-score">
-                      <Star size={12} />
-                      {formatFilmRating(film)}
-                    </span>
+                  <MaterialCover film={film} className="world-film-poster">
                     {watchedIds.has(film.id) && (
                       <b>{en ? 'Watched' : 'Просмотрено'}</b>
                     )}
-                  </TrailerSurface>
+                  </MaterialCover>
                   <h3>{film.title}</h3>
                   <p>
                     {film.year} · {film.category}
@@ -503,7 +496,9 @@ export default function WorldCinema({
           <div className="empty-state">
             <Globe2 size={34} />
             <h3>
-              {en ? 'A new destination awaits' : 'Это направление ещё впереди'}
+              {en
+                ? 'A new destination awaits'
+                : 'Это направление ещё впереди'}
             </h3>
             <p>
               {en
@@ -520,7 +515,9 @@ export default function WorldCinema({
                 setMode('catalog');
               }}
             >
-              {en ? 'Explore the catalog map' : 'Открыть карту всего каталога'}
+              {en
+                ? 'Explore the catalog map'
+                : 'Открыть карту всего каталога'}
             </button>
           </div>
         )}
