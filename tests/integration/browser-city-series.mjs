@@ -98,7 +98,9 @@ try {
       id,
     ]);
   }
-  await db.query('update mg_movies set views=999999999 where id=$1', [ids[0]]);
+  await db.query('update mg_movies set views=999999999 where id=$1', [
+    ids[0],
+  ]);
   await db.query(
     "insert into mg_series_seasons(movie_id,number,title)values($1,1,'Первый'),($1,2,'Второй')",
     [ids[0]],
@@ -184,39 +186,16 @@ try {
             })),
             p = el.querySelector('.cinema-poster').getBoundingClientRect(),
             issues = [];
-          const surface = el.querySelector('.series-poster'),
-            s = surface.getBoundingClientRect();
-          const sheets = [
-            getComputedStyle(surface, '::before'),
-            getComputedStyle(surface, '::after'),
-          ];
-          if (p.top - s.top < 11 || s.right - p.right < 11)
-            issues.push('stack lacks visible reserved space');
-          if (
-            sheets.some(
-              (sheet) =>
-                sheet.content === 'none' ||
-                parseFloat(sheet.borderTopWidth) < 1,
-            )
-          )
-            issues.push('missing visible backing sheets');
-          if (
-            getComputedStyle(surface).borderTopWidth !== '0px' ||
-            getComputedStyle(el.querySelector('.cinema-poster'))
-              .borderTopWidth !== '0px'
-          )
-            issues.push('duplicate frame inside the card perimeter');
-          if (sheets.some((sheet) => sheet.transform !== 'none'))
-            issues.push('legacy sheen moves the backing sheets');
-          if (
-            sheets[0].top !== '0px' ||
-            sheets[0].right !== '0px' ||
-            sheets[0].bottom !== '12px' ||
-            sheets[0].left !== '12px' ||
-            sheets[1].top !== '6px' ||
-            sheets[1].right !== '6px'
-          )
-            issues.push('legacy pseudo-element overrides the sheet geometry');
+          const surface = el.querySelector('.poster-wrap'),
+            r = surface.getBoundingClientRect();
+          if (el.querySelector('.series-poster'))
+            issues.push('serial stack must not return');
+          if (Math.abs(p.top - r.top) > 1 || Math.abs(p.right - r.right) > 1)
+            issues.push('poster does not fill the standard cover');
+          for (const pseudo of ['::before', '::after']) {
+            if (getComputedStyle(surface, pseudo).content !== 'none')
+              issues.push('legacy sheen or rear sheet remains');
+          }
           if (getComputedStyle(el).borderTopWidth !== '2px')
             issues.push('thin card border');
           const age = getComputedStyle(el.querySelector('.card-age-rating')),
@@ -262,17 +241,79 @@ try {
   await serial.screenshot({
     path: '/tmp/mm-city-series-screenshots/series-card.png',
   });
-  // Legacy poster sheen must not translate the rear sheet on hover.
+  // The new frame has no cursor tracking, zoom, sheen or card displacement.
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await serial.hover();
-  assert.equal(
-    await serial
-      .locator('.series-poster')
-      .evaluate((el) => getComputedStyle(el, '::before').transform),
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(450);
+  const idleShadow = await serial.evaluate(
+    (el) => getComputedStyle(el).boxShadow,
+  );
+  for (const season of ['off', 'winter', 'summer']) {
+    await page.evaluate((season) => {
+      document.documentElement.dataset.season = season;
+      document.documentElement.dataset.seasonGlow = 'off';
+    }, season);
+    await serial.hover({ position: { x: 30, y: 40 } });
+    await page.waitForTimeout(500);
+    const hover = await serial.evaluate((el) => {
+      const surface = el.querySelector('.poster-wrap');
+      const nodes = [
+        el,
+        surface,
+        el.querySelector('.cinema-poster-image'),
+        el.querySelector('.card-score'),
+      ];
+      return {
+        transforms: nodes.map((node) => [
+          node.className,
+          getComputedStyle(node).transform,
+        ]),
+        stationary: nodes.every(
+          (node) =>
+            new DOMMatrix(getComputedStyle(node).transform).isIdentity,
+        ),
+        unfiltered:
+          getComputedStyle(el.querySelector('.cinema-poster-image'))
+            .filter === 'none',
+        clean:
+          !surface.getAttribute('style') &&
+          !el.querySelector('.poster-gloss'),
+        shadow: getComputedStyle(el).boxShadow,
+        border: getComputedStyle(el).borderTopColor,
+        rating: getComputedStyle(el)
+          .getPropertyValue('--rating-color')
+          .trim(),
+      };
+    });
+    assert(
+      hover.stationary && hover.unfiltered && hover.clean,
+      `No old effects/${season}: ${JSON.stringify(hover)}`,
+    );
+    assert.notEqual(
+      hover.shadow,
+      'none',
+      `Visible halo even with seasonal glow off/${season}`,
+    );
+    assert.notEqual(hover.shadow, idleShadow);
+    assert(hover.shadow.includes('24px'), 'Broad halo is present');
+    await page.mouse.move(0, 0);
+  }
+  await serial.focus();
+  await page.waitForTimeout(450);
+  assert.notEqual(
+    await serial.evaluate((el) => getComputedStyle(el).boxShadow),
     'none',
   );
+  await serial.screenshot({
+    path: '/tmp/mm-city-series-screenshots/standard-cover-focus.png',
+  });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  // Top-five editions have no rectangular wrapper around their offset rounded sheets.
+  assert.equal(
+    await serial.evaluate((el) => getComputedStyle(el).transitionDuration),
+    '0s',
+  );
+  // Top-five uses the same ordinary full-bleed poster for series and films.
   await open('/');
   const five = page.locator('.home-five');
   await five
@@ -284,34 +325,47 @@ try {
   await topSeries.waitFor();
   for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    const cover = topSeries.locator('.series-poster');
+    const cover = topSeries.locator('.home-five-poster');
     assert(
       await cover.evaluate((el) => {
-        const s = getComputedStyle(el),
-          front = el.querySelector('.cinema-poster'),
-          f = getComputedStyle(front),
+        const front = el.querySelector('.cinema-poster'),
           p = front.getBoundingClientRect(),
-          b = el.getBoundingClientRect();
-        const badge = el.parentElement
-          .querySelector('.home-five-score')
-          .getBoundingClientRect();
+          b = el.getBoundingClientRect(),
+          s = getComputedStyle(el),
+          badge = el.parentElement
+            .querySelector('.home-five-score')
+            .getBoundingClientRect();
         return (
-          s.borderTopWidth === '0px' &&
-          s.boxShadow === 'none' &&
-          f.borderTopWidth === '2px' &&
-          parseFloat(f.borderTopLeftRadius) === 10 &&
-          p.top - b.top >= 11 &&
-          b.right - p.right >= 11 &&
+          !el.classList.contains('series-poster') &&
+          s.paddingTop === '0px' &&
+          s.paddingRight === '0px' &&
+          s.borderTopWidth === '2px' &&
+          Math.abs(p.top - b.top - 2) < 1 &&
+          Math.abs(b.right - p.right - 2) < 1 &&
           badge.top >= p.top &&
           badge.right <= p.right + 1
         );
       }),
-      `Clean single front frame in top-five at ${width}`,
+      `Standard full-bleed top-five at ${width}`,
     );
   }
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await topSeries.hover();
+  await page.waitForTimeout(450);
+  assert(
+    await topSeries.locator('.home-five-poster').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return (
+        new DOMMatrix(style.transform).isIdentity &&
+        style.boxShadow.includes('24px')
+      );
+    }),
+    'Top-five uses the new stationary rating halo too',
+  );
   await topSeries.screenshot({
     path: '/tmp/mm-city-series-screenshots/top-series-frame.png',
   });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await open('/catalog?studio=' + studio);
   // No mount-time location prompt; manual cities work without coordinates.
   assert.equal(await page.evaluate(() => window.geoCalls), 0);
@@ -377,7 +431,9 @@ try {
     path: '/tmp/mm-city-series-screenshots/city-choice-mobile.png',
   });
   const settings = await openSettings(page);
-  await settings.getByRole('heading', { name: 'Город и кинотеатры' }).waitFor();
+  await settings
+    .getByRole('heading', { name: 'Город и кинотеатры' })
+    .waitFor();
   await closeSettings(page);
   await open('/movie/' + ids[1]);
   await page.getByRole('link', { name: /Искать сеансы/ }).waitFor();
@@ -423,7 +479,7 @@ try {
     'No maps, reverse geocoder or schedule request without deliberate outbound navigation',
   );
   console.log(
-    'Passed series editions/city/privacy/profile hover: real season counts, no stack on films, badge isolation in 3 views/5 widths/2 themes, explicit location only, manual/session/remembered city, offline GPS suggestion confirmation, denied-permission fallback, safe outbound cinema search, settings and detail links, unclipped profile tab rings. Screenshots /tmp/mm-city-series-screenshots',
+    'Passed series editions/city/privacy/profile hover: real season counts, uniform standard covers on films and series, badge isolation in 3 views/5 widths/2 themes, explicit location only, manual/session/remembered city, offline GPS suggestion confirmation, denied-permission fallback, safe outbound cinema search, settings and detail links, unclipped profile tab rings. Screenshots /tmp/mm-city-series-screenshots',
   );
 } finally {
   await browser.close();

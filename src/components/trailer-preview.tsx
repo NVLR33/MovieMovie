@@ -1,5 +1,8 @@
 'use client';
-import { seriesPosterLabel, type SeriesPosterFilm } from '@/lib/series-poster';
+import {
+  seriesPosterLabel,
+  type SeriesPosterFilm,
+} from '@/lib/series-poster';
 import {
   useEffect,
   useRef,
@@ -78,9 +81,8 @@ export function TrailerSurface({
   return (
     <span
       {...props}
-      className={`${className}${serial ? ' series-poster' : ''}`}
+      className={className}
       data-series={serial ? 'true' : undefined}
-      title={serial?.description || props.title}
       onPointerEnter={(event) => {
         onPointerEnter?.(event);
         clear();
@@ -89,7 +91,9 @@ export function TrailerSurface({
         timer.current = setTimeout(() => {
           if (!mayPreview()) return;
           window.dispatchEvent(
-            new CustomEvent('mg-trailer-preview', { detail: session.current }),
+            new CustomEvent('mg-trailer-preview', {
+              detail: session.current,
+            }),
           );
           setActive(true);
         }, 650);

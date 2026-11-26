@@ -4,21 +4,6 @@ import { createPortal } from 'react-dom';
 import { Bookmark, Star, X } from 'lucide-react';
 
 const canMove = () => window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)').matches;
-export function tiltPoster(event: PointerEvent<HTMLElement>) {
-  if (event.pointerType !== 'mouse' || !canMove()) return;
-  const element = event.currentTarget;
-  const rect = element.getBoundingClientRect();
-  const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-  const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
-  // DOM-only updates: no React render or permanent GPU layer for each catalog tile.
-  element.style.setProperty('--tilt-x', `${(0.5 - y) * 7}deg`);
-  element.style.setProperty('--tilt-y', `${(x - 0.5) * 7}deg`);
-  element.style.setProperty('--gloss-x', `${x * 100}%`);
-  element.style.setProperty('--gloss-y', `${y * 100}%`);
-}
-export function resetTilt(event: PointerEvent<HTMLElement>) {
-  for (const property of ['--tilt-x', '--tilt-y', '--gloss-x', '--gloss-y']) event.currentTarget.style.removeProperty(property);
-}
 export function MagneticButton({ active, kind, children, className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { active: boolean; kind: 'heart' | 'bookmark' }) {
   const ref = useRef<HTMLSpanElement>(null);
   const previous = useRef(active);

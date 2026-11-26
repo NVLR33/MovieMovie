@@ -299,7 +299,7 @@
   border-radius: 8px;
   min-height: 36px;
 }
-.material-view-control button[aria-pressed='true'] {
+.material-view-control button[aria-pressed="true"] {
   color: var(--accent);
   border-color: var(--accent);
 }
@@ -520,132 +520,16 @@
   font-size: 11px;
 }
 
-/* Episodic editions reserve visible space ABOVE and BESIDE the front cover.
-   The sheets remain inside the card's clipping boundary in every density. */
-.series-poster.series-poster {
-  --series-reserve: 12px;
-  isolation: isolate;
-  background: transparent;
-  padding: var(--series-reserve) var(--series-reserve) 0 0;
-  border: 0;
-  box-shadow: none;
-  border-radius: 10px;
-}
-/* Higher specificity than the legacy poster sheen, which also uses ::before/after. */
-.series-poster.series-poster::before,
-.series-poster.series-poster::after {
-  content: '';
-  position: absolute;
-  border-radius: 10px;
-  pointer-events: none;
-  z-index: 0;
-  border: 1px solid
-    color-mix(in srgb, var(--rating-color, #a78bfa) 70%, #525666);
-  transform: none;
-  transition: none;
-  box-shadow: none;
-}
-.series-poster.series-poster::before {
-  inset: 0 0 12px 12px;
-  background: color-mix(in srgb, var(--rating-color, #a78bfa) 26%, #202430);
-}
-.series-poster.series-poster::after {
-  inset: 6px 6px 6px 6px;
-  background: color-mix(in srgb, var(--rating-color, #a78bfa) 42%, #202430);
-}
-.series-poster > .cinema-poster {
-  z-index: 1;
-  border-radius: 10px;
-  border: 2px solid
-    color-mix(in srgb, var(--rating-color, #a78bfa) 76%, transparent);
-  box-shadow: none;
-}
-/* The catalog card already has its one strong perimeter, including the caption. */
-.film-card .series-poster > .cinema-poster {
-  border: 0;
-  border-radius: 0 8px 0 0;
-}
-.film-card:hover .series-poster::before {
-  transform: none;
-}
-.series-poster > .poster-gloss,
-.series-poster > .card-shade,
-.series-poster > .trailer-preview {
-  inset: var(--series-reserve) var(--series-reserve) 0 0;
-  border-radius: 8px;
-}
-.film-card .series-poster .card-score {
-  top: 20px;
-}
-.film-card .series-poster .card-favorite-btn {
-  top: 20px;
-  right: 20px;
-}
-.film-card .series-poster .card-watched-badge {
-  right: 20px;
-  bottom: 8px;
-}
-.film-card .series-poster .card-age-rating {
-  bottom: 8px;
-}
-.series-poster .trailer-indicator {
-  left: calc(50% - 6px);
-  top: calc(50% + 6px);
-}
-.home-five-art:has(> .series-poster) > .home-five-score {
-  top: 20px;
-  right: 18px;
-}
-.home-five-poster.series-poster .home-five-age {
-  right: 17px;
-  bottom: 6px;
-}
-.showcase-poster.series-poster .showcase-score {
-  top: 18px;
-  right: 17px;
-}
-.showcase-poster.series-poster .showcase-watched {
-  right: 17px;
-}
-.world-film-poster.series-poster > .world-film-score {
-  top: 20px;
-  right: 20px;
-}
 .detail-series-cover {
   display: block;
   width: 100%;
   height: 100%;
   position: relative;
 }
-.material-view-list .series-poster .card-score {
-  font-size: 10px;
-  padding: 3px 4px;
-  left: 5px;
-  top: 18px;
-  gap: 3px;
-}
-.material-view-list .series-poster .card-score svg {
-  width: 10px;
-}
-.material-view-list .series-poster .card-favorite-btn {
-  width: 26px;
-  height: 26px;
-  right: 17px;
-  top: 18px;
-}
 @media (max-width: 600px) {
-  .material-view-compact .series-poster .card-favorite-btn {
-    top: 17px;
-    right: 16px;
-    width: 24px;
-    min-width: 24px;
-    height: 26px;
+  .material-view-compact .film-card .card-favorite-btn {
+    min-width: 26px;
     min-height: 26px;
-  }
-  .material-view-compact .series-poster .card-score {
-    top: 17px;
-    left: 4px;
-    padding-inline: 3px;
   }
   .material-view-compact .film-card .card-age-rating {
     min-width: 28px;
@@ -654,17 +538,15 @@
     bottom: 7px;
     font-size: 9px;
   }
-  .material-view-compact .series-poster .card-watched-badge {
+  .material-view-compact .film-card .card-watched-badge {
     width: 20px;
     height: 20px;
-    right: 17px;
+    right: 8px;
     bottom: 8px;
   }
 }
 @media (forced-colors: active) {
-  .film-card,
-  .series-poster.series-poster::before,
-  .series-poster.series-poster::after {
+  .film-card {
     border: 2px solid CanvasText;
   }
   .cinema-age.card-age-rating {
@@ -675,7 +557,7 @@
     border-color: Highlight;
   }
 }
-/* These overlays also sit above the front sheet, not behind its z-index. */
+/* Keep badges above artwork and trailer previews. */
 .home-five-age,
 .showcase-score,
 .showcase-watched,
@@ -685,4 +567,72 @@
 }
 .world-film-score {
   background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
+}
+
+/* Quiet premiere frame: artwork stays still and unfiltered. The frame resolves
+   into a crisp inner rim + a broad rating-colored halo, never a moving shine.
+   Repeated card specificity intentionally wins legacy seasonal hover rules. */
+:root .film-card.film-card.film-card,
+:root
+  :is(.home-five-poster, .showcase-poster, .weekly-pulse-card, .world-film) {
+  --cover-halo:
+    inset 0 0 0 1px
+      color-mix(in srgb, var(--rating-color, #757988) 38%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--rating-color, #757988) 28%, transparent),
+    0 0 24px color-mix(in srgb, var(--rating-color, #757988) 30%, transparent),
+    0 8px 24px #0003;
+  transform: none;
+  transition:
+    border-color 280ms ease,
+    box-shadow 380ms ease;
+}
+:root .film-card .poster-wrap,
+:root .film-card .poster-wrap img,
+:root .film-card .card-score,
+:root .home-five-card .home-five-poster,
+:root .showcase-film .showcase-poster {
+  transform: none;
+  filter: none;
+}
+:root .film-card .poster-wrap::before,
+:root .film-card .poster-wrap::after {
+  content: none;
+  display: none;
+}
+/* Keyboard and pointer receive the same rating-colored frame, not a seasonal tint. */
+:root .film-card.film-card.film-card:is(:focus-visible, :focus-within),
+:root .home-five-card:focus-visible .home-five-poster,
+:root .showcase-film:focus-visible .showcase-poster,
+:root :is(.weekly-pulse-card, .world-film):focus-within {
+  border-color: var(--rating-color, #757988);
+  box-shadow: var(--cover-halo);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root .film-card.film-card.film-card:hover,
+  :root .home-five-card:hover .home-five-poster,
+  :root .showcase-film:hover .showcase-poster,
+  :root :is(.weekly-pulse-card, .world-film):hover {
+    transform: none;
+    border-color: var(--rating-color, #757988);
+    box-shadow: var(--cover-halo);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .film-card.film-card.film-card,
+  :root
+    :is(.home-five-poster, .showcase-poster, .weekly-pulse-card, .world-film) {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  :root
+    .film-card.film-card.film-card:is(:hover, :focus-visible, :focus-within),
+  :root .home-five-card:is(:hover, :focus-visible) .home-five-poster,
+  :root .showcase-film:is(:hover, :focus-visible) .showcase-poster,
+  :root :is(.weekly-pulse-card, .world-film):is(:hover, :focus-within) {
+    border-color: Highlight;
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
 }

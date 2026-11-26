@@ -49,7 +49,7 @@ import { playerEmbedUrl } from '@/lib/player-url';
 import { resolveSiteRoute } from '@/lib/site-routes';
 import { catalogTokens, filterCatalog, parseCatalogOptions, catalogGenreCounts, type CatalogOptions } from '@/lib/catalog-filter';
 import { CATALOG_MOODS, parseCatalogMood } from '@/lib/catalog-moods';
-import { tiltPoster, resetTilt, MagneticButton, ReviewDrawer, MovieContextBar, RatingCelebration, AchievementReveal } from './cinema-interactions';
+import { MagneticButton, ReviewDrawer, MovieContextBar, RatingCelebration, AchievementReveal } from './cinema-interactions';
 import { useLiveUpdates } from './use-live-updates';
 import { applyCollectionUpdate, type CollectionUpdate } from '@/lib/optimistic-collections';
 import { achievementDefs, ACHIEVEMENT_TIERS } from '@/lib/achievements';
@@ -1162,8 +1162,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
         }
       }}
     >
-      <TrailerSurface film={film} trailerUrl={film.trailerUrl} className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
-        <span className="poster-gloss" aria-hidden="true" />
+      <TrailerSurface film={film} trailerUrl={film.trailerUrl} className="poster-wrap">
         <MediaPoster src={image(film)} alt={film.title} />
         <span className="card-shade" />
         {rank && <span className="rank-num">{String(rank).padStart(2, '0')}</span>}
