@@ -5,7 +5,7 @@
 Targeted additions; existing site composition, navigation, home podium and material view choices remain intact. No migration, production connection, deployment, external geocoder or showtime API is introduced.
 
 - Own-profile statistics tabs wrap instead of becoming a tightly clipped horizontal scroller. Scoped padding leaves room for outlines; hover/focus does not translate tabs. Existing public-profile responsive repairs remain separate.
-- Shared `TrailerSurface` decorates episodic categories with two static backing sheets, without an episode banner over the artwork. Applied to catalog, home five, weekly pulse, collections, world and detail posters. Feature films are not decorated. Existing muted hover previews retain their lifecycle/reduced-motion behavior.
+- Shared `TrailerSurface` uses the same standard full-bleed cover for episodic categories and feature films, without backing sheets or an episode banner over the artwork. Applied to catalog, home five, weekly pulse, collections, world and detail posters. Feature films are not decorated. Existing muted hover previews retain their lifecycle/reduced-motion behavior.
 - `getOverview` batches catalog season counts in one grouped query (not a query per poster). A missing count is not replaced with an assumed season. Episode numbers come from declared material metadata. Season entries remain available in detail navigation; episode counts remain in card metadata rather than covering the artwork.
 
 ## City choice and privacy
@@ -20,19 +20,17 @@ City UI is available in settings and in collapsed panels on home/catalog. A chos
 
 **This is cinema discovery, not a live schedule integration.** No availability, session times, ticket inventory or prices are fabricated. UI explicitly asks users to verify dates and availability at the external source. An in-app schedule requires a separately selected provider, credentials/terms as applicable, regional coverage and caching/error handling.
 
-## Follow-up card polish
+## Current material-card treatment
 
-Episodic covers reserve 12px above and beside the front poster for two clearly visible, thin-bordered backing sheets. Episode counts are shown in the text beneath the poster, not in an overlay. All three serial categories use this shared surface; ordinary films remain flat. Child overlays stay within the **front poster**, not just the outer stack boundary. Small compact covers explicitly constrain favorite-button minimum sizes so legacy mobile hitbox CSS cannot make score/heart badges collide.
+Films, series, anime series and animated series use the same standard full-bleed cover. The former episodic stack, reserved 12px space and sheet-specific badge offsets have been removed from the shared surface. Season metadata and navigation remain available, and episode counts stay in text below posters. Automatic native season-summary tooltips no longer obscure neighboring covers.
 
-Cards and shared framed cover surfaces use a stronger 2px rating-colored border. Age chips share the score's neutral charcoal background, with classification-colored text and a thin matching outline rather than solid colored fills. Favorite buttons have explicit neutral/hover/selected styles: selected hearts are pink and filled on the same charcoal background, with `aria-pressed` reflecting state. Keyboard focus and original actions are retained. Showcase/world/home overlays are explicitly layered above the front sheet.
+Age chips share the score's neutral charcoal background, with classification-colored text and a matching thin outline: 0–6 green, 7–12 blue, 13–15 yellow, 16–17 orange, 18–21 red; invalid/missing values remain neutral. Favorite hearts retain their selected state, accessible label and keyboard actions.
 
-The extended browser suite asserts actual 12px sheet clearance, 2px borders, matching age/score backgrounds, favorite state/icon styling, and no overlay intersection across three views/five widths/two themes. After this polish: 258 unit tests, typecheck, lint and isolated build pass; city/series, design, showcase, weekly pulse, roulette and general UI browser suites pass. Production has not been deployed or migrated.
+The new “premiere frame” hover resolves into a crisp inner rim and a broad, soft halo in the material's rating color. No poster zoom, image filtering, moving sheen, cursor-following light, tilt or card lift is used. The same treatment is applied to catalog cards, home top-five, showcases, weekly pulse and world results. Keyboard focus receives the frame too; reduced motion removes its transition, and forced-colors uses a visible system outline. Touch does not activate the desktop hover effect. Muted dwell-only trailer previews are unchanged.
 
-## Series frame follow-up
+Legacy seasonal hover rules previously replaced the rating glow with a seasonal shadow, and disabling seasonal glow suppressed card shadows entirely. The material-card layer now wins the former cascade; the seasonal-glow switch no longer disables this unrelated interaction feedback.
 
-The legacy catalog sheen also used `::before`/`::after` with more-specific geometry and hover transforms. Shared stack selectors now explicitly win that cascade, keeping the two sheets static at their actual 0px/6px offsets rather than allowing a full-size border or moving sheen. The redundant rectangular wrapper border and shadow are removed for stacked surfaces. Standalone covers (including home top-five) retain one 2px rounded front-poster border; catalog cards retain one 2px outer card border and no duplicate front-poster border. Rear sheets use 1px outlines. The home top-five score is aligned inside the inset front poster.
-
-Browser assertions cover wrapper/front border ownership, actual pseudo-element insets and hover transforms, rounded top-five fronts at 320/768/1440, and overlay clearance across the three catalog densities. After this follow-up: 258 unit tests, typecheck, lint, build, city/series, material design, ranking library, showcases and weekly pulse browser suites pass. The prior CI-audit changes remain separate, uncommitted work; no production deployment is performed.
+Validation: 260 unit tests, typecheck, lint and production build pass. City/series, material design, ranking library, weekly pulse and showcase production-browser suites pass against the isolated fixture database. Browser regressions assert standard full-bleed geometry, badge isolation across three densities/five widths/two themes, retained metadata and age colors, stationary/unfiltered artwork, absence of old effects, keyboard focus, reduced motion, and a visible halo with seasonal glow disabled. No production deployment or database migration was performed.
 
 ## Original validation
 
@@ -42,11 +40,3 @@ Browser assertions cover wrapper/front border ownership, actual pseudo-element i
 - Existing profiles, material design, mobile and UI production-browser suites also pass after these changes.
 
 Browser tests require `AUDIT_DATABASE_URL=postgresql://postgres:postgres@localhost/app_db?host=/tmp/mm-audit-pg`, the isolated fixture marker, and optional `UI_TEST_DEPS` pointing to a package with playwright-core/@sparticuz/chromium. The new suite is wired into the existing isolated quality workflow.
-
-## Age colors and clean poster follow-up
-
-Age chips use a shared classification helper across regular posters, home top-five and weekly pulse: 0–6 green, 7–12 blue, 13–15 yellow, 16–17 orange, 18–21 red; missing/invalid metadata stays neutral. These colors depend on the age classification, not the movie score. The background remains the same charcoal as the score badge.
-
-The shared season/episode overlay and its Layers icon are removed, while the serial stack and trailer behavior are preserved. Episode counts remain below the artwork (including home top-five); detail season navigation is unchanged. Browser regressions assert no episode overlay, retained episode metadata and orange 16+ text/outline on the shared neutral background.
-
-Validation: 260 unit tests, typecheck, lint and production build pass. City/series, material design, ranking library, weekly pulse and showcase production-browser suites pass against the isolated fixture database. No production deployment or database migration was performed.

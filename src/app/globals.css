@@ -4253,7 +4253,6 @@ select:focus {
 
 :root[data-season-glow="off"] .topbar,
 :root[data-season-glow="off"] .hero,
-:root[data-season-glow="off"] .film-card:hover,
 :root[data-season-glow="off"] .primary-btn,
 :root[data-season-glow="off"] .primary-btn:hover,
 :root[data-season-glow="off"] .challenges-bar,
@@ -5784,7 +5783,6 @@ button.pet-wallet:hover, button.pet-wallet[aria-pressed="true"] { border-color: 
 .catalog-moods button[aria-pressed="true"] { background:var(--accent-glow);color:var(--text);border-color:var(--accent); }
 .catalog-mood-note { color:var(--muted);font-size:11px;line-height:1.6;margin:0 0 20px; }
 .catalog-result-summary { color:var(--muted);font-size:12px;margin:18px 0; }
-.poster-gloss { position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(circle at var(--gloss-x,50%) var(--gloss-y,50%),rgba(255,255,255,.18),transparent 58%);transition:opacity .2s; }
 .magnetic-target { display:inline-flex;max-width:100%;vertical-align:middle; }
 .magnetic-button { transform:translate(var(--magnet-x,0px),var(--magnet-y,0px));transition:transform .15s ease-out; }
 .collection-motion-icon { display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0; }
@@ -5831,8 +5829,6 @@ button.pet-wallet:hover, button.pet-wallet[aria-pressed="true"] { border-color: 
 @keyframes context-appear { from { opacity:0;transform:translateY(-4px); } to { opacity:1;transform:translateY(0); } }
 @keyframes achievement-levitate { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(-3px) rotate(-5deg); } }
 @media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference) {
-  .tilt-poster { transform:perspective(850px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));transition:transform .16s ease-out; }
-  .tilt-poster:hover .poster-gloss { opacity:1; }
   .achievement-card:hover .achievement-icon,.hidden-trophy-card:hover .hidden-trophy-icon { animation:achievement-levitate 1.8s ease-in-out infinite; }
 }
 @media(max-width:520px) {
@@ -5846,7 +5842,7 @@ button.pet-wallet:hover, button.pet-wallet[aria-pressed="true"] { border-color: 
 }
 @media(prefers-reduced-motion:reduce) {
   .tilt-poster,.magnetic-button { transform:none!important;transition:none!important; }
-  .poster-gloss,.rating-celebration { display:none!important; }
+  .rating-celebration { display:none!important; }
   .review-drawer[open],.movie-context-bar,.achievement-card .achievement-icon,.hidden-trophy-icon { animation:none!important; }
   .achievement-flip,.catalog-moods button { transition:none!important; }
 }
