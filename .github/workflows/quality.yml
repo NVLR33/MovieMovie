@@ -40,6 +40,7 @@ jobs:
           trap 'kill "$WEB_PID" "$DB_PID" 2>/dev/null || true' EXIT
           node tests/integration/wait-for-audit.mjs
           npm run test:routes
+          npm run test:trailers:compat
           npm run test:browser
           npm run test:suggestions:browser
           npm run test:admin:browser
