@@ -20,7 +20,15 @@ City UI is available in settings and in collapsed panels on home/catalog. A chos
 
 **This is cinema discovery, not a live schedule integration.** No availability, session times, ticket inventory or prices are fabricated. UI explicitly asks users to verify dates and availability at the external source. An in-app schedule requires a separately selected provider, credentials/terms as applicable, regional coverage and caching/error handling.
 
-## Validation
+## Follow-up card polish
+
+Episodic covers now reserve 12px above and beside the front poster for two clearly visible, 2px-bordered backing sheets. A Layers icon supplements the real season/episode caption. All three serial categories use this shared surface; ordinary films remain flat. Child overlays stay within the **front poster**, not just the outer stack boundary. Small compact covers explicitly constrain favorite-button minimum sizes so legacy mobile hitbox CSS cannot make score/heart badges collide. Caption typography changes are atomic rather than inheriting theme-wide `transition: all`.
+
+Cards and shared framed cover surfaces use a stronger 2px rating-colored border. Age chips share the score's neutral charcoal background with readable neutral text, rather than red/orange fills. Favorite buttons have explicit neutral/hover/selected styles: selected hearts are pink and filled on the same charcoal background, with `aria-pressed` reflecting state. Keyboard focus and original actions are retained. Showcase/world/home overlays are explicitly layered above the front sheet.
+
+The extended browser suite asserts actual 12px sheet clearance, 2px borders, matching age/score backgrounds, favorite state/icon styling, and no overlay intersection across three views/five widths/two themes. After this polish: 258 unit tests, typecheck, lint and isolated build pass; city/series, design, showcase, weekly pulse, roulette and general UI browser suites pass. Production has not been deployed or migrated.
+
+## Original validation
 
 - `npm test`: 249 tests pass, including city validation, nearby bounds, outbound URL encoding and truthful episodic labels.
 - `npm run typecheck`, `npm run lint`, isolated `npm run build` pass (three existing next/no-img-element warnings).

@@ -1,5 +1,6 @@
 'use client';
 
+import CinemaRoulette from './cinema-roulette';
 import CineDayBanner from './cine-day-banner';
 import type { CineDay } from '@/lib/cine-day';
 import CityCinema, {CinemaSearchLink} from './city-cinema';
@@ -379,28 +380,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [authOpen, setAuthOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  // 🎰 Рулетка
   const [roulette, setRoulette] = useState(false);
-  const [rouletteDone, setRouletteDone] = useState(false);
-  const [rouletteCategory, setRouletteCategory] = useState('Все');
-  
-  // Состояние вращения
-  const [rouletteSpinning, setRouletteSpinning] = useState(false);
-  
-  // Выбранный победитель
-  const [rouletteWinner, setRouletteWinner] = useState<FilmType | null>(null);
-  
-  // Постеры в барабане
-  const [rouletteItems, setRouletteItems] = useState<FilmType[]>([]);
-  
-  // Горизонтальная позиция ленты
-  const [roulettePosition, setRoulettePosition] = useState(0);
-  
-  // Таймер остановки
-  const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Контейнер для точного центрирования победителя
-  const rouletteContainerRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState('');
   const [shareFilm, setShareFilm] = useState<FilmType | null>(null);
   const [shareContent, setShareContent] = useState<ShareContent | null>(null);
@@ -677,63 +657,7 @@ const nav = [
   { id: 'watchroom', label: en ? 'Watch room' : 'Кинозал', icon: Tv2, url: '/watchroom' }
 ];
 
-const startRoulette = () => {
-  if (rouletteSpinning) return;
-
-  const pool = rouletteCategory === 'Все'
-    ? data.films
-    : data.films.filter(f => f.category === rouletteCategory);
-
-  if (!pool.length) {
-    notify('В этой категории пока нет материалов');
-    return;
-  }
-
-  if (rouletteTimer.current) {
-    clearTimeout(rouletteTimer.current);
-  }
-
-  const items: FilmType[] = [];
-
-  // Формируем длинную ленту только из выбранной категории
-  for (let i = 0; i < 40; i++) {
-    const random = Math.floor(Math.random() * pool.length);
-    items.push(pool[random]);
-  }
-
-  const winnerIndex = 32;
-  const winner = items[winnerIndex];
-
-  setRoulette(true);
-  setRouletteDone(false);
-  setRouletteSpinning(true);
-  setRouletteWinner(winner);
-  setRouletteItems(items);
-  setRoulettePosition(0);
-
-  const cardWidth = 120;
-
-  // Получаем реальную ширину барабана
-  const containerWidth =
-    rouletteContainerRef.current?.clientWidth || 460;
-
-  const finalPosition =
-    containerWidth / 2 -
-    winnerIndex * cardWidth -
-    cardWidth / 2;
-
-  // Запускаем анимацию после отрисовки новой ленты
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setRoulettePosition(finalPosition);
-    });
-  });
-
-  rouletteTimer.current = setTimeout(() => {
-    setRouletteSpinning(false);
-    setRouletteDone(true);
-  }, 4700);
-};
+const startRoulette = () => setRoulette(true);
 
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
@@ -967,148 +891,7 @@ return (
         ]} />
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
-{roulette && (
-  <div
-    className="modal-backdrop"
-    onClick={() => {
-      if (rouletteSpinning) return;
-      setRoulette(false);
-    }}
-  >
-    <div
-      className="roulette-modal glass-modal fancy-roulette"
-      onClick={e => e.stopPropagation()}
-    >
-      <button
-        className="modal-close"
-        onClick={() => {
-          if (rouletteSpinning) return;
-          setRoulette(false);
-        }}
-      >
-        <X size={20} />
-      </button>
-
-      <div className="roulette-head">
-        <span className="eyebrow">
-          <Sparkles size={14} /> КИНО-СЛУЧАЙ
-        </span>
-
-        <h2>Чего желает душа?</h2>
-
-        <div className="roulette-tabs">
-          {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
-            <button
-              key={cat}
-              disabled={rouletteSpinning}
-              className={rouletteCategory === cat ? 'active' : ''}
-              onClick={() => {
-                setRouletteCategory(cat);
-                setRouletteDone(false);
-                setRouletteWinner(null);
-                setRouletteItems([]);
-                setRoulettePosition(0);
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="roulette-container"
-        ref={rouletteContainerRef}
-      >
-        <div
-          className="roulette-strip"
-          style={{
-            transform: `translateX(${roulettePosition}px)`,
-            transition:
-              rouletteSpinning && roulettePosition !== 0
-                ? 'transform 4.5s cubic-bezier(0.12, 0.75, 0.15, 1)'
-                : 'none',
-          }}
-        >
-          {rouletteItems.map((film, index) => (
-            <div
-              className={`strip-item ${
-                rouletteDone && index === 32
-                  ? 'winner-item'
-                  : ''
-              }`}
-              key={index}
-            >
-              <img
-                src={image(film)}
-                alt={film.title}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="roulette-pointer">
-          <ChevronDown size={24} />
-        </div>
-      </div>
-
-      {rouletteDone && rouletteWinner && (
-        <div className="roulette-result-card">
-          <span className="win-cat">
-            {rouletteWinner.category} · {rouletteWinner.year}
-          </span>
-
-          <h3>{rouletteWinner.title}</h3>
-
-          <p>{rouletteWinner.genre}</p>
-
-          <div className="win-actions">
-            <button
-              className="primary-btn"
-              onClick={() => {
-                setRoulette(false);
-                go('/movie/' + rouletteWinner.id);
-              }}
-            >
-              Открыть карточку
-              <ArrowRight size={17} />
-            </button>
-
-            <button
-              className="outline-btn"
-              onClick={startRoulette}
-            >
-              <RotateCcw size={16} />
-              Ещё раз
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!rouletteDone && !rouletteSpinning && (
-        <button
-          className="primary-btn start-spin-btn"
-          onClick={startRoulette}
-        >
-          Запустить барабан
-          <RotateCcw size={17} />
-        </button>
-      )}
-
-      {rouletteSpinning && (
-        <div
-          style={{
-            marginTop: 16,
-            fontSize: 12,
-            color: 'var(--muted)',
-          }}
-        >
-          🎬 Выбираем твою следующую историю...
-        </div>
-      )}
-    </div>
-  </div>
-)}
+{roulette && <CinemaRoulette films={data.films} watchedIds={watchedIds} savedIds={new Set(data.bookmarks.map(item => item.movieId))} signedIn={!!data.user} en={en} close={() => setRoulette(false)} open={id => {setRoulette(false);go('/movie/' + id);}} auth={() => {setRoulette(false);setAuthOpen(true);}} bookmark={id => action({action: 'bookmark', movieId: id}, 'Добавлено в желаемое')}/>}
 
 {shareContent && (
   <ShareCenter
@@ -1390,6 +1173,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
         {!clean && <button
           type="button"
           className={`card-favorite-btn ${isFavorite ? 'is-favorite' : ''}`}
+          aria-pressed={isFavorite}
           title={isFavorite ? 'Убрать из любимого' : 'Добавить в любимое'}
           aria-label={isFavorite ? 'Убрать из любимого' : 'Добавить в любимое'}
           onClick={(e) => {

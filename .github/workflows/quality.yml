@@ -60,6 +60,7 @@ jobs:
           npm run test:profiles:browser
           npm run test:city-series:browser
           npm run test:cine-day:browser
+          npm run test:roulette:browser
           npm run test:ui
       - uses: actions/upload-artifact@v4
         if: failure()

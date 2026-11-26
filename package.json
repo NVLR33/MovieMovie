@@ -40,7 +40,8 @@
     "test:trailers:compat": "node tests/integration/trailer-schema-compat.mjs",
     "test:profiles:browser": "node tests/integration/browser-profile-responsive.mjs",
     "test:city-series:browser": "node tests/integration/browser-city-series.mjs",
-    "test:cine-day:browser": "node tests/integration/browser-cine-day.mjs"
+    "test:cine-day:browser": "node tests/integration/browser-cine-day.mjs",
+    "test:roulette:browser": "node tests/integration/browser-roulette.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

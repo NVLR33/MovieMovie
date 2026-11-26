@@ -26,6 +26,7 @@ export default function CineDayBanner({
   return (
     <section
       className="cine-day-banner"
+      data-cine-day-version="catalog-v2"
       aria-label={en ? 'Random catalog tag' : 'Случайный тег каталога'}
     >
       <span className="cine-day-icon" aria-hidden="true">
@@ -36,7 +37,7 @@ export default function CineDayBanner({
         <small>
           {en
             ? 'A tag from the current catalog'
-            : 'Подборка из актуального каталога'}{' '}
+            : 'Тег дня из актуального каталога'}{' '}
           · {current.count}
         </small>
       </div>

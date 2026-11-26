@@ -118,6 +118,40 @@ try {
     await serial.locator('.series-poster-caption').innerText(),
     '2 сез. · 100 сер.',
   );
+  const heart = serial.locator('.card-favorite-btn');
+  assert.equal(await heart.getAttribute('aria-pressed'), 'false');
+  const neutral = await heart.evaluate(
+    (el) => getComputedStyle(el).backgroundColor,
+  );
+  await heart.click();
+  await page.waitForFunction(() =>
+    document.querySelector(
+      '.film-card .card-favorite-btn[aria-pressed="true"]',
+    ),
+  );
+  assert.equal(await heart.getAttribute('aria-pressed'), 'true');
+  assert(
+    await heart.evaluate((el) => {
+      const style = getComputedStyle(el),
+        svg = el.querySelector('svg');
+      return (
+        style.color === 'rgb(251, 113, 143)' &&
+        svg.getAttribute('fill') === 'currentColor' &&
+        getComputedStyle(svg).display === 'block'
+      );
+    }),
+  );
+  assert.equal(
+    await heart.evaluate((el) => getComputedStyle(el).backgroundColor),
+    neutral,
+  );
+  await heart.click();
+  await page.waitForFunction(
+    () =>
+      !document.querySelector(
+        '.film-card .card-favorite-btn[aria-pressed="true"]',
+      ),
+  );
   const data = await (await context.request.get(base + '/api/data')).json();
   assert.equal(data.films.find((f) => f.id === ids[0]).seasonCount, 2);
   for (const theme of ['Тёмная', 'Светлая']) {
@@ -127,6 +161,12 @@ try {
       await page.setViewportSize({ width, height: 1000 });
       for (const mode of [0, 1, 2]) {
         await page.locator('.material-view-control button').nth(mode).click();
+        await page.evaluate(
+          () =>
+            new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            ),
+        );
         const issues = await serial.evaluate((el) => {
           const entries = [
               ...el.querySelectorAll(
@@ -136,8 +176,30 @@ try {
               name: node.className,
               r: node.getBoundingClientRect(),
             })),
-            p = el.querySelector('.poster-wrap').getBoundingClientRect(),
+            p = el.querySelector('.cinema-poster').getBoundingClientRect(),
             issues = [];
+          const surface = el.querySelector('.series-poster'),
+            s = surface.getBoundingClientRect();
+          const sheets = [
+            getComputedStyle(surface, '::before'),
+            getComputedStyle(surface, '::after'),
+          ];
+          if (p.top - s.top < 11 || s.right - p.right < 11)
+            issues.push('stack lacks visible reserved space');
+          if (
+            sheets.some(
+              (sheet) =>
+                sheet.content === 'none' ||
+                parseFloat(sheet.borderTopWidth) < 2,
+            )
+          )
+            issues.push('missing visible backing sheets');
+          if (getComputedStyle(el).borderTopWidth !== '2px')
+            issues.push('thin card border');
+          const age = getComputedStyle(el.querySelector('.card-age-rating')),
+            score = getComputedStyle(el.querySelector('.card-score'));
+          if (age.backgroundColor !== score.backgroundColor)
+            issues.push('age chip does not match score background');
           for (const { name, r } of entries) {
             if (
               r.left < p.left - 1 ||
@@ -287,7 +349,7 @@ try {
 } finally {
   await browser.close();
   if (ids.length) {
-    for (const table of ['mg_ratings', 'mg_watches'])
+    for (const table of ['mg_ratings', 'mg_watches', 'mg_favorites'])
       await db.query(`delete from ${table} where movie_id=any($1::int[])`, [
         ids,
       ]);
