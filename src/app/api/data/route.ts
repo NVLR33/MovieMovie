@@ -1,3 +1,4 @@
+import { catalogDayTags, randomCatalogDay } from '@/lib/cine-day';
 import { createDailyGame } from '@/lib/daily-game';
 import { getWeeklyLeaders } from '@/lib/weekly-leaderboard';
 import { buildWeeklyPulse } from '@/lib/weekly-pulse';
@@ -62,81 +63,6 @@ function consecutiveDays(dates: Date[]) {
   }
 
   return streak;
-}
-
-// [DATA:CINE_DAY]
-
-function getCineDay(): {
-  label: string;
-  filter?: string;
-  icon: string;
-} {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-
-  if (m === 1 && day === 1)
-    return {
-      label: 'Фильмы про Новый год',
-      filter: 'Приключения',
-      icon: '🎆'
-    };
-
-  if (m === 2 && day === 14)
-    return {
-      label: 'Романтические истории',
-      filter: 'Драма',
-      icon: '💕'
-    };
-
-  if (m === 5 && day === 4)
-    return {
-      label: 'Да пребудет с тобой сила — Star Wars Day',
-      filter: 'Фантастика',
-      icon: '⚔️'
-    };
-
-  if (m === 10 && day === 31)
-    return {
-      label: 'Хоррор-марафон',
-      filter: 'Детектив',
-      icon: '🎃'
-    };
-
-  if (m === 12 && day >= 20)
-    return {
-      label: 'Новогоднее кино',
-      filter: 'Приключения',
-      icon: '🎄'
-    };
-
-  const weekday = d.getDay();
-
-  if (weekday === 1)
-    return {
-      label: 'Понедельник — Фантастика',
-      filter: 'Фантастика',
-      icon: '🚀'
-    };
-
-  if (weekday === 3)
-    return {
-      label: 'Среда — Анимация',
-      filter: 'Анимация',
-      icon: '🎨'
-    };
-
-  if (weekday === 5)
-    return {
-      label: 'Пятница — Боевик',
-      filter: 'Боевик',
-      icon: '💥'
-    };
-
-  return {
-    label: 'Кино на каждый день',
-    icon: '🎬'
-  };
 }
 
 // [DATA:ON_THIS_DAY]
@@ -726,7 +652,7 @@ const myChallenges = allChallenges
       }
     }
 
-    const cineDay = getCineDay();
+    const cineDay = randomCatalogDay(catalogDayTags(films));
     const season = getCurrentSeason();
 
     // [DATA:MOVIE_SUGGESTIONS]

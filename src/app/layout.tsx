@@ -16,6 +16,8 @@ import '../components/site-settings.css';
 import '../components/series-navigation.css';
 import '../components/catalog-discovery.css';
 import '../components/material-cards.css';
+import '../components/responsive-repairs.css';
+import '../components/cinema-roulette.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

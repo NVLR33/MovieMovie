@@ -1,4 +1,5 @@
 'use client';
+import { seriesPosterLabel, type SeriesPosterFilm } from '@/lib/series-poster';
 import {
   useEffect,
   useRef,
@@ -6,7 +7,7 @@ import {
   type ComponentPropsWithoutRef,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, X, ExternalLink } from 'lucide-react';
+import { Play, X, ExternalLink, Layers3 } from 'lucide-react';
 import { trailerSource, trailerPreviewUrl } from '@/lib/trailers';
 
 function mayPreview() {
@@ -21,11 +22,17 @@ function mayPreview() {
 /** Dwell-only, muted, bounded preview. No video/provider requests before deliberate desktop hover. */
 export function TrailerSurface({
   trailerUrl,
+  film,
+  className = '',
   children,
   onPointerEnter,
   onPointerLeave,
   ...props
-}: ComponentPropsWithoutRef<'span'> & { trailerUrl?: string | null }) {
+}: ComponentPropsWithoutRef<'span'> & {
+  trailerUrl?: string | null;
+  film?: SeriesPosterFilm;
+}) {
+  const serial = seriesPosterLabel(film);
   const source = trailerSource(trailerUrl),
     [active, setActive] = useState(false),
     timer = useRef<ReturnType<typeof setTimeout> | null>(null),
@@ -71,6 +78,9 @@ export function TrailerSurface({
   return (
     <span
       {...props}
+      className={`${className}${serial ? ' series-poster' : ''}`}
+      data-series={serial ? 'true' : undefined}
+      title={serial?.description || props.title}
       onPointerEnter={(event) => {
         onPointerEnter?.(event);
         clear();
@@ -91,6 +101,16 @@ export function TrailerSurface({
       }}
     >
       {children}
+      {serial && (
+        <span
+          className="series-poster-caption"
+          title={serial.description}
+          aria-label={serial.description}
+        >
+          <Layers3 size={11} aria-hidden="true" />
+          <span>{serial.short}</span>
+        </span>
+      )}
       {source && (
         <span
           className="trailer-indicator"

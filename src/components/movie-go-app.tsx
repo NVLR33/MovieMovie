@@ -1,5 +1,9 @@
 'use client';
 
+import CinemaRoulette from './cinema-roulette';
+import CineDayBanner from './cine-day-banner';
+import type { CineDay } from '@/lib/cine-day';
+import CityCinema, {CinemaSearchLink} from './city-cinema';
 import MediaPoster, {MediaAge,MediaRating} from './media-poster';
 import {TrailerSurface, TrailerDialog} from './trailer-preview';
 import {MaterialViewControls,useMaterialView} from './material-view';
@@ -126,7 +130,8 @@ type ProfileData = {
   };
   recentWatches: { watchedAt: string; film: FilmType | null; }[];
   ratings: { movieId: number; value: number; title: string; }[];
-  friendship: { status: string | null; id: number | null; };
+  friendship: { status: string | null; id: number | null; direction?: 'incoming' | 'outgoing' | null; };
+  commonFilms?: number;
   isSelf: boolean;
   compatibility?: number;
 };
@@ -162,7 +167,7 @@ type Data = {
   club: any;
 
   onThisDay: { text: string; icon: string }[];
-  cineDay: { label: string; filter?: string; icon: string };
+  cineDay: CineDay | null;
 
   monthlySummary: {
     watches: number;
@@ -212,7 +217,7 @@ const blank: Data = {
   lists: [],
   club: null,
   onThisDay: [],
-  cineDay: { label: '', icon: '🎬' },
+  cineDay: null,
   monthlySummary: null,
   hiddenAchievements: [],
   achievementProgress: {},
@@ -375,28 +380,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const [authOpen, setAuthOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  // 🎰 Рулетка
   const [roulette, setRoulette] = useState(false);
-  const [rouletteDone, setRouletteDone] = useState(false);
-  const [rouletteCategory, setRouletteCategory] = useState('Все');
-  
-  // Состояние вращения
-  const [rouletteSpinning, setRouletteSpinning] = useState(false);
-  
-  // Выбранный победитель
-  const [rouletteWinner, setRouletteWinner] = useState<FilmType | null>(null);
-  
-  // Постеры в барабане
-  const [rouletteItems, setRouletteItems] = useState<FilmType[]>([]);
-  
-  // Горизонтальная позиция ленты
-  const [roulettePosition, setRoulettePosition] = useState(0);
-  
-  // Таймер остановки
-  const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Контейнер для точного центрирования победителя
-  const rouletteContainerRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState('');
   const [shareFilm, setShareFilm] = useState<FilmType | null>(null);
   const [shareContent, setShareContent] = useState<ShareContent | null>(null);
@@ -673,63 +657,7 @@ const nav = [
   { id: 'watchroom', label: en ? 'Watch room' : 'Кинозал', icon: Tv2, url: '/watchroom' }
 ];
 
-const startRoulette = () => {
-  if (rouletteSpinning) return;
-
-  const pool = rouletteCategory === 'Все'
-    ? data.films
-    : data.films.filter(f => f.category === rouletteCategory);
-
-  if (!pool.length) {
-    notify('В этой категории пока нет материалов');
-    return;
-  }
-
-  if (rouletteTimer.current) {
-    clearTimeout(rouletteTimer.current);
-  }
-
-  const items: FilmType[] = [];
-
-  // Формируем длинную ленту только из выбранной категории
-  for (let i = 0; i < 40; i++) {
-    const random = Math.floor(Math.random() * pool.length);
-    items.push(pool[random]);
-  }
-
-  const winnerIndex = 32;
-  const winner = items[winnerIndex];
-
-  setRoulette(true);
-  setRouletteDone(false);
-  setRouletteSpinning(true);
-  setRouletteWinner(winner);
-  setRouletteItems(items);
-  setRoulettePosition(0);
-
-  const cardWidth = 120;
-
-  // Получаем реальную ширину барабана
-  const containerWidth =
-    rouletteContainerRef.current?.clientWidth || 460;
-
-  const finalPosition =
-    containerWidth / 2 -
-    winnerIndex * cardWidth -
-    cardWidth / 2;
-
-  // Запускаем анимацию после отрисовки новой ленты
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setRoulettePosition(finalPosition);
-    });
-  });
-
-  rouletteTimer.current = setTimeout(() => {
-    setRouletteSpinning(false);
-    setRouletteDone(true);
-  }, 4700);
-};
+const startRoulette = () => setRoulette(true);
 
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
@@ -917,7 +845,7 @@ return (
           </header>
 
           <main className="content" key={path}>
-            {active === 'home' ? <HomePage films={data.films} data={data} go={go} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} action={action} />
+            {active === 'home' ? <HomePage films={data.films} data={data} go={url => { if (url.startsWith('/catalog?genre=')) setSearch(''); go(url); }} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} action={action} />
               : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema key={`${searchParams.get('mode')}:${searchParams.get('country')}:${data.user?.id || 'guest'}`} initialMode={searchParams.get('mode') || ''} initialCountry={searchParams.get('country') || ''} films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={go} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
               : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} signedIn={!!data.user} />
@@ -930,7 +858,7 @@ return (
               : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
               : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
-              : active === 'viewuser' ? <ViewUserProfile key={viewUserId} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
+              : active === 'viewuser' ? <ViewUserProfile key={`${viewUserId}:${data.user?.id ?? 'guest'}`} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
               : active === 'compare' ? <ComparePage key={compareId} data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
               : active === 'wrapped' ? <WrappedPage data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'collab' ? <CollectionShowcase films={data.films} go={go} watchedIds={watchedIds} signedIn={!!data.user} personal={<CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />} />
@@ -963,148 +891,7 @@ return (
         ]} />
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
-{roulette && (
-  <div
-    className="modal-backdrop"
-    onClick={() => {
-      if (rouletteSpinning) return;
-      setRoulette(false);
-    }}
-  >
-    <div
-      className="roulette-modal glass-modal fancy-roulette"
-      onClick={e => e.stopPropagation()}
-    >
-      <button
-        className="modal-close"
-        onClick={() => {
-          if (rouletteSpinning) return;
-          setRoulette(false);
-        }}
-      >
-        <X size={20} />
-      </button>
-
-      <div className="roulette-head">
-        <span className="eyebrow">
-          <Sparkles size={14} /> КИНО-СЛУЧАЙ
-        </span>
-
-        <h2>Чего желает душа?</h2>
-
-        <div className="roulette-tabs">
-          {['Все', 'Фильм', 'Сериал', 'Аниме-сериал'].map(cat => (
-            <button
-              key={cat}
-              disabled={rouletteSpinning}
-              className={rouletteCategory === cat ? 'active' : ''}
-              onClick={() => {
-                setRouletteCategory(cat);
-                setRouletteDone(false);
-                setRouletteWinner(null);
-                setRouletteItems([]);
-                setRoulettePosition(0);
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="roulette-container"
-        ref={rouletteContainerRef}
-      >
-        <div
-          className="roulette-strip"
-          style={{
-            transform: `translateX(${roulettePosition}px)`,
-            transition:
-              rouletteSpinning && roulettePosition !== 0
-                ? 'transform 4.5s cubic-bezier(0.12, 0.75, 0.15, 1)'
-                : 'none',
-          }}
-        >
-          {rouletteItems.map((film, index) => (
-            <div
-              className={`strip-item ${
-                rouletteDone && index === 32
-                  ? 'winner-item'
-                  : ''
-              }`}
-              key={index}
-            >
-              <img
-                src={image(film)}
-                alt={film.title}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="roulette-pointer">
-          <ChevronDown size={24} />
-        </div>
-      </div>
-
-      {rouletteDone && rouletteWinner && (
-        <div className="roulette-result-card">
-          <span className="win-cat">
-            {rouletteWinner.category} · {rouletteWinner.year}
-          </span>
-
-          <h3>{rouletteWinner.title}</h3>
-
-          <p>{rouletteWinner.genre}</p>
-
-          <div className="win-actions">
-            <button
-              className="primary-btn"
-              onClick={() => {
-                setRoulette(false);
-                go('/movie/' + rouletteWinner.id);
-              }}
-            >
-              Открыть карточку
-              <ArrowRight size={17} />
-            </button>
-
-            <button
-              className="outline-btn"
-              onClick={startRoulette}
-            >
-              <RotateCcw size={16} />
-              Ещё раз
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!rouletteDone && !rouletteSpinning && (
-        <button
-          className="primary-btn start-spin-btn"
-          onClick={startRoulette}
-        >
-          Запустить барабан
-          <RotateCcw size={17} />
-        </button>
-      )}
-
-      {rouletteSpinning && (
-        <div
-          style={{
-            marginTop: 16,
-            fontSize: 12,
-            color: 'var(--muted)',
-          }}
-        >
-          🎬 Выбираем твою следующую историю...
-        </div>
-      )}
-    </div>
-  </div>
-)}
+{roulette && <CinemaRoulette films={data.films} watchedIds={watchedIds} savedIds={new Set(data.bookmarks.map(item => item.movieId))} signedIn={!!data.user} en={en} close={() => setRoulette(false)} open={id => {setRoulette(false);go('/movie/' + id);}} auth={() => {setRoulette(false);setAuthOpen(true);}} bookmark={id => action({action: 'bookmark', movieId: id}, 'Добавлено в желаемое')}/>}
 
 {shareContent && (
   <ShareCenter
@@ -1375,7 +1162,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
         }
       }}
     >
-      <TrailerSurface trailerUrl={film.trailerUrl} className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
+      <TrailerSurface film={film} trailerUrl={film.trailerUrl} className="poster-wrap tilt-poster" onPointerMove={tiltPoster} onPointerLeave={resetTilt} onPointerCancel={resetTilt}>
         <span className="poster-gloss" aria-hidden="true" />
         <MediaPoster src={image(film)} alt={film.title} />
         <span className="card-shade" />
@@ -1386,6 +1173,7 @@ function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; 
         {!clean && <button
           type="button"
           className={`card-favorite-btn ${isFavorite ? 'is-favorite' : ''}`}
+          aria-pressed={isFavorite}
           title={isFavorite ? 'Убрать из любимого' : 'Добавить в любимое'}
           aria-label={isFavorite ? 'Убрать из любимого' : 'Добавить в любимое'}
           onClick={(e) => {
@@ -1579,13 +1367,7 @@ const rating = data.ratings.find(x => x.movieId === f.id);
         />
       </div>
 
-      {data.cineDay?.label && (
-        <div className="cine-day-banner">
-          <span className="cine-day-icon">{data.cineDay.icon}</span>
-          <div><b>{data.cineDay.label}</b><small>Подборка на каждый день в кинотеатре</small></div>
-          {data.cineDay.filter && <button className="outline-btn small" onClick={() => go('/catalog?search=' + encodeURIComponent(data.cineDay.filter || ''))}>Открыть <ArrowRight size={14} /></button>}
-        </div>
-      )}
+      <CineDayBanner films={films} initialTag={data.cineDay?.filter} go={go} en={en}/>
 
       {data.challenges?.some(c => c.current) && (
         <div className="challenges-bar">
@@ -1783,6 +1565,7 @@ const rating = data.ratings.find(x => x.movieId === f.id);
   </>
 )}
 
+      <CityCinema en={en}/>
       <WeeklyCinemaPulse films={films} pulse={data.weeklyPulse} watches={data.watches} bookmarks={data.bookmarks} signedIn={!!data.user} action={action} auth={auth} go={go} en={en} />
 
       <section className="home-section">
@@ -1915,6 +1698,7 @@ function Catalog({
 )}
       </div>
 
+      <CityCinema en={en}/>
       <button type="button" className="catalog-top-entry" onClick={() => go('/top')}><Crown size={18} /><span>{en ? 'Looking for the best? Explore the top 10, 50 and 100.' : 'Ищешь лучшее? Открой топ-10, 50 и 100 материалов.'}</span><ArrowRight size={16} /></button>
 
       <div className="catalog-search">
@@ -2067,7 +1851,7 @@ function MovieDetailContent({
 
       <div className={`detail-hero tone-${materialTone(film)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
         <div className="detail-poster" ref={posterAnchor}>
-          <PosterThumb movieId={film.id} src={image(film)} alt={film.title} wrapStyle={{ display: 'block' }} />
+          <TrailerSurface film={film} className="detail-series-cover"><MediaPoster src={image(film)} alt={film.title}/></TrailerSurface>
         </div>
 
         <div className="detail-intro">
@@ -2101,6 +1885,7 @@ function MovieDetailContent({
           </div>
 
           <div className="detail-actions">
+            {!isSeries(film.category) && <CinemaSearchLink title={film.title}/>}
             {trailerSource(film.trailerUrl) && <button className="outline-btn" onClick={()=>setTrailerOpen(true)}><Play size={16}/>Трейлер</button>}
 <button
   className={isWatched ? 'outline-btn watched-done' : 'primary-btn'}
@@ -2667,12 +2452,12 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
     stats: (
       <div className="profile-tile">
         <div className="tile-heading"><span><BarChart3 size={18} /> Детальная статистика</span>{editing && <GripVertical size={18} />}</div>
-        <div className="stats-tabs">
-          <button className={statTab === 'all' ? 'active' : ''} onClick={() => setStatTab('all')}>Общая</button>
-          <button className={statTab === 'movie' ? 'active' : ''} onClick={() => setStatTab('movie')}>Фильмы</button>
-          <button className={statTab === 'tv' ? 'active' : ''} onClick={() => setStatTab('tv')}>Сериалы</button>
-          <button className={statTab === 'anime' ? 'active' : ''} onClick={() => setStatTab('anime')}>Аниме</button>
-          <button className={statTab === 'cartoon' ? 'active' : ''} onClick={() => setStatTab('cartoon')}>Мультфильмы</button>
+        <div className="stats-tabs" role="group" aria-label="Категория статистики">
+          <button type="button" aria-pressed={statTab === 'all'} className={statTab === 'all' ? 'active' : ''} onClick={() => setStatTab('all')}>Общая</button>
+          <button type="button" aria-pressed={statTab === 'movie'} className={statTab === 'movie' ? 'active' : ''} onClick={() => setStatTab('movie')}>Фильмы</button>
+          <button type="button" aria-pressed={statTab === 'tv'} className={statTab === 'tv' ? 'active' : ''} onClick={() => setStatTab('tv')}>Сериалы</button>
+          <button type="button" aria-pressed={statTab === 'anime'} className={statTab === 'anime' ? 'active' : ''} onClick={() => setStatTab('anime')}>Аниме</button>
+          <button type="button" aria-pressed={statTab === 'cartoon'} className={statTab === 'cartoon' ? 'active' : ''} onClick={() => setStatTab('cartoon')}>Мультфильмы</button>
         </div>
         <div className="profile-stats-grid expanded-stats">
           <div><span className="stat-icon"><Clapperboard size={18} /></span><b>{tabData.length}</b><small>просмотров</small></div>
@@ -3954,30 +3739,44 @@ function MovieForm({
 }
 
 function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId: number; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; openChat: (id: number) => void; auth: () => void; }) {
-  const myWatchedIds = useWatchedIds();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const relationship = data.friends.find(f=>(f.fromId===userId && f.toId===data.user?.id)||(f.toId===userId && f.fromId===data.user?.id));
+  const relationshipKey = `${relationship?.id || ''}:${relationship?.status || ''}`;
+  const retry = () => { setLoading(true); setReload(n=>n+1); };
+  const changeFriendship = async () => {
+    if (busy || !profile) return;
+    setBusy(true);
+    try {
+      const incoming = profile.friendship.status==='pending' && profile.friendship.direction==='incoming';
+      if (await action(incoming ? {action:'friendAccept',id:profile.friendship.id} : {action:'friend',userId},incoming?'Заявка принята':'Заявка отправлена')) setReload(n=>n+1);
+    } finally { setBusy(false); }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/profile?id=' + userId, { signal: controller.signal, cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(d => {
-      if (d.profile) setProfile(d);
-      else setProfile(null);
-    }).catch(() => { if (!controller.signal.aborted) setProfile(null); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    fetch('/api/profile?id=' + userId, { signal: controller.signal, cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error(response.status===404 ? 'Пользователь не найден' : 'Не удалось загрузить профиль. Попробуй ещё раз.');
+      const snapshot = await response.json();
+      if (!controller.signal.aborted) { setProfile(snapshot.profile ? snapshot : null); setError(snapshot.profile ? '' : 'Пользователь не найден'); }
+    }).catch(error => { if (!controller.signal.aborted) { setProfile(null); setError(error instanceof Error ? error.message : 'Не удалось загрузить профиль'); } }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [userId]);
+  }, [userId, data.user?.id, relationshipKey, reload]);
 
-  if (loading) return <div className="empty-state"><h3>Загрузка...</h3></div>;
-  if (!profile) return <div className="empty-state"><h3>Пользователь не найден</h3><button className="primary-btn" onClick={() => go('/friends')}>Назад</button></div>;
+  if (loading) return <div className="empty-state" role="status"><h3>Загрузка профиля…</h3></div>;
+  if (!profile) return <div className="empty-state" role="alert"><h3>{error || 'Не удалось загрузить профиль'}</h3><button className="outline-btn" onClick={retry}>Повторить</button><button className="primary-btn" onClick={() => go('/friends')}>Назад к друзьям</button></div>;
 
   const p = profile.profile;
   const s = profile.stats;
   const level = s.level;
 
-  const commonFilms = profile.recentWatches.filter(w => w.film && myWatchedIds.has(w.film.id)).length;
+  const commonFilms = profile.commonFilms ?? 0;
 
   return (
-    <>
+    <section className="public-profile" aria-label="Профиль участника">
       <button className="back-link" onClick={() => go('/friends')}>← Назад к друзьям</button>
 
       <div className={`profile-cover header-style- effect-${p.profileEffect || 'none'} ${p.headerImage && p.headerStyle === 5 ? 'custom-header' : ''}`} style={p.headerImage && p.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${p.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={p.headerStyle || 1} data-frame={p.headerFrame || 'none'}>
@@ -4003,9 +3802,9 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
                 <button className="cover-edit" onClick={() => go("/compare/" + p.id)}><Zap size={16} /> Кино-Баттл</button>
               </>
             ) : profile.friendship.status === 'pending' ? (
-              <span className="cover-edit">⏳ Заявка отправлена</span>
+              profile.friendship.direction === 'incoming' ? <button className="cover-edit" disabled={busy} onClick={changeFriendship}><UserPlus size={16}/>Принять заявку</button> : <span className="cover-edit" role="status">⏳ Заявка отправлена</span>
             ) : !profile.isSelf && data.user ? (
-              <button className="cover-edit" onClick={() => action({ action: 'friend', userId: p.id }, 'Заявка отправлена')}><UserPlus size={16} /> Добавить в друзья</button>
+              <button className="cover-edit" disabled={busy} onClick={changeFriendship}><UserPlus size={16} /> Добавить в друзья</button>
             ) : !data.user ? (
               <button className="cover-edit" onClick={auth}>Войти</button>
             ) : null}
@@ -4019,7 +3818,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
           <div className="level-emblem"><Zap size={23} fill="currentColor" /></div>
           <div>
             <span>УРОВЕНЬ {level} · {progressionTitle(s.uniqueFilms)}</span>
-            <div className="level-track"><i style={{ width: `${((p.xp || 0) % 500) / 5}%` }} /></div>
+            <div className="level-track" role="progressbar" aria-label="Опыт до следующего уровня" aria-valuemin={0} aria-valuemax={500} aria-valuenow={(p.xp || 0) % 500}><i style={{ width: `${((p.xp || 0) % 500) / 5}%` }} /></div>
             <small>{fmt(p.xp || 0)} XP</small>
           </div>
         </div>
@@ -4039,13 +3838,14 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
               <div><span className="stat-icon"><Bookmark size={18} /></span><b>{s.totalBookmarks}</b><small>в списке</small></div>
               <div><span className="stat-icon amber"><TrendingUp size={18} /></span><b>{s.totalWatches > 0 ? Math.round(s.totalMinutes / s.totalWatches) : 0}м</b><small>ср. время</small></div>
               <div><span className="stat-icon green"><Zap size={18} /></span><b>{p.xp}</b><small>опыт XP</small></div>
-              <div><span className="stat-icon pink-icon"><Flame size={18} /></span><b>{s.activeDays}</b><small>дней стрик</small></div>
+              <div><span className="stat-icon pink-icon"><Flame size={18} /></span><b>{s.activeDays}</b><small>активных дней</small></div>
             </div>
           </div>
 
           <div className="profile-tile">
             <div className="tile-heading"><span><Sparkles size={18} /> Жанровые предпочтения</span></div>
             <div className="top-genres-list">
+              {!s.topGenres.length && <div className="tile-empty">Пока нет просмотров для определения жанров.</div>}
               {s.topGenres.map(g => (
                 <div className="top-genre-item" key={g.genre}>
                   <span>{g.genre}</span>
@@ -4113,7 +3913,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
           )}
         </div>
       </div>
-    </>
+    </section>
   );
 }
 
@@ -4827,9 +4627,9 @@ function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string
 
       <p className="collectible-note">Редкость и процент выполнения рассчитаны среди всех зарегистрированных пользователей за {data.challenges[0]?.year || new Date().getUTCFullYear()} год. Повторные записи одного участника не увеличивают процент.</p>
 
-      <div className="challenge-month-tabs">
+      <div className="challenge-month-tabs" role="group" aria-label="Месяц челленджей">
         {months.map((m, i) => (
-          <button key={i} className={`challenge-month-tab ${selectedMonth === i + 1 ? 'active' : ''} ${i + 1 === currentMonth ? 'current' : ''}`} onClick={() => setSelectedMonth(i + 1)}>
+          <button type="button" aria-pressed={selectedMonth === i + 1} key={i} className={`challenge-month-tab ${selectedMonth === i + 1 ? 'active' : ''} ${i + 1 === currentMonth ? 'current' : ''}`} onClick={() => setSelectedMonth(i + 1)}>
             <span className="month-num">{String(i + 1).padStart(2, '0')}</span>{m}{i + 1 === currentMonth && <span className="month-now">сейчас</span>}
           </button>
         ))}

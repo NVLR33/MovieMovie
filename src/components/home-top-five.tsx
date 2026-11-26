@@ -29,7 +29,11 @@ import { formatFilmRating } from '@/lib/rating-display';
 
 function Cover({ film }: { film: Film }) {
   return (
-    <TrailerSurface trailerUrl={film.trailerUrl} className="home-five-poster">
+    <TrailerSurface
+      film={film}
+      trailerUrl={film.trailerUrl}
+      className="home-five-poster"
+    >
       <MediaPoster src={film.poster} alt="" />
       {film.ageRating && (
         <small className="home-five-age">{film.ageRating}</small>

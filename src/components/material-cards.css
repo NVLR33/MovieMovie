@@ -24,8 +24,9 @@
   background: linear-gradient(145deg, #242532, #11131d);
 }
 .film-card {
-  border: 1px solid
-    color-mix(in srgb, var(--rating-color, #757988) 52%, transparent);
+  --poster-chip-bg: rgba(24, 27, 35, 0.94);
+  border: 2px solid
+    color-mix(in srgb, var(--rating-color, #757988) 76%, transparent);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -54,7 +55,7 @@
   padding: 4px 7px;
   font-size: 12px;
   color: var(--rating-color);
-  background: rgba(10, 12, 19, 0.92);
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
   border: 1px solid color-mix(in srgb, var(--rating-color) 55%, transparent);
   border-radius: 8px;
 }
@@ -68,7 +69,56 @@
   z-index: 5;
   opacity: 1;
   transform: none;
-  background: rgba(10, 12, 19, 0.88);
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
+  border: 1px solid #c7ced84d;
+  color: #e2e6ef;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px #0004;
+  animation: none;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+.film-card .card-favorite-btn:hover,
+.film-card .card-favorite-btn:focus-visible {
+  transform: none;
+  color: #fda4b6;
+  border-color: #fda4b6;
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
+}
+.film-card .card-favorite-btn.is-favorite {
+  color: #fb718f;
+  border-color: #fb718fb3;
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
+  box-shadow: 0 2px 8px #0004;
+  animation: none;
+}
+.film-card .card-favorite-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  stroke-width: 2;
+  filter: none;
+}
+.film-card .card-favorite-btn:focus-visible {
+  outline: 2px solid #fda4b6;
+  outline-offset: 2px;
+}
+/* Age is information, not a warning button: the same neutral chip as the score. */
+.cinema-age.card-age-rating,
+.home-five-age,
+.weekly-pulse-age {
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
+  color: #e2e6ef;
+  border: 1px solid #c7ced84d;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: 0 2px 8px #0004;
 }
 .film-card .card-age-rating {
   left: 8px;
@@ -134,19 +184,18 @@
   display: block;
   position: relative;
   overflow: hidden;
-  border: 1px solid
-    color-mix(in srgb, var(--rating-color, #757988) 65%, transparent);
+  border: 2px solid
+    color-mix(in srgb, var(--rating-color, #757988) 76%, transparent);
 }
 .home-five-score,
 .showcase-score,
 .weekly-pulse-rating,
-.world-film-poster
-  > span:not(.cinema-poster):not(.trailer-preview):not(.trailer-indicator) {
+.world-film-score {
   color: var(--rating-color, #ddd);
 }
 .home-five-score,
 .showcase-score {
-  background: rgba(10, 12, 19, 0.92);
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
   border-color: color-mix(
     in srgb,
     var(--rating-color, #757988) 55%,
@@ -450,4 +499,206 @@
 .material-trailer-field .upload-button input {
   max-width: 100%;
   font-size: 11px;
+}
+
+/* Episodic editions reserve visible space ABOVE and BESIDE the front cover.
+   The sheets remain inside the card's clipping boundary in every density. */
+.series-poster.series-poster {
+  --series-reserve: 12px;
+  isolation: isolate;
+  background: transparent;
+  padding: var(--series-reserve) var(--series-reserve) 0 0;
+}
+.series-poster::before,
+.series-poster::after {
+  content: '';
+  position: absolute;
+  border-radius: 9px;
+  pointer-events: none;
+  z-index: 0;
+  border: 2px solid
+    color-mix(in srgb, var(--rating-color, #a78bfa) 75%, #525666);
+}
+.series-poster::before {
+  inset: 0 0 12px 12px;
+  background: color-mix(in srgb, var(--rating-color, #a78bfa) 26%, #202430);
+}
+.series-poster::after {
+  inset: 6px 6px 6px 6px;
+  background: color-mix(in srgb, var(--rating-color, #a78bfa) 42%, #202430);
+}
+.series-poster > .cinema-poster {
+  z-index: 1;
+  border-radius: 8px;
+  border: 1px solid
+    color-mix(in srgb, var(--rating-color, #a78bfa) 65%, #303542);
+  box-shadow: 2px -2px 5px #0006;
+}
+.series-poster > .poster-gloss,
+.series-poster > .card-shade,
+.series-poster > .trailer-preview {
+  inset: var(--series-reserve) var(--series-reserve) 0 0;
+  border-radius: 8px;
+}
+.series-poster-caption {
+  position: absolute;
+  z-index: 4;
+  bottom: 42px;
+  left: 7px;
+  right: 19px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #c7ced84d;
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
+  color: #e2e6ef;
+  border-radius: 6px;
+  padding: 4px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.series-poster-caption svg {
+  flex: none;
+}
+.series-poster-caption > span {
+  font: inherit;
+  min-width: 0;
+}
+.film-card .series-poster .card-score {
+  top: 20px;
+}
+.film-card .series-poster .card-favorite-btn {
+  top: 20px;
+  right: 20px;
+}
+.film-card .series-poster .card-watched-badge {
+  right: 20px;
+  bottom: 8px;
+}
+.film-card .series-poster .card-age-rating {
+  bottom: 8px;
+}
+.series-poster .trailer-indicator {
+  left: calc(50% - 6px);
+  top: calc(50% + 6px);
+}
+.home-five-poster.series-poster .home-five-age {
+  right: 17px;
+  bottom: 6px;
+}
+.home-five-poster.series-poster .series-poster-caption,
+.showcase-poster.series-poster .series-poster-caption {
+  font-size: 8px;
+  bottom: 35px;
+}
+.showcase-poster.series-poster .showcase-score {
+  top: 18px;
+  right: 17px;
+}
+.showcase-poster.series-poster .showcase-watched {
+  right: 17px;
+}
+.world-film-poster.series-poster > .world-film-score {
+  top: 20px;
+  right: 20px;
+}
+.detail-series-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.material-view-list .series-poster .card-score {
+  font-size: 10px;
+  padding: 3px 4px;
+  left: 5px;
+  top: 18px;
+  gap: 3px;
+}
+.material-view-list .series-poster .card-score svg {
+  width: 10px;
+}
+.material-view-list .series-poster .card-favorite-btn {
+  width: 26px;
+  height: 26px;
+  right: 17px;
+  top: 18px;
+}
+@media (max-width: 600px) {
+  .material-view-compact .film-card .series-poster-caption {
+    font-size: 8px;
+    padding: 3px;
+    left: 4px;
+    right: 16px;
+    bottom: 41px;
+    gap: 3px;
+  }
+  .material-view-compact .series-poster-caption svg {
+    width: 9px;
+    height: 9px;
+  }
+  .material-view-compact .series-poster .card-favorite-btn {
+    top: 17px;
+    right: 16px;
+    width: 24px;
+    min-width: 24px;
+    height: 26px;
+    min-height: 26px;
+  }
+  .material-view-compact .series-poster .card-score {
+    top: 17px;
+    left: 4px;
+    padding-inline: 3px;
+  }
+  .material-view-compact .film-card .card-age-rating {
+    min-width: 28px;
+    height: 22px;
+    left: 5px;
+    bottom: 7px;
+    font-size: 9px;
+  }
+  .material-view-compact .series-poster .card-watched-badge {
+    width: 20px;
+    height: 20px;
+    right: 17px;
+    bottom: 8px;
+  }
+}
+@media (forced-colors: active) {
+  .film-card,
+  .series-poster::before,
+  .series-poster::after {
+    border: 2px solid CanvasText;
+  }
+  .series-poster-caption,
+  .cinema-age.card-age-rating {
+    border: 1px solid CanvasText;
+  }
+  .film-card .card-favorite-btn.is-favorite {
+    color: Highlight;
+    border-color: Highlight;
+  }
+}
+/* Geometry/typography changes in dense covers must be atomic, not inherited
+   theme-wide `transition: all` animations that make badges collide mid-resize. */
+.series-poster-caption,
+.series-poster-caption > span,
+.series-poster-caption svg {
+  transition: none !important;
+}
+
+/* These overlays also sit above the front sheet, not behind its z-index. */
+.home-five-age,
+.showcase-score,
+.showcase-watched,
+.world-film-score,
+.world-film-poster > b {
+  z-index: 4;
+}
+.world-film-score {
+  background: var(--poster-chip-bg, rgba(24, 27, 35, 0.94));
 }
