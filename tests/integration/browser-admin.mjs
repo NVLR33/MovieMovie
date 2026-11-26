@@ -74,7 +74,14 @@ try {
   ];
   fs.mkdirSync('/tmp/mm-admin-screenshots', { recursive: true });
   for (const label of tabs) {
-    await workspace.getByRole('button', { name: label, exact: true }).click();
+    // The suggestions tab includes a real pending-count badge after the preceding suite.
+    await workspace
+      .getByRole('navigation', { name: 'Разделы управления' })
+      .getByRole('button', {
+        name: label === 'Предложения' ? /^Предложения(?:\s*\d+)?$/ : label,
+        exact: true,
+      })
+      .click();
     await page.waitForTimeout(450);
     await workspace
       .getByText('Загружаем…', { exact: true })

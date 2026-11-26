@@ -1,6 +1,7 @@
 // Isolated local integration test: never connects to DATABASE_URL or a remote service.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import Module from 'node:module';
@@ -10,6 +11,13 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { NextRequest } from 'next/server.js';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 process.chdir(root);
+// Verify names AND checksums, not a count that goes stale on the next migration.
+const expectedMigrations = fs.readdirSync(resolve(root, 'scripts/migrations'))
+ .filter(name => /^\d{8}-[a-z0-9-]+\.sql$/.test(name)).sort()
+ .map(name => ({name, checksum:createHash('sha256').update(fs.readFileSync(resolve(root,'scripts/migrations',name))).digest('hex')}));
+assert(expectedMigrations.length > 0);
+async function migrationHistory(pg) {return (await pg.query('SELECT name, checksum FROM moviemovie_migrations.history ORDER BY name')).rows;}
+
 async function handlers() {
  const bundle = await build({ stdin: { contents: `export { POST as actionPost } from './src/app/api/action/route';export { GET as petGet, POST as petPost } from './src/app/api/pet/route';`, resolveDir: root, loader: 'ts' }, bundle: true, write: false, platform: 'node', format: 'cjs', packages: 'external', plugins: [{ name: 'isolated-services', setup(builder) {
   builder.onResolve({ filter: /^@\/db$/ }, () => ({ path: 'db', namespace: 'test' }));
@@ -25,7 +33,7 @@ async function handlers() {
 (async()=>{const pg=new PGlite();const RealDate=Date;let clock=RealDate.parse('2026-11-16T12:00:00Z');try{
  await pg.exec(`CREATE ROLE anon;CREATE ROLE authenticated;`);await pg.exec(fs.readFileSync('tests/integration/fixtures/pre-economy-schema.sql','utf8'));
  const bundle=fs.readFileSync('scripts/supabase/01-upgrade.sql','utf8');await pg.exec(bundle);await pg.exec(bundle);
- assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,11);
+ assert.deepEqual(await migrationHistory(pg),expectedMigrations);
  assert.deepEqual((await pg.query(fs.readFileSync('scripts/supabase/02-verify.sql','utf8'))).rows.filter(r=>r.result!=='OK'),[]);
  const schemaAudit=fs.readFileSync('scripts/supabase/03-schema-audit.sql','utf8');
  assert.deepEqual((await pg.query(schemaAudit)).rows.filter(r=>r.result!=='OK'),[]);
@@ -96,16 +104,16 @@ async function handlers() {
  for(let id=13;id<=17;id++)await activity('watch',id);await post({action:'weekly',id:'screenings'});
  pet=(await get()).pet;assert.equal(pet.economy.week.earned,70);assert.equal(pet.economy.weeklyActivity.watch,5);assert.equal(pet.economy.activity.watch,15);
  const preserved=pet.balance,carry=pet.productionCarry;
- // Production-like incremental upgrade: seven files already applied, only indexes pending.
+ // Production-like incremental upgrade: all other files applied, only indexes pending.
  const indexNames=['mg_watch_user_movie','mg_watch_user_date','mg_watch_movie','mg_rating_movie_value','mg_comment_movie_date','mg_notification_user_date','mg_message_pair_date','mg_popcorn_user_history'];
  await pg.exec("DELETE FROM moviemovie_migrations.history WHERE name='20261122-z-system-indexes.sql';"+indexNames.map(name=>'DROP INDEX '+name+';').join('')+'ALTER TABLE mg_users RENAME COLUMN bio TO bio_missing;');
  let incrementalRejected=false;try{await pg.exec(bundle)}catch(error){incrementalRejected=/schema verification failed/.test(error.message)}assert(incrementalRejected);await pg.exec('ROLLBACK');
- assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,10);
+ assert.deepEqual(await migrationHistory(pg),expectedMigrations.filter(file=>file.name!=='20261122-z-system-indexes.sql'));
  assert.equal((await pg.query("SELECT to_regclass('mg_popcorn_user_history') AS name")).rows[0].name,null);
  assert.equal((await get()).pet.balance,preserved);
  await pg.exec('ALTER TABLE mg_users RENAME COLUMN bio_missing TO bio');
- await pg.exec(bundle);assert.equal((await pg.query('SELECT count(*)::int n FROM moviemovie_migrations.history')).rows[0].n,11);
+ await pg.exec(bundle);assert.deepEqual(await migrationHistory(pg),expectedMigrations);
  await pg.exec(bundle);pet=(await get()).pet;assert.equal(pet.balance,preserved);assert.equal(pet.productionCarry,carry);assert.equal(pet.economy.lifetime.earned-pet.economy.lifetime.spent,pet.balance);
  for(const invalid of [-1,3600000]){let failed=false;try{await pg.query('UPDATE mg_cinema_pets SET production_carry=$1 WHERE user_id=1',[invalid])}catch{failed=true}assert(failed)}
- console.log('Passed full database audit (32 tables, 228 columns), deliberate drift detection, transactional rollback + pending-index incremental upgrade, optional Storage idempotence/privacy; actual wallet API + PGlite: eleven repeatable migrations/readiness, authenticated private cursor history and filters; UTC week rollover; all-part weekly criteria, zero/capped/baseline exclusion, atomic concurrent bonus claims, permanent milestone dedup; injected amount/date/user ignored; fractional collection and speed change conservation; unchanged XP; full balance reconciliation and no reset.');
+ console.log('Passed full database audit (32 tables, 228 columns), deliberate drift detection, transactional rollback + pending-index incremental upgrade, optional Storage idempotence/privacy; actual wallet API + PGlite: manifest-verified repeatable migrations/readiness, authenticated private cursor history and filters; UTC week rollover; all-part weekly criteria, zero/capped/baseline exclusion, atomic concurrent bonus claims, permanent milestone dedup; injected amount/date/user ignored; fractional collection and speed change conservation; unchanged XP; full balance reconciliation and no reset.');
 }finally{global.Date=RealDate;await pg.close()}})().catch(e=>{console.error(e);process.exitCode=1});

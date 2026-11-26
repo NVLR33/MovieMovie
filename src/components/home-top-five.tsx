@@ -1,4 +1,6 @@
 'use client';
+import { isSeries } from '@/lib/series';
+import { ageRatingTone } from '@/lib/age-rating';
 
 import MediaPoster from './media-poster';
 import { TrailerSurface } from './trailer-preview';
@@ -36,7 +38,9 @@ function Cover({ film }: { film: Film }) {
     >
       <MediaPoster src={film.poster} alt="" />
       {film.ageRating && (
-        <small className="home-five-age">{film.ageRating}</small>
+        <small className={`home-five-age age-${ageRatingTone(film.ageRating)}`}>
+          {film.ageRating}
+        </small>
       )}
     </TrailerSurface>
   );
@@ -230,6 +234,14 @@ export default function HomeTopFive({
                   <strong>{film.title}</strong>
                   <small>
                     {film.year} · {film.category}
+                    {isSeries(film.category) &&
+                      film.episodes != null &&
+                      film.episodes > 0 && (
+                        <>
+                          {' '}
+                          · {film.episodes} {en ? 'eps' : 'сер.'}
+                        </>
+                      )}
                   </small>
                 </span>
               </a>

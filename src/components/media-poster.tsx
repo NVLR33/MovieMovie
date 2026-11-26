@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useCallback, useState, type ComponentPropsWithoutRef } from 'react';
 import { Film as FilmIcon, Star } from 'lucide-react';
+import { ageRatingTone } from '@/lib/age-rating';
 import { formatFilmRating } from '@/lib/rating-display';
 
 type Rated = { rating: number; ratingCount: number };
@@ -77,18 +78,7 @@ export function MediaAge({
 }) {
   const age = String(value || '').trim();
   if (!age) return null;
-  const number = parseInt(age, 10),
-    tone = !Number.isFinite(number)
-      ? 'unknown'
-      : number <= 6
-        ? 'green'
-        : number <= 12
-          ? 'blue'
-          : number <= 15
-            ? 'yellow'
-            : number <= 17
-              ? 'orange'
-              : 'red';
+  const tone = ageRatingTone(age);
   return (
     <span
       className={`cinema-age card-age-rating age-${tone} ${className}`}
