@@ -105,6 +105,7 @@ function PulseCard({
           aria-label={`${en ? 'Open' : 'Открыть'} ${film.title}`}
         >
           <TrailerSurface
+            film={film}
             trailerUrl={film.trailerUrl}
             className="weekly-trailer-surface"
           >

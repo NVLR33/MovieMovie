@@ -64,7 +64,11 @@ function Poster({
       onClick={(event) => navigate(event, `/movie/${film.id}`)}
       aria-label={`${film.title}, ${film.year}${watched ? ', просмотрено' : ''}`}
     >
-      <TrailerSurface trailerUrl={film.trailerUrl} className="showcase-poster">
+      <TrailerSurface
+        film={film}
+        trailerUrl={film.trailerUrl}
+        className="showcase-poster"
+      >
         <MediaPoster src={film.poster} alt="" />
         <span className="showcase-score">
           <Star size={10} />

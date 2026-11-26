@@ -462,6 +462,7 @@ export default function WorldCinema({
                   }}
                 >
                   <TrailerSurface
+                    film={film}
                     trailerUrl={film.trailerUrl}
                     className="world-film-poster"
                   >

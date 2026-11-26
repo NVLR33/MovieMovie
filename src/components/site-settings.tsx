@@ -1,4 +1,5 @@
 'use client';
+import {CitySettings} from './city-cinema';
 import {
   useId,
   useLayoutEffect,
@@ -471,6 +472,7 @@ export default function SiteSettings({
                 onChange={setAmbient}
               />
             </section>
+            <CitySettings en={en}/>
             <div className="settings-system-note">
               <Monitor size={17} />
               <span>

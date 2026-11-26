@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
   // Check friendship status
   let friendStatus: string | null = null;
   let friendshipId: number | null = null;
+  let friendDirection: 'incoming' | 'outgoing' | null = null;
   if (me && me.id !== userId) {
     const allFriendships = await db.select().from(friendships).where(
       eq(friendships.fromId, me.id)
@@ -39,8 +40,8 @@ export async function GET(req: NextRequest) {
     );
     const sent = allFriendships.find(f => f.toId === userId);
     const received = allFriendshipsReverse.find(f => f.fromId === userId);
-    if (sent) { friendStatus = sent.status; friendshipId = sent.id; }
-    else if (received) { friendStatus = received.status; friendshipId = received.id; }
+    if (sent) { friendStatus = sent.status; friendshipId = sent.id; friendDirection = 'outgoing'; }
+    else if (received) { friendStatus = received.status; friendshipId = received.id; friendDirection = 'incoming'; }
   }
 
   const filmMap = Object.fromEntries(allFilms.map(f => [f.id, f]));
@@ -79,12 +80,14 @@ export async function GET(req: NextRequest) {
 
   // Compatibility calculation
   let compatibility = 0;
+  let commonFilms = 0;
   if (me && me.id !== userId) {
     const myWatches = await db.select().from(watches).where(eq(watches.userId, me.id));
     const myWatchesIds = new Set(myWatches.map(w => w.movieId));
     
     // 1. Watched overlap (max 40%)
-    const overlapCount = userWatches.filter(w => myWatchesIds.has(w.movieId)).length;
+    const overlapCount = new Set(userWatches.filter(w => myWatchesIds.has(w.movieId) && filmMap[w.movieId]).map(w=>w.movieId)).size;
+    commonFilms = overlapCount;
     const maxWatches = Math.max(myWatches.length, userWatches.length);
     const watchScore = maxWatches > 0 ? (overlapCount / maxWatches) * 40 : 0;
     
@@ -160,8 +163,8 @@ export async function GET(req: NextRequest) {
     },
     recentWatches,
     ratings: userRatingsWithFilm,
-    friendship: { status: friendStatus, id: friendshipId },
-    isSelf: me?.id === userId, compatibility,
+    friendship: { status: friendStatus, id: friendshipId, direction: friendDirection },
+    isSelf: me?.id === userId, compatibility, commonFilms,
   }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return requestFailure(error, 'Не удалось загрузить профиль'); }
 }

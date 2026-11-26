@@ -37,7 +37,10 @@
     "test:series:browser": "node tests/integration/browser-series-navigation.mjs",
     "test:catalog:browser": "node tests/integration/browser-catalog-discovery.mjs",
     "test:design:browser": "node tests/integration/browser-design-system.mjs",
-    "test:trailers:compat": "node tests/integration/trailer-schema-compat.mjs"
+    "test:trailers:compat": "node tests/integration/trailer-schema-compat.mjs",
+    "test:profiles:browser": "node tests/integration/browser-profile-responsive.mjs",
+    "test:city-series:browser": "node tests/integration/browser-city-series.mjs",
+    "test:cine-day:browser": "node tests/integration/browser-cine-day.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

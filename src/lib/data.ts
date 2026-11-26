@@ -2,7 +2,7 @@ import { movieReadFields } from '@/lib/movie-read-fields';
 import { cache } from 'react';
 import { summarizeRatings } from '@/lib/rating-summary';
 import { db } from '@/db';
-import { users, movies, watches, ratings, comments, bookmarks, friendships, notifications, gameScores, favorites } from '@/db/schema';
+import { users, movies, watches, ratings, comments, bookmarks, friendships, notifications, gameScores, favorites, seriesSeasons } from '@/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 
 export async function ensureSeed() {
@@ -18,19 +18,21 @@ export function getTitleMinutes(film:{duration:number;episodes:number|null;categ
 
 // React cache deduplicates metadata/page reads within a render, without stale cross-request data.
 export const getOverview = cache(async () => {
-  const [films, favoriteGroups, ratingGroups] = await Promise.all([
+  const [films, favoriteGroups, ratingGroups, seasonGroups] = await Promise.all([
     db.select(movieReadFields).from(movies).orderBy(desc(movies.createdAt)),
     db.select({ movieId: favorites.movieId, count: sql<number>`count(*)::int` })
       .from(favorites).groupBy(favorites.movieId),
     db.select({ movieId: ratings.movieId, value: ratings.value, count: sql<number>`count(*)::int` })
       .from(ratings).groupBy(ratings.movieId, ratings.value),
+    db.select({movieId:seriesSeasons.movieId,count:sql<number>`count(*)::int`}).from(seriesSeasons).groupBy(seriesSeasons.movieId),
   ]);
+  const seasonMap = new Map(seasonGroups.map(row=>[row.movieId,row.count]));
   const favoriteMap = new Map(favoriteGroups.map(row => [row.movieId, row.count]));
   const scoreMap = summarizeRatings(ratingGroups);
 
   return films.map(m => {
     const s = scoreMap.get(m.id);
-    return { ...m, favoriteCount: favoriteMap.get(m.id) || 0, rating: s?.average || 0, ratingCount: s?.count || 0, ratingDist: s?.dist || {} };
+    return { ...m, seasonCount:seasonMap.get(m.id) ?? null, favoriteCount: favoriteMap.get(m.id) || 0, rating: s?.average || 0, ratingCount: s?.count || 0, ratingDist: s?.dist || {} };
   });
 });
 
@@ -47,6 +49,8 @@ export type Film = {
   ageRating?: string | null;
   duration: number;
   episodes: number | null;
+  seasonCount?: number | null;
+  seriesCatalogComplete?: boolean | null;
   poster: string;
   backdrop: string | null;
   watchUrl: string | null;
