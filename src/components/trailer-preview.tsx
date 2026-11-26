@@ -7,7 +7,7 @@ import {
   type ComponentPropsWithoutRef,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, X, ExternalLink, Layers3 } from 'lucide-react';
+import { Play, X, ExternalLink } from 'lucide-react';
 import { trailerSource, trailerPreviewUrl } from '@/lib/trailers';
 
 function mayPreview() {
@@ -101,16 +101,6 @@ export function TrailerSurface({
       }}
     >
       {children}
-      {serial && (
-        <span
-          className="series-poster-caption"
-          title={serial.description}
-          aria-label={serial.description}
-        >
-          <Layers3 size={11} aria-hidden="true" />
-          <span>{serial.short}</span>
-        </span>
-      )}
       {source && (
         <span
           className="trailer-indicator"

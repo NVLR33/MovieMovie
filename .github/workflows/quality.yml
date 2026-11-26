@@ -7,7 +7,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost/app_db?host=/tmp/mm-audit-pg
       AUDIT_DATABASE_URL: postgresql://postgres:postgres@localhost/app_db?host=/tmp/mm-audit-pg
@@ -21,16 +21,37 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=moderate
       - run: npm run typecheck && npm run lint && npm test
-      - run: npm run test:wallet && npm run test:live && npm run test:suggestions && npm run test:admin && npm run test:auth
+      - name: Wallet and migration manifest
+        shell: bash
+        run: npm run test:wallet 2>&1 | tee "$RUNNER_TEMP/audit-wallet.log"
+      - name: Realtime and storage
+        shell: bash
+        run: npm run test:live 2>&1 | tee "$RUNNER_TEMP/audit-live.log"
+      - name: Movie suggestions
+        shell: bash
+        run: npm run test:suggestions 2>&1 | tee "$RUNNER_TEMP/audit-suggestions.log"
+      - name: Admin permissions
+        shell: bash
+        run: npm run test:admin 2>&1 | tee "$RUNNER_TEMP/audit-admin.log"
+      - name: Auth and sessions
+        shell: bash
+        run: npm run test:auth 2>&1 | tee "$RUNNER_TEMP/audit-auth.log"
       - name: Check generated database bundle
         run: npm run db:bundle && git diff --exit-code -- scripts/supabase/01-upgrade.sql scripts/supabase/03-schema-audit.sql
       - run: npm run build
       - name: Install optional local audit transport and browser
         run: npm install --prefix "$RUNNER_TEMP/mm-audit-tools" @electric-sql/pglite-socket@0.2.20 playwright-core@1.65.1 @sparticuz/chromium@153.0.0
       - name: Exercise production HTTP routes and browser filters against an isolated database
+        shell: bash
         env:
           AWS_EXECUTION_ENV: AWS_Lambda_nodejs22.x
         run: |
+          set -euo pipefail
+          run_suite() {
+            echo "::group::$1"
+            npm run "$1" 2>&1 | tee "$RUNNER_TEMP/audit-${1//:/-}.log"
+            echo "::endgroup::"
+          }
           export AUDIT_DB_DEPS="$RUNNER_TEMP/mm-audit-tools"
           export UI_TEST_DEPS="$RUNNER_TEMP/mm-audit-tools"
           node tests/integration/serve-audit-db.mjs > "$RUNNER_TEMP/audit-db.log" 2>&1 &
@@ -39,34 +60,33 @@ jobs:
           WEB_PID=$!
           trap 'kill "$WEB_PID" "$DB_PID" 2>/dev/null || true' EXIT
           node tests/integration/wait-for-audit.mjs
-          npm run test:routes
-          npm run test:trailers:compat
-          npm run test:browser
-          npm run test:suggestions:browser
-          npm run test:admin:browser
-          npm run test:auth:browser
-          npm run test:mobile:browser
-          npm run test:ambient:browser
-          npm run test:hud:browser
-          npm run test:passport:browser
-          npm run test:orbit:browser
-          npm run test:rankings:browser
-          npm run test:showcase:browser
-          npm run test:pulse:browser
-          npm run test:settings:browser
-          npm run test:series:browser
-          npm run test:catalog:browser
-          npm run test:design:browser
-          npm run test:profiles:browser
-          npm run test:city-series:browser
-          npm run test:cine-day:browser
-          npm run test:roulette:browser
-          npm run test:ui
+          run_suite test:routes
+          run_suite test:trailers:compat
+          run_suite test:browser
+          run_suite test:suggestions:browser
+          run_suite test:admin:browser
+          run_suite test:auth:browser
+          run_suite test:mobile:browser
+          run_suite test:ambient:browser
+          run_suite test:hud:browser
+          run_suite test:passport:browser
+          run_suite test:orbit:browser
+          run_suite test:rankings:browser
+          run_suite test:showcase:browser
+          run_suite test:pulse:browser
+          run_suite test:settings:browser
+          run_suite test:series:browser
+          run_suite test:catalog:browser
+          run_suite test:design:browser
+          run_suite test:profiles:browser
+          run_suite test:city-series:browser
+          run_suite test:cine-day:browser
+          run_suite test:roulette:browser
+          run_suite test:ui
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: isolated-audit-logs
           path: |
-            ${{ runner.temp }}/audit-db.log
-            ${{ runner.temp }}/audit-web.log
+            ${{ runner.temp }}/audit-*.log
           retention-days: 3

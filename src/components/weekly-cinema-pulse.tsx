@@ -1,4 +1,5 @@
 'use client';
+import { ageRatingTone } from '@/lib/age-rating';
 
 import MediaPoster from './media-poster';
 import { TrailerSurface } from './trailer-preview';
@@ -130,7 +131,11 @@ function PulseCard({
           {saved ? <Check size={16} /> : <Bookmark size={16} />}
         </button>
         {film.ageRating && (
-          <small className="weekly-pulse-age">{film.ageRating}</small>
+          <small
+            className={`weekly-pulse-age age-${ageRatingTone(film.ageRating)}`}
+          >
+            {film.ageRating}
+          </small>
         )}
       </div>
       <div className="weekly-pulse-info">

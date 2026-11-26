@@ -98,6 +98,7 @@ try {
       id,
     ]);
   }
+  await db.query('update mg_movies set views=999999999 where id=$1', [ids[0]]);
   await db.query(
     "insert into mg_series_seasons(movie_id,number,title)values($1,1,'Первый'),($1,2,'Второй')",
     [ids[0]],
@@ -115,8 +116,13 @@ try {
   assert.equal(await serial.locator('[data-series=true]').count(), 1);
   assert.equal(await film.locator('[data-series=true]').count(), 0);
   assert.equal(
-    await serial.locator('.series-poster-caption').innerText(),
-    '2 сез. · 100 сер.',
+    await page.locator('.series-poster-caption').count(),
+    0,
+    'No episode banner over artwork',
+  );
+  assert.match(
+    await serial.locator('.card-info p').first().innerText(),
+    /100 сер\./,
   );
   const heart = serial.locator('.card-favorite-btn');
   assert.equal(await heart.getAttribute('aria-pressed'), 'false');
@@ -170,7 +176,7 @@ try {
         const issues = await serial.evaluate((el) => {
           const entries = [
               ...el.querySelectorAll(
-                '.card-score,.card-favorite-btn,.card-age-rating,.card-watched-badge,.series-poster-caption',
+                '.card-score,.card-favorite-btn,.card-age-rating,.card-watched-badge',
               ),
             ].map((node) => ({
               name: node.className,
@@ -190,16 +196,38 @@ try {
             sheets.some(
               (sheet) =>
                 sheet.content === 'none' ||
-                parseFloat(sheet.borderTopWidth) < 2,
+                parseFloat(sheet.borderTopWidth) < 1,
             )
           )
             issues.push('missing visible backing sheets');
+          if (
+            getComputedStyle(surface).borderTopWidth !== '0px' ||
+            getComputedStyle(el.querySelector('.cinema-poster'))
+              .borderTopWidth !== '0px'
+          )
+            issues.push('duplicate frame inside the card perimeter');
+          if (sheets.some((sheet) => sheet.transform !== 'none'))
+            issues.push('legacy sheen moves the backing sheets');
+          if (
+            sheets[0].top !== '0px' ||
+            sheets[0].right !== '0px' ||
+            sheets[0].bottom !== '12px' ||
+            sheets[0].left !== '12px' ||
+            sheets[1].top !== '6px' ||
+            sheets[1].right !== '6px'
+          )
+            issues.push('legacy pseudo-element overrides the sheet geometry');
           if (getComputedStyle(el).borderTopWidth !== '2px')
             issues.push('thin card border');
           const age = getComputedStyle(el.querySelector('.card-age-rating')),
             score = getComputedStyle(el.querySelector('.card-score'));
           if (age.backgroundColor !== score.backgroundColor)
             issues.push('age chip does not match score background');
+          if (
+            age.color !== 'rgb(253, 186, 116)' ||
+            age.borderTopColor === 'rgba(199, 206, 216, 0.3)'
+          )
+            issues.push('age lost its classification color');
           for (const { name, r } of entries) {
             if (
               r.left < p.left - 1 ||
@@ -234,6 +262,57 @@ try {
   await serial.screenshot({
     path: '/tmp/mm-city-series-screenshots/series-card.png',
   });
+  // Legacy poster sheen must not translate the rear sheet on hover.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await serial.hover();
+  assert.equal(
+    await serial
+      .locator('.series-poster')
+      .evaluate((el) => getComputedStyle(el, '::before').transform),
+    'none',
+  );
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  // Top-five editions have no rectangular wrapper around their offset rounded sheets.
+  await open('/');
+  const five = page.locator('.home-five');
+  await five
+    .getByRole('button', { name: 'По просмотрам', exact: true })
+    .click();
+  const topSeries = five
+    .locator('.home-five-card')
+    .filter({ hasText: 'Издание Сериал' });
+  await topSeries.waitFor();
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const cover = topSeries.locator('.series-poster');
+    assert(
+      await cover.evaluate((el) => {
+        const s = getComputedStyle(el),
+          front = el.querySelector('.cinema-poster'),
+          f = getComputedStyle(front),
+          p = front.getBoundingClientRect(),
+          b = el.getBoundingClientRect();
+        const badge = el.parentElement
+          .querySelector('.home-five-score')
+          .getBoundingClientRect();
+        return (
+          s.borderTopWidth === '0px' &&
+          s.boxShadow === 'none' &&
+          f.borderTopWidth === '2px' &&
+          parseFloat(f.borderTopLeftRadius) === 10 &&
+          p.top - b.top >= 11 &&
+          b.right - p.right >= 11 &&
+          badge.top >= p.top &&
+          badge.right <= p.right + 1
+        );
+      }),
+      `Clean single front frame in top-five at ${width}`,
+    );
+  }
+  await topSeries.screenshot({
+    path: '/tmp/mm-city-series-screenshots/top-series-frame.png',
+  });
+  await open('/catalog?studio=' + studio);
   // No mount-time location prompt; manual cities work without coordinates.
   assert.equal(await page.evaluate(() => window.geoCalls), 0);
   const panel = page.locator('.city-cinema');
