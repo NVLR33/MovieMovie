@@ -371,74 +371,41 @@ try {
   await open('/catalog?studio=' + studio);
   // No mount-time location prompt; manual cities work without coordinates.
   assert.equal(await page.evaluate(() => window.geoCalls), 0);
-  const panel = page.locator('.city-cinema');
-  await panel.locator('summary').click();
-  await panel.getByLabel('Город', { exact: true }).fill('Москва');
-  await panel.getByRole('button', { name: 'Применить', exact: true }).click();
-  assert.match(await panel.locator('summary').innerText(), /Москва/);
-  assert.equal(
-    await page.evaluate(
-      () => JSON.parse(localStorage.getItem('mg_city_v1')).city,
-    ),
-    '',
-  );
-  await page.reload();
-  await panel.locator('summary').click();
-  assert.doesNotMatch(await panel.locator('summary').innerText(), /Москва/);
-  await panel.getByLabel('Город', { exact: true }).fill('Москва');
-  await panel.getByLabel(/Запомнить на этом устройстве/).check();
-  await panel.getByRole('button', { name: 'Применить', exact: true }).click();
-  await page.reload();
-  await panel.locator('summary').click();
-  assert.match(await panel.locator('summary').innerText(), /Москва/);
-  assert.equal(await page.evaluate(() => window.geoCalls), 0);
-  await panel
-    .getByRole('button', { name: 'Определить местоположение', exact: true })
-    .click();
-  assert.equal(
-    await panel.getByLabel('Город', { exact: true }).inputValue(),
-    'Каменск-Уральский',
-  );
-  assert.match(
-    await panel.locator('summary').innerText(),
-    /Москва/,
-    'coordinates are a suggestion, not consent to save',
-  );
-  assert.equal(
-    await page.evaluate(
-      () => JSON.parse(localStorage.getItem('mg_city_v1')).city,
-    ),
-    'Москва',
-  );
-  assert.equal(await page.evaluate(() => window.geoCalls), 1);
-  await panel.getByRole('button', { name: 'Применить', exact: true }).click();
-  const link = panel.getByRole('link', { name: /Найти сеансы/ }),
-    url = new URL(await link.getAttribute('href'));
-  assert.equal(url.origin, 'https://yandex.ru');
-  assert.match(url.searchParams.get('text'), /Каменск-Уральский/);
-  assert.deepEqual(
-    await page.evaluate(() =>
-      Object.keys(JSON.parse(localStorage.getItem('mg_city_v1'))),
-    ),
-    ['city'],
-  );
-  await page.evaluate(() => {
-    window.geoDeny = true;
-  });
-  await panel
-    .getByRole('button', { name: 'Определить местоположение', exact: true })
-    .click();
+  await page.route('**/api/location', route => route.fulfill({json:{city:'Каменск-Уральский',region:'Свердловская область',country:'Россия',source:'OpenStreetMap'}}));
+  const panel = page.getByRole('dialog', {name:'Ваш город', exact:true});
+  const openCity = async () => {await page.locator('.header-city-button').click();await panel.waitFor();};
+  await openCity();
+  await panel.getByLabel('Город', {exact:true}).fill('Москва');
+  await panel.getByLabel(/Запомнить на этом устройстве/).uncheck();
+  await panel.getByRole('button', {name:'Применить',exact:true}).click();
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('mg_city_v1')).city),'');
+  await page.reload();await openCity();
+  assert.doesNotMatch(await page.locator('.header-city-button').innerText(),/Москва/);
+  await panel.getByLabel('Город',{exact:true}).fill('Москва');
+  assert.equal(await panel.getByLabel(/Запомнить на этом устройстве/).isChecked(),true);
+  await panel.getByRole('button',{name:'Применить',exact:true}).click();
+  await page.reload();await openCity();
+  assert.match(await page.locator('.header-city-button').innerText(),/Москва/);
+  assert.equal(await page.evaluate(()=>window.geoCalls),0);
+  await panel.getByRole('button',{name:'Определить местоположение',exact:true}).click();
+  await panel.getByText(/Найден город:/).waitFor();
+  assert.equal(await panel.getByLabel('Город',{exact:true}).inputValue(),'Каменск-Уральский');
+  assert.match(await page.locator('.header-city-button').innerText(),/Москва/,'GPS is a proposal, not consent to save');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('mg_city_v1')).city),'Москва');
+  await panel.getByRole('button',{name:'Применить',exact:true}).click();
+  assert.deepEqual(await page.evaluate(()=>Object.keys(JSON.parse(localStorage.getItem('mg_city_v1')))),['city']);
+  await page.evaluate(()=>{window.geoDeny=true;});
+  await panel.getByRole('button',{name:'Определить местоположение',exact:true}).click();
   await panel.getByText(/Доступ к геолокации запрещён/).waitFor();
-  await panel.screenshot({
-    path: '/tmp/mm-city-series-screenshots/city-choice-mobile.png',
-  });
+  await panel.screenshot({path:'/tmp/mm-city-series-screenshots/city-choice-mobile.png'});
+  await panel.getByRole('button',{name:'Закрыть выбор города',exact:true}).click();
   const settings = await openSettings(page);
   await settings
     .getByRole('heading', { name: 'Город и кинотеатры' })
     .waitFor();
   await closeSettings(page);
   await open('/movie/' + ids[1]);
-  await page.getByRole('link', { name: /Искать сеансы/ }).waitFor();
+  assert.equal(await page.getByRole('link', { name: /Искать сеансы/ }).count(), 0, 'Cinema search stays out of the material header');
   await open('/movie/' + ids[0]);
   await page.locator('.detail-series-cover[data-series=true]').waitFor();
   assert.equal(
@@ -481,7 +448,7 @@ try {
     'No maps, reverse geocoder or schedule request without deliberate outbound navigation',
   );
   console.log(
-    'Passed series editions/city/privacy/profile hover: real season counts, uniform standard covers on films and series, badge isolation in 3 views/5 widths/2 themes, explicit location only, manual/session/remembered city, offline GPS suggestion confirmation, denied-permission fallback, safe outbound cinema search, settings and detail links, unclipped profile tab rings. Screenshots /tmp/mm-city-series-screenshots',
+    'Passed series editions/city/privacy/profile hover: real season counts, uniform standard covers on films and series, badge isolation in 3 views/5 widths/2 themes, explicit location only, manual/session/remembered city, mocked reverse-geocoding confirmation, denied-permission fallback, settings and detail links, unclipped profile tab rings. Screenshots /tmp/mm-city-series-screenshots',
   );
 } finally {
   await browser.close();

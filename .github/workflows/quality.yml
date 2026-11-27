@@ -76,10 +76,13 @@ jobs:
           run_suite test:pulse:browser
           run_suite test:settings:browser
           run_suite test:series:browser
+          run_suite test:detail:browser
+          run_suite test:brand:browser
           run_suite test:catalog:browser
           run_suite test:design:browser
           run_suite test:profiles:browser
           run_suite test:city-series:browser
+          run_suite test:location:browser
           run_suite test:cine-day:browser
           run_suite test:roulette:browser
           run_suite test:playback:browser

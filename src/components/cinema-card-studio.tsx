@@ -146,7 +146,7 @@ function CinemaCardDialog({ card, close, go }: { card: CinemaCardData; close: ()
   return (
     <div className="cinema-studio-backdrop" onClick={event => { if (event.target === event.currentTarget) close(); }}>
       <div className="cinema-studio" role="dialog" aria-modal="true" aria-labelledby={headingId} ref={dialog} tabIndex={-1}>
-        <header className="cinema-studio-header"><div><span className="eyebrow">СТУДИЯ MOVIEMOVIE</span><h2 id={headingId}>Твоя история. В одном кадре.</h2></div><button type="button" className="icon-button" aria-label="Закрыть кино-визитку" onClick={close}><X size={21} /></button></header>
+        <header className="cinema-studio-header"><div><span className="eyebrow">СТУДИЯ <span className="brand-name">moviemovie</span></span><h2 id={headingId}>Твоя история. В одном кадре.</h2></div><button type="button" className="icon-button" aria-label="Закрыть кино-визитку" onClick={close}><X size={21} /></button></header>
         <div className="cinema-studio-body">
           <div className={`cinema-studio-preview cinema-format-${format}`} aria-busy={!logoData}>
             {logoData ? <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} width={width} height={height} alt={`Кино-визитка ${card.username}. ${Math.floor(card.totalMinutes / 60)} ч ${card.totalMinutes % 60} мин в кино. Жанры: ${card.topGenres.map(genre => genre.name).join(', ') || 'пока нет'}. Актёр: ${card.topActor?.name || 'нет данных'}. Коронная ачивка: ${card.crown?.name || 'пока не открыта'}.`} /> : <div className="cinema-studio-loading"><Loader2 size={25} />Готовим твою визитку…</div>}

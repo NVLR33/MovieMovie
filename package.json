@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-postgresql-template",
+  "name": "moviemovie",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -42,7 +42,11 @@
     "test:city-series:browser": "node tests/integration/browser-city-series.mjs",
     "test:cine-day:browser": "node tests/integration/browser-cine-day.mjs",
     "test:roulette:browser": "node tests/integration/browser-roulette.mjs",
-    "test:playback:browser": "node tests/integration/browser-playback.mjs"
+    "test:playback:browser": "node tests/integration/browser-playback.mjs",
+    "brand:assets": "node scripts/generate-brand-assets.mjs",
+    "test:brand:browser": "node tests/integration/browser-brand.mjs",
+    "test:detail:browser": "node tests/integration/browser-material-detail.mjs",
+    "test:location:browser": "node tests/integration/browser-location-showtimes.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",
@@ -76,6 +80,7 @@
     "eslint": "9.39.4",
     "eslint-config-next": "16.4.6",
     "postcss": "8.5.33",
+    "sharp": "0.35.5",
     "tailwindcss": "4.1.17",
     "topojson-client": "^3.1.0",
     "tsx": "^4.23.15",

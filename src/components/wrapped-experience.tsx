@@ -506,7 +506,7 @@ export default function WrappedExperience({
 
         <div className="ww-center">
           <div className="ww-mini-label">
-            MOVIEMOVIE / WRAPPED {year}
+            <span className="brand-name">moviemovie</span> / WRAPPED {year}
           </div>
 
           <Film size={58} />
@@ -963,7 +963,7 @@ export default function WrappedExperience({
     <section className="ww-slide ww-final" key="final">
       <div className="ww-section-label">
         <Heart size={18} />
-        MOVIEMOVIE WRAPPED {data.year}
+        <span className="brand-name">moviemovie</span> WRAPPED {data.year}
       </div>
 
       <div className="ww-final-content">
@@ -981,7 +981,7 @@ export default function WrappedExperience({
 
         <div className="ww-final-card">
           <div className="ww-final-card-top">
-            <span>moviemovie.</span>
+            <span>moviemovie</span>
             <span>WRAPPED / {data.year}</span>
           </div>
 
@@ -1106,7 +1106,7 @@ export default function WrappedExperience({
 
         <div className="ww-top-actions">
           <span className="ww-brand">
-            moviemovie<span>.</span>
+            moviemovie
           </span>
 
           <select

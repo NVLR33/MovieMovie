@@ -480,7 +480,7 @@ export default function CinemaRoulette({
     >
       <header className="rr-header">
         <span className="rr-kicker">
-          MOVIEMOVIE / {en ? 'CINEMA CHANCE' : 'КИНОСЛУЧАЙ'}
+          <span className="brand-name">moviemovie</span> / {en ? 'CINEMA CHANCE' : 'КИНОСЛУЧАЙ'}
         </span>
         <button
           type="button"

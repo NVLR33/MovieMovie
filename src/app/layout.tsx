@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { BRAND_NAME, BRAND_SOCIAL_IMAGE, DEFAULT_SITE_URL } from '@/lib/brand';
 import type { ReactNode } from 'react';
 // Fonts are bundled locally: production builds no longer depend on Google Fonts access.
 import '@fontsource-variable/unbounded';
@@ -20,14 +21,15 @@ import '../components/responsive-repairs.css';
 import '../components/cinema-roulette.css';
 import '../components/material-cover.css';
 import '../components/material-player.css';
+import '../components/material-detail.css';
+import '../components/location-showtimes.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 
 // [SEO:METADATA]
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ||
-      'https://moviego-gamma.vercel.app'
+    process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL
   ),
 
   title: {
@@ -41,15 +43,18 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
-    siteName: 'moviemovie',
+    siteName: BRAND_NAME,
     title: 'moviemovie — твоя киновселенная',
     description:
       'Твоя киновселенная: фильмы, сериалы, аниме, оценки, достижения и друзья.',
     url: '/',
+    images: [{ url: BRAND_SOCIAL_IMAGE, width: 1200, height: 630, alt: BRAND_NAME }],
   },
 
   twitter: {
     card: 'summary_large_image',
+    title: 'moviemovie — твоя киновселенная',
+    images: [BRAND_SOCIAL_IMAGE],
   },
 };
 

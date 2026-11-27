@@ -1,4 +1,4 @@
-export const STATIC_SITE_ROUTES = ['catalog', 'world', 'top', 'profile', 'watchlist', 'favorites', 'leaderboard', 'achievements', 'challenges', 'games', 'friends', 'wrapped', 'collab', 'watchroom', 'chat', 'admin', 'about-admin'] as const;
+export const STATIC_SITE_ROUTES = ['catalog', 'showtimes', 'world', 'top', 'profile', 'watchlist', 'favorites', 'leaderboard', 'achievements', 'challenges', 'games', 'friends', 'wrapped', 'collab', 'watchroom', 'chat', 'admin', 'about-admin'] as const;
 export function resolveSiteRoute(pathname: string) {
   const parts = pathname.replace(/^\/|\/$/g, '').split('/').filter(Boolean);
   if (!parts.length) return { page: 'home' };

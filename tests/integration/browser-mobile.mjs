@@ -254,7 +254,7 @@ try {
   );
   await actions.getByRole('button', { name: 'Отзывы', exact: true }).click();
   const reviews = page.getByRole('dialog', {
-    name: 'Мнения сообщества',
+    name: 'Комментарии',
     exact: true,
   });
   await reviews.waitFor();
