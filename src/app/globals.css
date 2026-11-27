@@ -4573,7 +4573,7 @@ select:focus {
   transform: skew(-8deg);
 }
 
-/* Original MovieMovie artwork: preserve transparency, colors and aspect ratio. */
+/* Supplied moviemovie artwork: preserve transparency, colors and aspect ratio. */
 .brand-logo {
   display: block;
   width: 160px;
@@ -6005,3 +6005,10 @@ button.pet-wallet:hover, button.pet-wallet[aria-pressed="true"] { border-color: 
 }
 @media(prefers-reduced-motion:reduce) { .home-five-poster { transition:none; } .home-five-card:hover .home-five-poster { transform:none; } .home-five-track { scroll-behavior:auto; } }
 @media(forced-colors:active) { .home-five-number { color:CanvasText; } .home-five-filters > button[aria-pressed='true'] { border:2px solid Highlight; } }
+
+/* The public name stays lowercase even inside uppercase editorial labels. */
+.brand-name { text-transform: none !important; }
+
+/* Brand spans must wrap inside narrow editorial headings rather than widen the page. */
+.section-heading > div { min-width: 0; }
+.eyebrow:has(> .brand-name) { flex-wrap: wrap; max-width: 100%; row-gap: 2px; }

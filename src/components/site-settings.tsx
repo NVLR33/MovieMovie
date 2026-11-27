@@ -172,7 +172,7 @@ function Panel({
       <header className="settings-header">
         <div>
           <span className="eyebrow">
-            MOVIEMOVIE / {en ? 'YOUR SPACE' : 'ТВОЁ ПРОСТРАНСТВО'}
+            <span className="brand-name">moviemovie</span> / {en ? 'YOUR SPACE' : 'ТВОЁ ПРОСТРАНСТВО'}
           </span>
           <h2 id={titleId}>
             <Settings2 size={23} />

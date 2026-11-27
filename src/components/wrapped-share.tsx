@@ -270,7 +270,7 @@ async function generateWrappedImage(
 
   text(
     ctx,
-    'moviemovie.',
+    'moviemovie',
     M,
     135,
     43,
@@ -697,7 +697,7 @@ async function generateWrappedImage(
 
   text(
     ctx,
-    'MOVIEMOVIE',
+    'moviemovie',
     W - M,
     footerY + 17,
     22,

@@ -414,7 +414,7 @@ const exportPNG = async () => {
         <div className="share-center-header">
           <div>
             <span className="share-center-kicker">
-              MOVIEMOVIE SOCIAL
+              <span className="brand-name">moviemovie</span> SOCIAL
             </span>
 
             <h2>Поделиться</h2>

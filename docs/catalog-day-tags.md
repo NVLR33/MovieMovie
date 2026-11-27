@@ -1,11 +1,20 @@
-# Catalog-backed home discovery tag
+# Один тег каталога на день
 
-The home `cine-day-banner` no longer uses hard-coded weekday/holiday themes. Some old calendar branches had no filter at all; others used a text search for a genre absent from the catalog.
+Баннер — не рулетка. Кнопка «Другой тег», пользовательский reroll и случайный выбор на каждый `/api/data` удалены.
 
-`catalogDayTags` now builds choices from actual comma-separated catalog genre tokens. It trims values, groups case-insensitively, counts each material only once per genre, and excludes the all-genres sentinel. `randomCatalogDay` selects uniformly among available tags; explicit rerolls exclude the current tag when another exists. Empty catalogs/no genre metadata produce no banner rather than an unopenable suggestion.
+`catalogDayTags` собирает настоящие жанровые теги каталога: запятые/пробелы нормализуются, регистр объединяется, один материал учитывается один раз, «Все жанры» исключается. Выбор не взвешивается популярностью фильмов. Пустой каталог/отсутствие тегов не дают фиктивную подборку.
 
-`/api/data.cineDay` is a populated random choice or null. Its existing label/filter/icon fields are retained for populated choices; href and count are added. The home component validates its selected tag against current films, so deleted tags are not retained on catalog refresh. An explicit client reroll remains selected across background refreshes while its tag exists.
+`dailyCatalogDay` использует детерминированно перемешанный цикл тегов и номер календарного дня в **Europe/Moscow**. При неизменном наборе тегов:
 
-The Open action is a real link to `/catalog?genre=…`, not broad free-text search. A local navigation from this banner clears an unfinished header search so it cannot accidentally narrow results to zero. Native modified-click/new-tab navigation remains supported. Long genre labels and both controls wrap on mobile; the existing banner composition is retained. No schema changes or external requests are introduced.
+- один результат для всех посетителей и всех запросов за день;
+- refresh, фоновые обновления, перезапуск процесса, порядок строк каталога и другой браузер не дают новый тег;
+- на следующий день выбран следующий тег перемешанного цикла: соседние дни не повторяются, если доступно хотя бы два тега;
+- один доступный тег остаётся единственным — других не выдумываем.
 
-Validation: 253 unit tests, typecheck, lint (three existing image warnings), isolated production build; `test:cine-day:browser`, `test:catalog:browser`, `test:ui` pass. The new production-browser suite checks actual API tag counts, random rerolls, exact catalog transitions at four widths, stale-header-search isolation, URL-special tags, and single/no-tag edge cases. It is included in the existing isolated quality workflow.
+Это воспроизводимая псевдослучайная ротация без персонального трекинга и новых таблиц, не криптографическая лотерея. Счётчик отражает текущий каталог. **Редакторское изменение самого набора тегов может изменить выбор внутри дня**: удалённый тег не сохраняется ради пустой подборки. Для жёстко зафиксированного редакционного снимка при любых правках нужна отдельная сущность расписания в БД; она не добавлялась.
+
+Сервер возвращает прежний `cineDay` с label/filter/icon/href/count. Клиент использует ту же функцию, проверяет время каждые 30 секунд и при возвращении во вкладку; уже открытая главная переходит на новый день без refresh (до 30 секунд после полуночи). Часовой пояс явно подписан в баннере.
+
+Кнопка «Открыть» ведёт в `/catalog?genre=…` с точным жанровым фильтром. Черновик общего поиска очищается при этом переходе и не сужает подборку незаметно. Никаких случайных фильмов, не относящихся к тегу, не добавляется.
+
+Проверки: `cine-day.test.ts` — нормализация, точные непустые подборки/URL-спецсимволы, стабильность дня/порядка, московская полночь, распределение цикла и отсутствие соседнего повтора; `test:cine-day:browser` — API без reroll, четыре ширины, переход/счётчики/пустой и единственный тег, отсутствие утечки поиска и автоматический переход через полночь в виртуальном браузерном времени без hydration errors.

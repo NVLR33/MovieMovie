@@ -1,7 +1,8 @@
 import Image from 'next/image';
+import { BRAND_NAME } from '@/lib/brand';
 import logo from '../../public/brand/moviemovie-logo.png';
 
-/** Original artwork, cropped to remove transparent margins without changing its pixels. */
+/** Supplied artwork, navigation crop of the original letters and nearby glow. */
 export default function BrandLogo({
   className = '',
   sizes = '160px',
@@ -14,7 +15,7 @@ export default function BrandLogo({
   return (
     <Image
       src={logo}
-      alt="moviemovie"
+      alt={BRAND_NAME}
       className={`brand-logo ${className}`}
       sizes={sizes}
       priority={priority}

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { DEFAULT_SITE_URL } from '@/lib/brand';
 import { resolveSiteRoute } from '@/lib/site-routes';
 import type { Metadata } from 'next';
 import { getOverview, db, users, eq } from '@/lib/data';
@@ -7,8 +8,7 @@ import MovieGoApp from '@/components/movie-go-app';
 export const dynamic = 'force-dynamic';
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://moviemovie.ru';
+  process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL;
 
 type PageProps = {
   params: Promise<{
@@ -21,6 +21,8 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+
+  if (slug?.[0] === 'showtimes') return { title: 'Афиша и сеансы в твоём городе | moviemovie', description: 'Сеансы кинотеатров по выбранному городу. Даты, кинотеатры и данные внешнего источника.', alternates: { canonical: `${SITE_URL}/showtimes` } };
 
   if (slug?.[0] === 'world') return { title: 'Кино-карта мира | moviemovie', description: 'Исследуй кино по странам производства. Цветная карта каталога и личная география просмотров.', alternates: { canonical: `${SITE_URL}/world` } };
 

@@ -1,30 +1,34 @@
-'use client';
-import MaterialPlayer from './material-player';
+"use client";
+import MaterialPlayer from "./material-player";
+import { createPortal } from "react-dom";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
+  Layers3,
+  ChevronDown,
+  X,
   ChevronLeft,
   ChevronRight,
   Link2,
   Plus,
   Settings2,
   Trash2,
-} from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { browserStorage, copyText } from '@/lib/browser-preferences';
+} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { browserStorage, copyText } from "@/lib/browser-preferences";
 import {
   resolveSeason,
   seasonLink,
   seasonStorageKey,
   seasonNumber,
-} from '@/lib/season-navigation';
+} from "@/lib/season-navigation";
 import {
   SERIAL_MIN_EPISODES,
   seriesProgress,
   type SeriesSeason,
   type SeriesSnapshot,
-} from '@/lib/series';
+} from "@/lib/series";
 
 type Mutation = (body: Record<string, unknown>) => Promise<boolean>;
 function Rating({
@@ -46,7 +50,7 @@ function Rating({
     <select
       aria-label={label}
       disabled={busy}
-      value={value ?? ''}
+      value={value ?? ""}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
     >
       <option value="">Без оценки</option>
@@ -74,7 +78,7 @@ function SeasonEditor({
   mutate: Mutation;
 }) {
   const [number, setNumber] = useState(season?.number ?? nextNumber);
-  const [title, setTitle] = useState(season?.title ?? '');
+  const [title, setTitle] = useState(season?.title ?? "");
   const [count, setCount] = useState(season?.episodes.length || 1);
   return (
     <form
@@ -85,12 +89,12 @@ function SeasonEditor({
           season &&
           count < season.episodes.length &&
           !window.confirm(
-            'Уменьшение числа эпизодов удалит лишние эпизоды и их оценки. Уже заработанные достижения сохранятся. Продолжить?',
+            "Уменьшение числа эпизодов удалит лишние эпизоды и их оценки. Уже заработанные достижения сохранятся. Продолжить?",
           )
         )
           return;
         void mutate({
-          action: 'saveSeason',
+          action: "saveSeason",
           ...(season ? { id: season.id } : {}),
           number,
           title,
@@ -130,7 +134,7 @@ function SeasonEditor({
       </label>
       <button className="outline-btn small" disabled={busy} type="submit">
         {season ? (
-          'Сохранить сезон'
+          "Сохранить сезон"
         ) : (
           <>
             <Plus size={14} />
@@ -146,10 +150,10 @@ function SeasonEditor({
           onClick={() => {
             if (
               window.confirm(
-                'Удалить сезон, его эпизоды и оценки? Заработанные достижения сохранятся.',
+                "Удалить сезон, его эпизоды и оценки? Заработанные достижения сохранятся.",
               )
             )
-              void mutate({ action: 'deleteSeason', id: season.id });
+              void mutate({ action: "deleteSeason", id: season.id });
           }}
         >
           <Trash2 size={14} />
@@ -162,31 +166,38 @@ function SeasonEditor({
 
 export default function SeriesPanel({
   movieId,
+  title,
   userId,
   auth,
   onUpdated,
 }: {
   movieId: number;
+  title: string;
   userId: number | null;
   auth: () => void;
   onUpdated: () => Promise<void>;
 }) {
   const [snapshot, setSnapshot] = useState<SeriesSnapshot | null>(null);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const [revision, setRevision] = useState(0);
   const [editing, setEditing] = useState(false);
   const url = `/api/series?movieId=${movieId}`;
   const searchParams = useSearchParams();
+  const [open, setOpen] = useState(
+    () => !!seasonNumber(searchParams.get("season")),
+  );
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const storageKey = seasonStorageKey(movieId, userId);
   const [rememberedId, setRememberedId] = useState(() =>
     browserStorage.getItem(storageKey),
   );
   const selected = resolveSeason(
     snapshot?.seasons || [],
-    searchParams.get('season'),
+    searchParams.get("season"),
     rememberedId,
   );
   const selectedIndex =
@@ -195,22 +206,59 @@ export default function SeriesPanel({
   const scrollToSeason = useRef(false);
   const initialLink = useRef(false);
   const dirty = useRef(false);
-  const [fallbackLink, setFallbackLink] = useState('');
+  const [fallbackLink, setFallbackLink] = useState("");
 
   useEffect(() => {
-    if (!selected) return;
+    if (!open) return;
+    const element = dialog.current;
+    if (!element) return;
+    const previous =
+      trigger.current || (document.activeElement as HTMLElement | null);
+    const overflow = document.body.style.overflow;
+    element.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      element.close();
+      document.body.style.overflow = overflow;
+      if (previous?.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!selected || !open) return;
     browserStorage.setItem(storageKey, String(selected.id));
-    const followLink = !initialLink.current && searchParams.has('season');
+    const followLink = !initialLink.current && searchParams.has("season");
     initialLink.current = true;
     if (scrollToSeason.current || followLink) {
       scrollToSeason.current = false;
       seasonHeading.current?.focus({ preventScroll: true });
       seasonHeading.current?.scrollIntoView({
-        block: 'start',
-        behavior: 'instant',
+        block: "start",
+        behavior: "instant",
       });
     }
-  }, [selected?.id, storageKey, searchParams, selected]);
+  }, [selected?.id, storageKey, searchParams, selected, open]);
+
+  const close = () => {
+    if (pending.current) {
+      setMessage("Дождись завершения сохранения.");
+      return;
+    }
+    if (
+      dirty.current &&
+      !window.confirm(
+        "Закрыть сезоны? Несохранённые изменения редактора будут потеряны.",
+      )
+    )
+      return;
+    dirty.current = false;
+    setEditing(false);
+    setOpen(false);
+  };
+  const authenticate = () => {
+    setOpen(false);
+    auth();
+  };
 
   const chooseSeason = (id: number, scroll = false) => {
     const season = snapshot?.seasons.find((item) => item.id === id);
@@ -218,39 +266,39 @@ export default function SeriesPanel({
     if (
       dirty.current &&
       !window.confirm(
-        'Перейти к другому сезону? Несохранённые изменения редактора будут потеряны.',
+        "Перейти к другому сезону? Несохранённые изменения редактора будут потеряны.",
       )
     )
       return;
     dirty.current = false;
-    setMessage('');
-    setError('');
-    setFallbackLink('');
+    setMessage("");
+    setError("");
+    setFallbackLink("");
     scrollToSeason.current = scroll;
     setRememberedId(String(id));
     browserStorage.setItem(storageKey, String(id));
     window.history.replaceState(
       null,
-      '',
+      "",
       seasonLink(window.location.href, season.number),
     );
   };
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(url, { cache: 'no-store', signal: controller.signal })
+    void fetch(url, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok)
-          throw new Error(data.error || 'Не удалось загрузить сезоны');
+          throw new Error(data.error || "Не удалось загрузить сезоны");
         if (!controller.signal.aborted) {
           setSnapshot(data);
-          setError('');
+          setError("");
         }
       })
       .catch((error) => {
         if (!controller.signal.aborted)
-          setError(error instanceof Error ? error.message : 'Ошибка загрузки');
+          setError(error instanceof Error ? error.message : "Ошибка загрузки");
       });
     return () => controller.abort();
   }, [url, userId, revision]);
@@ -259,42 +307,42 @@ export default function SeriesPanel({
     if (pending.current) return false;
     pending.current = true;
     setBusy(true);
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
     try {
-      const response = await fetch('/api/series', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/series", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...body, movieId }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Не удалось сохранить');
-      const fresh = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(result.error || "Не удалось сохранить");
+      const fresh = await fetch(url, { cache: "no-store" });
       if (!fresh.ok)
         throw new Error(
-          'Изменения сохранены, но обновить список не удалось. Нажмите «Повторить».',
+          "Изменения сохранены, но обновить список не удалось. Нажмите «Повторить».",
         );
-      if (body.action === 'deleteSeason') scrollToSeason.current = true;
+      if (body.action === "deleteSeason") scrollToSeason.current = true;
       setSnapshot(await fresh.json());
       if (
-        ['saveSeason', 'saveEpisode', 'deleteSeason'].includes(
+        ["saveSeason", "saveEpisode", "deleteSeason"].includes(
           String(body.action),
         )
       )
         dirty.current = false;
       setMessage(
         result.newlyCompleted
-          ? '📚 Сериал засчитан в «Серийного маньяка»! Прогресс сохранён навсегда.'
-          : 'Сохранено',
+          ? "📚 Сериал засчитан в «Серийного маньяка»! Прогресс сохранён навсегда."
+          : "Сохранено",
       );
       if (
         result.newlyCompleted ||
-        ['saveSeason', 'deleteSeason'].includes(String(body.action))
+        ["saveSeason", "deleteSeason"].includes(String(body.action))
       )
         await onUpdated();
       return true;
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Не удалось сохранить');
+      setError(error instanceof Error ? error.message : "Не удалось сохранить");
       return false;
     } finally {
       pending.current = false;
@@ -308,19 +356,19 @@ export default function SeriesPanel({
   );
   const nextNumber =
     Math.max(0, ...(snapshot?.seasons || []).map((s) => s.number)) + 1;
-  return (
+  const content = (
     <section
       className="series-panel"
+      onChangeCapture={event => { if ((event.target as HTMLElement).closest('form')) dirty.current = true; }}
       aria-label="Сезоны и эпизоды"
       aria-busy={busy}
     >
       <header className="series-panel-heading">
         <div>
-          <span className="eyebrow">КАЖДАЯ СЕРИЯ ИМЕЕТ ЗНАЧЕНИЕ</span>
           <h3>Сезоны и эпизоды</h3>
           <p>
-            Твои оценки от 0.5 до 10. Они не меняют общую оценку сериала и не
-            начисляют XP.
+            Выбери сезон, включи эпизод или поставь оценку. Оценки здесь не
+            меняют рейтинг сериала и не начисляют XP.
           </p>
         </div>
         {snapshot?.canEdit && (
@@ -332,7 +380,7 @@ export default function SeriesPanel({
                 editing &&
                 dirty.current &&
                 !window.confirm(
-                  'Закрыть редактор? Несохранённые изменения выбранного сезона будут потеряны.',
+                  "Закрыть редактор? Несохранённые изменения выбранного сезона будут потеряны.",
                 )
               )
                 return;
@@ -341,7 +389,7 @@ export default function SeriesPanel({
             }}
           >
             <Settings2 size={15} />
-            {editing ? 'Закрыть редактор' : 'Редактировать сезоны'}
+            {editing ? "Закрыть редактор" : "Редактировать сезоны"}
           </button>
         )}
       </header>
@@ -360,22 +408,25 @@ export default function SeriesPanel({
       {!snapshot && !error && <p role="status">Загружаем сезоны…</p>}
       {snapshot && (
         <>
-          <div
-            className={`series-completion ${snapshot.completed ? 'is-complete' : ''}`}
+          <details
+            className={`series-completion ${snapshot.completed ? "is-complete" : ""}`}
           >
-            <b>
-              {snapshot.completed ? (
-                <>
-                  <CheckCircle2 size={16} />
-                  Сериал уже засчитан в достижение
-                </>
-              ) : (
-                '📚 Серийный маньяк'
-              )}
-            </b>
-            <span>
-              Оценено {progress.rated} из {progress.total}: сезоны и эпизоды
-            </span>
+            <summary>
+              <b>
+                {snapshot.completed ? (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Сериал уже засчитан в достижение
+                  </>
+                ) : (
+                  "📚 Серийный маньяк"
+                )}
+              </b>
+              <span>
+                Оценено {progress.rated} из {progress.total}
+              </span>
+              <ChevronDown size={15} />
+            </summary>
             <div className="bar-track">
               <i
                 style={{
@@ -385,16 +436,16 @@ export default function SeriesPanel({
             </div>
             <small>
               {snapshot.completed
-                ? 'Этот результат не пропадёт при добавлении новых сезонов или изменении оценок.'
+                ? "Этот результат не пропадёт при добавлении новых сезонов или изменении оценок."
                 : !snapshot.catalogComplete
-                  ? 'Редактор ещё не подтвердил полный список сезонов и эпизодов. Ачивка пока не начисляется.'
+                  ? "Редактор ещё не подтвердил полный список сезонов и эпизодов. Ачивка пока не начисляется."
                   : progress.episodeCount < SERIAL_MIN_EPISODES
                     ? `Для достижения нужен сериал минимум с ${SERIAL_MIN_EPISODES} эпизодами.`
                     : progress.complete
-                      ? 'Все оценки на месте. Обнови любую из них, чтобы зафиксировать достижение.'
-                      : 'Оцени каждый сезон и каждый эпизод. Общая оценка сериала не заменяет отдельные оценки.'}
+                      ? "Все оценки на месте. Обнови любую из них, чтобы зафиксировать достижение."
+                      : "Оцени каждый сезон и каждый эпизод. Общая оценка сериала не заменяет отдельные оценки."}
             </small>
-          </div>
+          </details>
           {editing && snapshot.canEdit && (
             <div className="series-editor">
               <h4>Структура сериала</h4>
@@ -419,18 +470,18 @@ export default function SeriesPanel({
                   if (
                     snapshot.catalogComplete ||
                     window.confirm(
-                      'Подтверждаете, что внесены ВСЕ сезоны и эпизоды сериала? По этому списку будут начисляться достижения.',
+                      "Подтверждаете, что внесены ВСЕ сезоны и эпизоды сериала? По этому списку будут начисляться достижения.",
                     )
                   )
                     void mutate({
-                      action: 'publish',
+                      action: "publish",
                       complete: !snapshot.catalogComplete,
                     });
                 }}
               >
                 {snapshot.catalogComplete
-                  ? 'Снять подтверждение полноты'
-                  : 'Подтвердить полный список'}
+                  ? "Снять подтверждение полноты"
+                  : "Подтвердить полный список"}
               </button>
             </div>
           )}
@@ -453,7 +504,7 @@ export default function SeriesPanel({
                   Сезон
                   <select
                     aria-label="Выбрать сезон"
-                    value={selected?.id ?? ''}
+                    value={selected?.id ?? ""}
                     disabled={busy}
                     onChange={(event) =>
                       chooseSeason(Number(event.target.value))
@@ -462,7 +513,7 @@ export default function SeriesPanel({
                     {snapshot.seasons.map((season) => (
                       <option key={season.id} value={season.id}>
                         Сезон {season.number}
-                        {season.title ? ` · ${season.title}` : ''} ·{' '}
+                        {season.title ? ` · ${season.title}` : ""} ·{" "}
                         {season.episodes.length} эп.
                       </option>
                     ))}
@@ -490,10 +541,10 @@ export default function SeriesPanel({
               )}
             </nav>
           )}
-          {searchParams.has('season') &&
+          {searchParams.has("season") &&
             !snapshot.seasons.some(
               (season) =>
-                season.number === seasonNumber(searchParams.get('season')),
+                season.number === seasonNumber(searchParams.get("season")),
             ) &&
             snapshot.seasons.length > 0 && (
               <p role="status">
@@ -509,7 +560,7 @@ export default function SeriesPanel({
                   className="series-season"
                   aria-labelledby={`series-season-${movieId}-${season.id}`}
                   onChangeCapture={(event) => {
-                    if ((event.target as HTMLElement).closest('form'))
+                    if ((event.target as HTMLElement).closest("form"))
                       dirty.current = true;
                   }}
                 >
@@ -522,14 +573,14 @@ export default function SeriesPanel({
                         tabIndex={-1}
                       >
                         Сезон {season.number}
-                        {season.title ? ` · ${season.title}` : ''}
+                        {season.title ? ` · ${season.title}` : ""}
                       </h4>
                       <p>
-                        {season.episodes.length} эп. · оценено{' '}
+                        {season.episodes.length} эп. · оценено{" "}
                         {
                           season.episodes.filter((e) => e.rating !== null)
                             .length
-                        }{' '}
+                        }{" "}
                         из {season.episodes.length}
                       </p>
                     </div>
@@ -542,11 +593,11 @@ export default function SeriesPanel({
                           season.number,
                         );
                         const copied = await copyText(link);
-                        setFallbackLink(copied ? '' : link);
+                        setFallbackLink(copied ? "" : link);
                         setMessage(
                           copied
-                            ? 'Ссылка на сезон скопирована'
-                            : 'Не удалось скопировать автоматически. Скопируй ссылку из поля ниже.',
+                            ? "Ссылка на сезон скопирована"
+                            : "Не удалось скопировать автоматически. Скопируй ссылку из поля ниже.",
                         );
                       }}
                     >
@@ -579,10 +630,10 @@ export default function SeriesPanel({
                       label={`Оценка сезона ${season.number}`}
                       busy={busy}
                       signedIn={snapshot.authenticated}
-                      auth={auth}
+                      auth={authenticate}
                       onChange={(value) =>
                         void mutate({
-                          action: 'rateSeason',
+                          action: "rateSeason",
                           id: season.id,
                           value,
                         })
@@ -595,24 +646,28 @@ export default function SeriesPanel({
                         <div className="series-rating-row">
                           <span>
                             Эпизод {episode.number}
-                            {episode.title ? ` · ${episode.title}` : ''}
+                            {episode.title ? ` · ${episode.title}` : ""}
                           </span>
                           <Rating
                             value={episode.rating}
                             label={`Оценка: сезон ${season.number}, эпизод ${episode.number}`}
                             busy={busy}
                             signedIn={snapshot.authenticated}
-                            auth={auth}
+                            auth={authenticate}
                             onChange={(value) =>
                               void mutate({
-                                action: 'rateEpisode',
+                                action: "rateEpisode",
                                 id: episode.id,
                                 value,
                               })
                             }
                           />
                         </div>
-                        <MaterialPlayer url={episode.playbackUrl} title={`Сезон ${season.number} · Эпизод ${episode.number}${episode.title ? ` · ${episode.title}` : ''}`} className="outline-btn small" />
+                        <MaterialPlayer
+                          url={episode.playbackUrl}
+                          title={`Сезон ${season.number} · Эпизод ${episode.number}${episode.title ? ` · ${episode.title}` : ""}`}
+                          className="outline-btn small"
+                        />
                         {editing && snapshot.canEdit && (
                           <form
                             className="series-episode-editor"
@@ -620,10 +675,12 @@ export default function SeriesPanel({
                               event.preventDefault();
                               const form = new FormData(event.currentTarget);
                               void mutate({
-                                action: 'saveEpisode',
+                                action: "saveEpisode",
                                 id: episode.id,
-                                title: String(form.get('title') || ''),
-                                playbackUrl: String(form.get('playbackUrl') || ''),
+                                title: String(form.get("title") || ""),
+                                playbackUrl: String(
+                                  form.get("playbackUrl") || "",
+                                ),
                               });
                             }}
                           >
@@ -636,8 +693,18 @@ export default function SeriesPanel({
                             />
                             <label className="episode-playback-field">
                               Источник просмотра эпизода
-                              <input type="url" name="playbackUrl" defaultValue={episode.playbackUrl || ''} maxLength={4096} aria-label={`Источник: сезон ${season.number}, эпизод ${episode.number}`} placeholder="HTTPS: VK, Rutube или MP4" />
-                              <small>Только контент с разрешением на показ. Публичная ссылка, не HTML и не секретный токен.</small>
+                              <input
+                                type="url"
+                                name="playbackUrl"
+                                defaultValue={episode.playbackUrl || ""}
+                                maxLength={4096}
+                                aria-label={`Источник: сезон ${season.number}, эпизод ${episode.number}`}
+                                placeholder="HTTPS: VK, Rutube или MP4"
+                              />
+                              <small>
+                                Только контент с разрешением на показ. Публичная
+                                ссылка, не HTML и не секретный токен.
+                              </small>
                             </label>
                             <button
                               disabled={busy}
@@ -694,5 +761,97 @@ export default function SeriesPanel({
         {message}
       </p>
     </section>
+  );
+  return (
+    <>
+      <button
+        ref={trigger}
+        type="button"
+        className="outline-btn detail-seasons-trigger"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={`series-browser-${movieId}`}
+        onClick={() => setOpen(true)}
+      >
+        <Layers3 size={17} />
+        <span>
+          Сезоны и эпизоды
+          {snapshot && (
+            <small>
+              {snapshot.seasons.length
+                ? `${snapshot.seasons.length} сез. · ${snapshot.seasons.reduce((count, season) => count + season.episodes.length, 0)} эп.`
+                : "Список готовится"}
+            </small>
+          )}
+        </span>
+        <ChevronDown size={15} />
+      </button>
+      {open && (
+        <dialog
+          ref={dialog}
+          id={`series-browser-${movieId}`}
+          className="series-browser"
+          aria-labelledby={`series-browser-title-${movieId}`}
+          onKeyDown={(event) => {
+            if (event.key !== "Tab") return;
+            const element = event.currentTarget;
+            const controls = [
+              ...element.querySelectorAll<HTMLElement>(
+                'button:not([disabled]), a[href], select:not([disabled]), input:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+              ),
+            ].filter((control) => control.checkVisibility());
+            const first = controls[0],
+              last = controls.at(-1);
+            if (
+              event.shiftKey &&
+              (document.activeElement === first ||
+                !element.contains(document.activeElement))
+            ) {
+              event.preventDefault();
+              last?.focus();
+            } else if (
+              !event.shiftKey &&
+              (document.activeElement === last ||
+                !element.contains(document.activeElement))
+            ) {
+              event.preventDefault();
+              first?.focus();
+            }
+          }}
+          onCancel={(event) => {
+            event.preventDefault();
+            close();
+          }}
+          onClick={(event) => {
+            if (event.target !== event.currentTarget) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            if (
+              event.clientX < rect.left ||
+              event.clientX > rect.right ||
+              event.clientY < rect.top ||
+              event.clientY > rect.bottom
+            )
+              close();
+          }}
+        >
+          <header className="series-browser-heading">
+            <div>
+              <span className="eyebrow">НАВИГАЦИЯ ПО СЕРИАЛУ</span>
+              <h2 id={`series-browser-title-${movieId}`}>{title}</h2>
+            </div>
+            <button
+              type="button"
+              autoFocus
+              className="icon-button"
+              aria-label="Закрыть сезоны"
+              onClick={close}
+            >
+              <X size={21} />
+            </button>
+          </header>
+          <div className="series-browser-scroll">{content}</div>
+        </dialog>
+      )}
+    </>
   );
 }

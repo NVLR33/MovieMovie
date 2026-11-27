@@ -83,7 +83,15 @@ try {
   const url = base + '/movie/' + movieId,
     panel = page.getByRole('region', { name: 'Сезоны и эпизоды', exact: true }),
     season = panel.locator('.series-season');
+  async function openSeasons(target = page) {
+    if (target === page) await page.locator('.hud-xp-chip').waitFor();
+    const trigger = target.locator('.detail-seasons-trigger');
+    await trigger.waitFor();
+    if (await trigger.getAttribute('aria-expanded') === 'false') await trigger.click();
+    await target.locator('.series-browser[open]').waitFor();
+  }
   async function expectSeason(number) {
+    await openSeasons();
     await page.locator('.hud-xp-chip').waitFor();
     await season
       .getByRole('heading', {
@@ -258,7 +266,9 @@ try {
     path: '/tmp/mm-series-screenshots/seasons-mobile.png',
     animations: 'disabled',
   });
+  await page.getByRole('button', {name:'Закрыть сезоны', exact:true}).click();
   await chooseTheme(page, 'Светлая');
+  await openSeasons();
   await panel.screenshot({
     path: '/tmp/mm-series-screenshots/seasons-light-mobile.png',
     animations: 'disabled',
@@ -272,6 +282,7 @@ try {
   await page.keyboard.press('Enter');
   await expectSeason(2);
   assert.equal(await second.getAttribute('aria-pressed'), 'true');
+  await page.getByRole('button', {name:'Закрыть сезоны', exact:true}).click();
   await page
     .getByRole('navigation', { name: 'Мобильная навигация', exact: true })
     .getByRole('link', { name: 'Каталог', exact: true })
@@ -280,6 +291,7 @@ try {
   await page.goBack();
   await expectSeason(2);
   await page.goto(base + '/movie/' + manyId);
+  await openSeasons();
   await panel
     .getByRole('combobox', { name: 'Выбрать сезон', exact: true })
     .waitFor();
@@ -307,6 +319,7 @@ try {
     0,
   );
   await page.goto(base + '/movie/' + emptyId);
+  await openSeasons();
   await panel
     .getByText('Сезоны ещё не добавлены редактором.', { exact: false })
     .waitFor();
@@ -380,6 +393,7 @@ try {
     gp = await guest.newPage();
   gp.on('pageerror', (e) => errors.push(e.message));
   await gp.goto(url);
+  await openSeasons(gp);
   const guestPanel = gp.getByRole('region', {
     name: 'Сезоны и эпизоды',
     exact: true,

@@ -1,8 +1,7 @@
-'use client';
-
-import { useMemo, useState } from 'react';
-import { ArrowRight, Shuffle } from 'lucide-react';
-import { catalogDayTags, randomCatalogDay } from '@/lib/cine-day';
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { catalogDayTags, dailyCatalogDay } from "@/lib/cine-day";
 
 export default function CineDayBanner({
   films,
@@ -16,18 +15,26 @@ export default function CineDayBanner({
   en?: boolean;
 }) {
   const tags = useMemo(() => catalogDayTags(films), [films]);
-  // Preserve an explicit reroll during data refreshes; never retain a deleted tag.
-  const [selected, setSelected] = useState(initialTag);
-  const current =
-    tags.find((tag) => tag.filter === selected) ||
-    tags.find((tag) => tag.filter === initialTag) ||
-    tags[0];
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    const update = () => setNow(new Date());
+    update();
+    const timer = window.setInterval(update, 30000);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
+  const current = now
+    ? dailyCatalogDay(tags, now)
+    : tags.find((tag) => tag.filter === initialTag) || null;
   if (!current) return null;
   return (
     <section
       className="cine-day-banner"
-      data-cine-day-version="catalog-v2"
-      aria-label={en ? 'Random catalog tag' : 'Случайный тег каталога'}
+      data-cine-day-version="daily-v3"
+      aria-label={en ? "Tag of the day" : "Тег дня"}
     >
       <span className="cine-day-icon" aria-hidden="true">
         {current.icon}
@@ -36,24 +43,12 @@ export default function CineDayBanner({
         <b>{current.label}</b>
         <small>
           {en
-            ? 'A tag from the current catalog'
-            : 'Тег дня из актуального каталога'}{' '}
+            ? "One catalog tag for the day · updates at midnight Moscow time"
+            : "Один тег на весь день · новый в полночь по Москве"}{" "}
           · {current.count}
         </small>
       </div>
       <div className="cine-day-actions">
-        {tags.length > 1 && (
-          <button
-            type="button"
-            className="outline-btn small"
-            onClick={() =>
-              setSelected(randomCatalogDay(tags, current.filter)?.filter)
-            }
-          >
-            <Shuffle size={14} />
-            {en ? 'Another tag' : 'Другой тег'}
-          </button>
-        )}
         <a
           className="outline-btn small"
           href={current.href}
@@ -70,7 +65,7 @@ export default function CineDayBanner({
             go(current.href);
           }}
         >
-          {en ? 'Open' : 'Открыть'}
+          {en ? "Open" : "Открыть"}
           <ArrowRight size={14} />
         </a>
       </div>

@@ -1,4 +1,4 @@
-import { catalogDayTags, randomCatalogDay } from '@/lib/cine-day';
+import { catalogDayTags, dailyCatalogDay } from '@/lib/cine-day';
 import { createDailyGame } from '@/lib/daily-game';
 import { getWeeklyLeaders } from '@/lib/weekly-leaderboard';
 import { buildWeeklyPulse } from '@/lib/weekly-pulse';
@@ -652,7 +652,7 @@ const myChallenges = allChallenges
       }
     }
 
-    const cineDay = randomCatalogDay(catalogDayTags(films));
+    const cineDay = dailyCatalogDay(catalogDayTags(films));
     const season = getCurrentSeason();
 
     // [DATA:MOVIE_SUGGESTIONS]

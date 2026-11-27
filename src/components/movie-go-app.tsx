@@ -3,7 +3,9 @@
 import CinemaRoulette from './cinema-roulette';
 import CineDayBanner from './cine-day-banner';
 import type { CineDay } from '@/lib/cine-day';
-import CityCinema, {CinemaSearchLink} from './city-cinema';
+import { HeaderLocation } from './city-cinema';
+import ShowtimesPage from './showtimes-page';
+import { DetailDescription, DetailTags, detailTitleStyle } from './material-detail-parts';
 import MaterialPlayer from './material-player';
 import { playbackSource } from '@/lib/playback-source';
 import MaterialCover, {type CoverFilm} from './material-cover';
@@ -727,6 +729,7 @@ return (
         </aside>
 
         <div className="main-wrap">
+          <HeaderLocation key={path} en={en} go={go}/>
           <header className="topbar">
             <div id="movie-context-slot" />
 
@@ -845,6 +848,7 @@ return (
           <main className="content" key={path}>
             {active === 'home' ? <HomePage films={data.films} data={data} go={url => { if (url.startsWith('/catalog?genre=')) setSearch(''); go(url); }} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} action={action} />
               : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
+              : active === 'showtimes' ? <ShowtimesPage en={en} />
               : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema key={`${searchParams.get('mode')}:${searchParams.get('country')}:${data.user?.id || 'guest'}`} initialMode={searchParams.get('mode') || ''} initialCountry={searchParams.get('country') || ''} films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={go} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
               : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} signedIn={!!data.user} />
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} onSeriesUpdated={refresh} />)
@@ -879,6 +883,7 @@ return (
         </div>
 
         <MobileNavigation key={path} page={active} go={go} auth={() => setAuthOpen(true)} signedIn={!!data.user} en={en} destinations={[
+          { id: 'showtimes', label: en ? 'Cinema showtimes' : 'Афиша и сеансы', url: '/showtimes', icon: Clapperboard },
           ...nav.map(item => ({ ...item, count: item.id === 'watchlist' ? data.bookmarks.length : undefined })),
           { id: 'profile', label: words.profile, url: '/profile', icon: Users, requiresAuth: true },
           { id: 'friends', label: en ? 'Friends' : 'Друзья', url: '/friends', icon: UserPlus, requiresAuth: true },
@@ -966,7 +971,7 @@ return (
 
 
 // ==========================================
-// MOVIEMOVIE — SEASON PARTICLES
+// moviemovie — SEASON PARTICLES
 // ==========================================
 
 function SeasonParticles({
@@ -1062,78 +1067,10 @@ function InfoInlineLinks({
 function SectionTitle({ kicker, title, link, onClick }: { kicker?: string; title: string; link?: string; onClick?: () => void; }) {
   return (
     <div className="section-heading">
-      <div>{kicker && <div className="eyebrow">{kicker}</div>}<h2>{title}</h2></div>
+      <div>{kicker && <div className="eyebrow">{kicker.split(/(moviemovie)/g).map((part, index) => part === 'moviemovie' ? <span className="brand-name" key={index}>{part}</span> : part)}</div>}<h2>{title}</h2></div>
       {link && <button className="text-link" onClick={onClick}>{link} <ArrowUpRight size={17} /></button>}
     </div>
   );
-}
-
-function heroTitleStyle(title: string): React.CSSProperties {
-  const len = (title || '').trim().length;
-
-  // базовые улучшения переноса
-  const base: React.CSSProperties = {
-    textWrap: 'balance' as any,
-    overflowWrap: 'anywhere',
-    hyphens: 'auto',
-  };
-
-  function CollapsibleText({
-  text,
-  className,
-  lines = 4,
-  moreLabel = 'Развернуть',
-  lessLabel = 'Свернуть',
-}: {
-  text: string;
-  className?: string;
-  lines?: number;
-  moreLabel?: string;
-  lessLabel?: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  // показываем кнопку только если текст реально длинный
-  const canCollapse = (text || '').trim().length > 260;
-
-  return (
-    <div className={className} style={{ position: 'relative' }}>
-      <div
-        style={
-          expanded || !canCollapse
-            ? undefined
-            : {
-                display: '-webkit-box',
-                WebkitBoxOrient: 'vertical',
-                WebkitLineClamp: lines,
-                overflow: 'hidden',
-              }
-        }
-      >
-        {text}
-      </div>
-
-      {canCollapse && (
-        <button
-          type="button"
-          className="text-link"
-          style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}
-          onClick={() => setExpanded(v => !v)}
-        >
-          {expanded ? lessLabel : moreLabel} <ChevronRight size={14} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-  // чем длиннее — тем меньше размер
-  if (len > 110) return { ...base, fontSize: 'clamp(20px, 2.6vw, 32px)', lineHeight: 1.06 };
-  if (len > 80)  return { ...base, fontSize: 'clamp(24px, 3.0vw, 38px)', lineHeight: 1.07 };
-  if (len > 55)  return { ...base, fontSize: 'clamp(28px, 3.4vw, 44px)', lineHeight: 1.08 };
-  if (len > 40)  return { ...base, fontSize: 'clamp(32px, 3.8vw, 50px)', lineHeight: 1.08 };
-
-  return base;
 }
 
 function FilmCard({ film, go, rank, watched, clean = false }: { film: FilmType; go: (url: string) => void; rank?: number; watched?: boolean; clean?: boolean; }) {
@@ -1224,53 +1161,6 @@ function Gate({ title, description, auth }: { title: string; description: string
       <h1>{title}</h1>
       <p>{description}</p>
       <button className="primary-btn" onClick={auth}>Войти или зарегистрироваться <ArrowRight size={17} /></button>
-    </div>
-  );
-}
-
-function CollapsibleText({
-  text,
-  className,
-  lines = 4,
-  moreLabel = 'Развернуть',
-  lessLabel = 'Свернуть',
-}: {
-  text: string;
-  className?: string;
-  lines?: number;
-  moreLabel?: string;
-  lessLabel?: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const canCollapse = (text || '').trim().length > 260;
-
-  return (
-    <div className={className} style={{ position: 'relative' }}>
-      <div
-        style={
-          expanded || !canCollapse
-            ? undefined
-            : ({
-                display: '-webkit-box',
-                WebkitBoxOrient: 'vertical',
-                WebkitLineClamp: lines,
-                overflow: 'hidden',
-              } as React.CSSProperties)
-        }
-      >
-        {text}
-      </div>
-
-      {canCollapse && (
-        <button
-          type="button"
-          className="text-link"
-          style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}
-          onClick={() => setExpanded(v => !v)}
-        >
-          {expanded ? lessLabel : moreLabel} <ChevronRight size={14} />
-        </button>
-      )}
     </div>
   );
 }
@@ -1553,7 +1443,6 @@ const rating = data.ratings.find(x => x.movieId === f.id);
   </>
 )}
 
-      <CityCinema en={en}/>
       <WeeklyCinemaPulse films={films} pulse={data.weeklyPulse} watches={data.watches} bookmarks={data.bookmarks} signedIn={!!data.user} action={action} auth={auth} go={go} en={en} />
 
       <section className="home-section">
@@ -1686,7 +1575,6 @@ function Catalog({
 )}
       </div>
 
-      <CityCinema en={en}/>
       <button type="button" className="catalog-top-entry" onClick={() => go('/top')}><Crown size={18} /><span>{en ? 'Looking for the best? Explore the top 10, 50 and 100.' : 'Ищешь лучшее? Открой топ-10, 50 и 100 материалов.'}</span><ArrowRight size={16} /></button>
 
       <div className="catalog-search">
@@ -1835,7 +1723,9 @@ function MovieDetailContent({
       <MobileMovieActions title={film.title} rating={myRating} saved={saved} rate={() => setMobileRatingOpen(true)} reviews={() => setReviewsOpen(true)} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       {mobileRatingOpen && <MobileRatingSheet rating={myRating} title={film.title} save={rate} close={closeMobileRating} />}
       <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
-      <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button></div>
+      <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
+        {isSeries(film.category) && <SeriesPanel key={`${film.id}:${data.user?.id || 'guest'}`} title={film.title} movieId={film.id} userId={data.user?.id ?? null} auth={() => requireAuth(() => {})} onUpdated={onSeriesUpdated} />}
+      </div>
 
       <div className={`detail-hero tone-${materialTone(film)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
         <div className="detail-poster" ref={posterAnchor}>
@@ -1844,8 +1734,8 @@ function MovieDetailContent({
 
         <div className="detail-intro">
           <div className="detail-badges"><span className="eyebrow">{film.category.toUpperCase()}</span><span>·</span><span>{film.year}</span><span>·</span><span>{film.country}</span></div>
-          <h1 style={heroTitleStyle(film.title)}>{film.title}</h1>
-          <p className="original-title">{film.originalTitle}</p>
+          <h1 style={detailTitleStyle(film.title)}>{film.title}</h1>
+          {film.originalTitle && film.originalTitle !== film.title && <p className="original-title">{film.originalTitle}</p>}
 
           <div className="detail-rating">
             <div className="detail-community-rating">
@@ -1861,23 +1751,14 @@ function MovieDetailContent({
             </div>
           </div>
 
-          <CollapsibleText
-            key={film.id}
-            className="detail-description"
-            text={film.description}
-          />
-
-          <div className="genre-list">
-            {film.genre.split(',').map(g => <button key={g} onClick={() => go('/catalog?search=' + encodeURIComponent(g.trim()))}>{g.trim()}</button>)}
-            {film.studio && film.studio.split(',').map((st, i) => <button key={i} onClick={() => go('/catalog?search=' + encodeURIComponent(st.trim()))}>{st.trim()}</button>)}
-          </div>
+          <DetailDescription key={film.id} text={film.description || ''} />
+          <DetailTags genre={film.genre || ''} studio={film.studio || ''} go={go} />
 
           <div className="detail-actions">
             <MaterialPlayer url={film.playbackUrl} title={film.title} />
-            {!isSeries(film.category) && <CinemaSearchLink title={film.title}/>}
             {trailerSource(film.trailerUrl) && <button className="outline-btn" onClick={()=>setTrailerOpen(true)}><Play size={16}/>Трейлер</button>}
 <button
-  className={isWatched ? 'outline-btn watched-done' : 'primary-btn'}
+  className={`outline-btn detail-watch-toggle ${isWatched ? 'watched-done' : ''}`}
   onClick={() =>
     requireAuth(() =>
       action(
@@ -1891,9 +1772,11 @@ function MovieDetailContent({
   }
 >
   <CheckCircle2 size={17} />
-  {isWatched ? 'Просмотрено' : 'Отметить просмотренным'}
+  {isWatched ? 'Просмотрено' : 'Я посмотрел'}
 </button>
 
+          </div>
+          <div className="detail-library-actions" role="group" aria-label="Личная коллекция">
             <MagneticButton active={saved} kind="bookmark"
               className="outline-btn"
               onClick={() =>
@@ -1931,10 +1814,6 @@ function MovieDetailContent({
               <Share2 size={18} />
             </button>
 
-            <button type="button" className="outline-btn" aria-haspopup="dialog" onClick={() => setReviewsOpen(true)}><MessageCircle size={17} /> Мнения сообщества · {movieComments.length}</button>
-            <button className="outline-btn" onClick={() => requireAuth(() => go('/room/' + Math.random().toString(36).slice(2, 8)))} title="Смотреть вместе с другом">
-              <Tv2 size={17} /> Кинозал
-            </button>
           </div>
 
           {film.watchUrl && <a className="watch-external" href={film.watchUrl} target="_blank" rel="noopener noreferrer"><MonitorPlay size={17} /> Где посмотреть <ExternalLink size={15} /></a>}
@@ -1943,7 +1822,6 @@ function MovieDetailContent({
 
       <div className="detail-lower">
         <div className="detail-main">
-          {isSeries(film.category) && <SeriesPanel key={`${film.id}:${data.user?.id || 'guest'}`} movieId={film.id} userId={data.user?.id ?? null} auth={() => requireAuth(() => {})} onUpdated={onSeriesUpdated} />}
           <div className="rating-panel-advanced">
             <div className="rating-selector-box">
               <RatingCelebration sequence={ratingBurst} />
@@ -1999,7 +1877,11 @@ function MovieDetailContent({
             ) : null}
           </div>
 
-          <div className="community-review-entry"><MessageCircle size={26} /><div><h3>Истории интереснее обсуждать</h3><p>{movieComments.length ? `${movieComments.length} мнений сообщества. Отзывы, ответы и реакции — рядом с фильмом.` : 'Поделись первым впечатлением — без спойлеров или со скрытым текстом.'}</p></div><button type="button" className="outline-btn" aria-haspopup="dialog" onClick={() => setReviewsOpen(true)}>Читать и написать отзыв <ArrowRight size={16} /></button></div>
+          <div className="community-review-entry">
+            <span className="detail-comment-icon"><MessageCircle size={24} /></span>
+            <div><h3>Комментарии <span className="detail-comment-count">{movieComments.length}</span></h3><p>{movieComments.length ? 'Впечатления зрителей, ответы и обсуждения. Спойлеры скрыты.' : 'Здесь начнётся обсуждение. Поделись первым впечатлением.'}</p></div>
+            <button type="button" className="outline-btn detail-comments-button" aria-haspopup="dialog" onClick={() => setReviewsOpen(true)}><MessageCircle size={17} />{movieComments.length ? 'Открыть комментарии' : 'Написать комментарий'}<ArrowRight size={16} /></button>
+          </div>
           <ReviewDrawer open={reviewsOpen} close={() => setReviewsOpen(false)}>
           <div className="discussion">
             <SectionTitle kicker="ДЕЛИСЬ ВПЕЧАТЛЕНИЯМИ" title={`Обсуждение · ${movieComments.length}`} />
@@ -2097,7 +1979,7 @@ function MovieDetailContent({
         
               {film.franchise && <div className="info-item"><span className="info-icon"><Layers3 size={15} /></span><div><small>Франшиза</small><b>{film.franchise}</b></div></div>}
               {film.festivalRecognized && <div className="info-item"><span className="info-icon"><Award size={15} /></span><div><small>Отметка редакции</small><b>Фестивальное кино</b></div></div>}
-              {film.cast && <div className="info-item"><span className="info-icon"><UsersRound size={15} /></span><div><small>В ролях</small><InfoInlineLinks value={film.cast.replace(/[;\n\r]+/g, ', ')} go={go} /></div></div>}
+              {film.cast && <div className="info-item"><span className="info-icon"><UsersRound size={15} /></span><details className="detail-cast"><summary>В ролях<span>{film.cast.replace(/[;\n\r]+/g, ', ').split(',').slice(0, 2).join(', ')}{film.cast.replace(/[;\n\r]+/g, ', ').split(',').length > 2 ? ' и другие' : ''}</span></summary><InfoInlineLinks value={film.cast.replace(/[;\n\r]+/g, ', ')} go={go} /></details></div>}
 
               {/* Год выпуска */}
               <div className="info-item">
@@ -4229,7 +4111,7 @@ function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: num
 }
 
 /* ============================================
-   MOVIEMOVIE WRAPPED 2.0 + SHARE STUDIO
+   moviemovie WRAPPED 2.0 + SHARE STUDIO
 ============================================ */
 
 function WrappedPage({
@@ -4398,7 +4280,7 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
     { id: 'games', icon: <Gamepad2 size={20} />, color: 'violet', title: 'Мини-игры', subtitle: '16 режимов в тематике кино', items: ['Угадай по сюжету — описание → название', 'Год премьеры — выбор из 4 вариантов', 'Кто режиссёр — режиссёр фильма', 'Жанровый детектив — жанр по названию', 'Угадай по постеру — название по обложке', 'Хронометраж — длительность фильма', 'Карта кино — страна производства', 'Оригинальное название — перевод названия', 'Тип истории — категория материала', 'Рейтинговая битва — у кого оценка выше', '🟩 Кино-Вордли — угадай по подсказкам', '🔡 Поле Чудес — по буквам', '🔀 Анаграмма — собери буквы', '🤥 Две правды, одна ложь — найди фальшивый факт', '⏳ Хроно-Слайдер — хронология фильмов', '🧩 Кино-Связи — группы по признаку', '5 вопросов за сессию, история тренировок без XP'] },
     { id: 'gamification', icon: <Trophy size={20} />, color: 'amber', title: 'Геймификация', subtitle: 'Достижения, челленджи, прогрессия', items: ['33 достижения: Бронза, Серебро, Золото и Платина', 'Тиры открываются прогрессивно по порогу прогресса', 'Ежемесячные челленджи — по 3–5 на каждый месяц года', 'Разнообразие: жанровые, категорийные, социальные, ночные, скоростные', 'Прогресс-бар челленджа с процентом выполнения', 'Страница /challenges с навигацией по всем 12 месяцам', 'Сводная панель: выполнено / XP заработано / всего закрыто', 'Season Pass с миссиями', 'Коллаборативные подборки с голосованием'] },
     { id: 'discovery', icon: <Compass size={20} />, color: 'blue', title: 'Виджеты и контент', subtitle: 'Умные рекомендации и память', items: ['Кино-День: тематический фильтр по дате календаря', '«В этот день» — ретроспектива просмотров и юбилеев фильмов', 'Виджет «Капсула времени» — случайный день из истории', 'Итоги прошлого месяца в профиле', 'Рулетка материалов — анимированный выбор случайного фильма', 'Пульс недели: лучший, худший, новинка, высокий рейтинг', 'Лента «Что сейчас смотрят» по просмотрам', 'Лента «Свежие находки» по году', 'Похожие фильмы на странице материала по жанру', 'Виджет челленджей на главной', 'Сезонный Pass-виджет'] },
-    { id: 'tech', icon: <BarChart3 size={20} />, color: 'green', title: 'Техническая архитектура', subtitle: 'Стек и устройство системы', items: ['Next.js 16 App Router — SSR + клиентские компоненты', 'PostgreSQL + Drizzle ORM — типобезопасные запросы', '31 таблица БД: users, movies, watches, ratings, comments, reactions, bookmarks, friendships, notifications, messages, challenges...', 'JWT-сессии: jose + httpOnly cookie', 'bcryptjs для паролей (стойкость 12)', 'Единый компонент movie-go-app.tsx', 'REST API: /api/auth, /api/data, /api/action, /api/chat, /api/profile, /api/upload, /api/visit, /api/oauth', 'Загрузка изображений в Supabase Storage; в PostgreSQL только URL', 'Подсчёт совместимости: взвешенный алгоритм (40% просмотры + 30% рейтинги + 30% жанры)', 'SSE: приватные события чата/друзей и обновления Кинопульса, восстановление соединения'] },
+    { id: 'tech', icon: <BarChart3 size={20} />, color: 'green', title: 'Техническая архитектура', subtitle: 'Стек и устройство системы', items: ['Next.js 16 App Router — SSR + клиентские компоненты', 'PostgreSQL + Drizzle ORM — типобезопасные запросы', '31 таблица БД: users, movies, watches, ratings, comments, reactions, bookmarks, friendships, notifications, messages, challenges...', 'JWT-сессии: jose + httpOnly cookie', 'bcryptjs для паролей (стойкость 12)', 'Единый интерфейс moviemovie на React', 'REST API: /api/auth, /api/data, /api/action, /api/chat, /api/profile, /api/upload, /api/visit, /api/oauth', 'Загрузка изображений в Supabase Storage; в PostgreSQL только URL', 'Подсчёт совместимости: взвешенный алгоритм (40% просмотры + 30% рейтинги + 30% жанры)', 'SSE: приватные события чата/друзей и обновления Кинопульса, восстановление соединения'] },
     { id: 'design', icon: <Sparkles size={20} />, color: 'pink', title: 'Дизайн-система', subtitle: 'Glassmorphism + 5 тем + адаптив', items: ['Шрифт Inter (Google Fonts): 400–900', 'Glassmorphism: backdrop-filter blur(40px) saturate(1.5) на всех поверхностях', 'CSS-переменные: --bg, --surface, --surface2, --surface3, --border, --accent...', '5 тем: Тёмная, Светлая, Розовая, Фиолетовая, Жёлтая', 'Акцент сохраняется в localStorage + синхронизируется с профилем', 'CSS-анимации: pulse-glow, toast-in, orbit-spin, flyUp, loading', 'Адаптивность: 4 брейкпоинта (1300/1050/760/520px)', 'Компактный сайдбар на планшете (68px), drawer на мобиле', 'Стили рейтинга: золото/бирюза/синий/красный на рамках постеров', 'Рамки аватара с box-shadow свечением', 'Drag & drop для виджетов профиля (native HTML5)'] },
   ];
 
@@ -4480,13 +4362,8 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
       </div>
 
       <div className="about-accounts">
-        <div className="about-section-label"><span className="eyebrow"><Globe2 size={13} /> ТЕСТОВЫЕ АККАУНТЫ</span></div>
-        <div className="accounts-grid">
-          <div className="account-card"><div className="account-role admin">ADMIN</div><b>demo@moviego.ru</b><span>Demo12345!</span><p>cinephile · XP 2450 · Легенда экрана</p></div>
-          <div className="account-card"><div className="account-role vip">VIP</div><b>luna@moviego.ru</b><span>Demo12345!</span><p>lunafilm · XP 1890</p></div>
-          <div className="account-card"><div className="account-role user">ПОСЕТИТЕЛЬ</div><b>max@moviego.ru</b><span>Demo12345!</span><p>maxframes · XP 1320</p></div>
-          <div className="account-card"><div className="account-role mod">МОДЕРАТОР</div><b>neo@moviego.ru</b><span>Demo12345!</span><p>neonight · XP 760</p></div>
-        </div>
+        <div className="about-section-label"><span className="eyebrow"><Globe2 size={13} /> АККАУНТ В <span className="brand-name">moviemovie</span></span></div>
+        <p>Создай аккаунт через регистрацию. Права редактора и модератора назначает администратор. Для входа используй собственные учётные данные.</p>
       </div>
 
       <div className="about-footer-note">

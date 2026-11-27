@@ -50,7 +50,7 @@ export function ReviewDrawer({ open, close, children }: { open: boolean; close: 
     const rect = event.currentTarget.getBoundingClientRect();
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
   }}>
-    <header><div><span className="eyebrow">ДЕЛИСЬ ВПЕЧАТЛЕНИЯМИ</span><h2 id="review-drawer-title">Мнения сообщества</h2></div><button autoFocus type="button" className="icon-button" aria-label="Закрыть мнения сообщества" onClick={close}><X size={21} /></button></header>
+    <header><div><span className="eyebrow">ДЕЛИСЬ ВПЕЧАТЛЕНИЯМИ</span><h2 id="review-drawer-title">Комментарии</h2></div><button autoFocus type="button" className="icon-button" aria-label="Закрыть комментарии" onClick={close}><X size={21} /></button></header>
     <div className="review-drawer-scroll">{children}</div>
   </dialog>, document.body);
 }

@@ -283,6 +283,8 @@ try {
     'Source/title edits do not invalidate catalog completeness',
   );
   await page.goto(base + '/movie/' + serial.movieId);
+  await page.locator('.hud-xp-chip').waitFor();
+  await page.locator('.detail-seasons-trigger').click();
   await page.locator('.series-rating-row').first().waitFor();
   await page
     .getByRole('button', { name: 'Редактировать сезоны', exact: true })

@@ -440,7 +440,7 @@ function RankingLibrary({
             <br />
             LISTS
           </span>
-          <small>MOVIEMOVIE</small>
+          <small>moviemovie</small>
         </div>
       </header>
       <div
@@ -515,7 +515,7 @@ function RankingLibrary({
                             <small>TOP</small>
                             <b>{options.limit}</b>
                             <Icon className="ranking-cover-icon" />
-                            <span>MOVIEMOVIE</span>
+                            <span>moviemovie</span>
                           </span>
                           <span className="ranking-list-info">
                             <strong>{title}</strong>

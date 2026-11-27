@@ -96,7 +96,7 @@ try {
     await route.continue();
   });
   await page
-    .getByRole('button', { name: 'Отметить просмотренным', exact: true })
+    .getByRole('button', { name: 'Я посмотрел', exact: true })
     .click();
   await page.waitForFunction(
     () => document.querySelector('.app-shell')?.dataset.hudBusy === 'true',
@@ -284,7 +284,7 @@ try {
     }),
   );
   await page
-    .getByRole('button', { name: 'Отметить просмотренным', exact: true })
+    .getByRole('button', { name: 'Я посмотрел', exact: true })
     .click();
   await page.getByText('HUD isolated failure', { exact: true }).waitFor();
   await expectXP(480);

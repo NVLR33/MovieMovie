@@ -16,7 +16,7 @@ Targeted additions; existing site composition, navigation, home podium and mater
 
 By default the applied city lasts until page reload. Remember is opt-in, storing only `{city}` under `mg_city_v1`; no coordinates or identity are stored. Clear city invalidates pending callbacks and clears the stored city value. Storage failures fall back to the current page. Browser storage events keep remembered preferences synchronized between tabs.
 
-City UI is available in settings and in collapsed panels on home/catalog. A chosen city enables an outbound title-specific search on non-episodic detail pages. Links open a fixed `https://yandex.ru/search/` origin with encoded text and without a referrer. Opening the search deliberately discloses the city/title query to that external service.
+City UI is available in settings and in collapsed panels on home/catalog. The reusable cinema search link remains available to discovery surfaces; the subsequent material-page cleanup intentionally removes it from the film/series header (see material-detail-layout.md). Links open a fixed `https://yandex.ru/search/` origin with encoded text and without a referrer. Opening the search deliberately discloses the city/title query to that external service.
 
 **This is cinema discovery, not a live schedule integration.** No availability, session times, ticket inventory or prices are fabricated. UI explicitly asks users to verify dates and availability at the external source. An in-app schedule requires a separately selected provider, credentials/terms as applicable, regional coverage and caching/error handling.
 

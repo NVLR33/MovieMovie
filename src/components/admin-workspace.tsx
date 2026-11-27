@@ -419,7 +419,7 @@ function WorkspaceBody({
         <div>
           <span className="eyebrow">ЦЕНТР УПРАВЛЕНИЯ</span>
           <h1>
-            За кадром <em>moviemovie.</em>
+            За кадром <em>moviemovie</em>
           </h1>
           <p>Каталог, сообщество и порядок — в одном месте.</p>
         </div>

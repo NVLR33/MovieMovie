@@ -27,7 +27,7 @@ export default function HeroStats({
   ];
 
   return (
-    <dl className="hero-stats" aria-label={en ? 'MovieMovie statistics' : 'Статистика moviemovie'}>
+    <dl className="hero-stats" aria-label={en ? 'moviemovie statistics' : 'Статистика moviemovie'}>
       {stats.map(({ key, icon: Icon, label, title, value, decimals }) => (
         <div className={`hero-stat hero-stat--${key}`} key={key} title={title}>
           <dt>
