@@ -1724,10 +1724,10 @@ function MovieDetailContent({
       {mobileRatingOpen && <MobileRatingSheet rating={myRating} title={film.title} save={rate} close={closeMobileRating} />}
       <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
-        {isSeries(film.category) && <SeriesPanel key={`${film.id}:${data.user?.id || 'guest'}`} title={film.title} movieId={film.id} userId={data.user?.id ?? null} auth={() => requireAuth(() => {})} onUpdated={onSeriesUpdated} />}
       </div>
 
       <div className={`detail-hero tone-${materialTone(film)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
+        {isSeries(film.category) && <div className="detail-hero-tools">{isSeries(film.category) && <SeriesPanel key={`${film.id}:${data.user?.id || 'guest'}`} title={film.title} movieId={film.id} userId={data.user?.id ?? null} auth={() => requireAuth(() => {})} onUpdated={onSeriesUpdated} />}</div>}
         <div className="detail-poster" ref={posterAnchor}>
           <MaterialCover film={film} preview={false} className="detail-series-cover" alt={film.title}/>
         </div>
@@ -1755,7 +1755,10 @@ function MovieDetailContent({
           <DetailTags genre={film.genre || ''} studio={film.studio || ''} go={go} />
 
           <div className="detail-actions">
-            <MaterialPlayer url={film.playbackUrl} title={film.title} />
+            {(film.playbackUrl || film.watchUrl) && <div className="detail-play-actions">
+              <MaterialPlayer url={film.playbackUrl} title={film.title} />
+              {film.watchUrl && <a className="watch-external" href={film.watchUrl} target="_blank" rel="noopener noreferrer"><MonitorPlay size={17} /> Где посмотреть ещё <ExternalLink size={15} /></a>}
+            </div>}
             {trailerSource(film.trailerUrl) && <button className="outline-btn" onClick={()=>setTrailerOpen(true)}><Play size={16}/>Трейлер</button>}
 <button
   className={`outline-btn detail-watch-toggle ${isWatched ? 'watched-done' : ''}`}
@@ -1816,9 +1819,134 @@ function MovieDetailContent({
 
           </div>
 
-          {film.watchUrl && <a className="watch-external" href={film.watchUrl} target="_blank" rel="noopener noreferrer"><MonitorPlay size={17} /> Где посмотреть <ExternalLink size={15} /></a>}
         </div>
+        {['admin', 'moderator'].includes(data.user?.role || '') && <div className="detail-hero-footer">
+            <button
+              className="outline-btn manage-film"
+              onClick={() => edit(film)}
+            >
+              <Pencil size={16} />
+              Редактировать материал
+            </button>
+        </div>}
       </div>
+
+        <section className="detail-facts" aria-label="Детали истории">
+          <div className="info-panel-fancy">
+            <div className="info-panel-header">
+              <Sparkles size={18} />
+              <h3>Детали истории</h3>
+            </div>
+
+            <div className="info-grid">
+
+              {/* Режиссёр */}
+              <div className="info-item">
+                <span className="info-icon">
+                  <Users size={15} />
+                </span>
+                <div>
+                  <small>Режиссёр</small>
+                  <InfoInlineLinks
+                    value={film.director}
+                    go={go}
+                  />
+                </div>
+              </div>
+
+              {film.franchise && <div className="info-item"><span className="info-icon"><Layers3 size={15} /></span><div><small>Франшиза</small><b>{film.franchise}</b></div></div>}
+              {film.festivalRecognized && <div className="info-item"><span className="info-icon"><Award size={15} /></span><div><small>Отметка редакции</small><b>Фестивальное кино</b></div></div>}
+              {film.cast && <div className="info-item"><span className="info-icon"><UsersRound size={15} /></span><details className="detail-cast"><summary>В ролях<span>{film.cast.replace(/[;\n\r]+/g, ', ').split(',').slice(0, 2).join(', ')}{film.cast.replace(/[;\n\r]+/g, ', ').split(',').length > 2 ? ' и другие' : ''}</span></summary><InfoInlineLinks value={film.cast.replace(/[;\n\r]+/g, ', ')} go={go} /></details></div>}
+
+              {/* Год выпуска */}
+              <div className="info-item">
+                <span className="info-icon">
+                  <CalendarDays size={15} />
+                </span>
+                <div>
+                  <small>Год выпуска</small>
+                  <InfoInlineLinks
+                    value={String(film.year)}
+                    param="year"
+                    go={go}
+                  />
+                </div>
+              </div>
+
+              {/* Длительность */}
+              <div className="info-item">
+                <span className="info-icon">
+                  <Clock3 size={15} />
+                </span>
+                <div>
+                  <small>Длительность</small>
+                  <b>{film.duration} мин</b>
+                </div>
+              </div>
+
+              {/* Количество серий */}
+              {film.episodes && (
+                <div className="info-item">
+                  <span className="info-icon">
+                    <Layers3 size={15} />
+                  </span>
+                  <div>
+                    <small>Кол-во серий</small>
+                    <b>{film.episodes}</b>
+                  </div>
+                </div>
+              )}
+
+              {/* Страна */}
+              <div className="info-item">
+                <span className="info-icon">
+                  <Globe2 size={15} />
+                </span>
+                <div>
+                  <small>Страна</small>
+                  <InfoInlineLinks
+                    value={film.country}
+                    go={go}
+                  />
+                </div>
+              </div>
+
+              {/* Категория */}
+              <div className="info-item">
+                <span className="info-icon">
+                  <Film size={15} />
+                </span>
+                <div>
+                  <small>Категория</small>
+                  <InfoInlineLinks
+                    value={film.category}
+                    param="category"
+                    go={go}
+                  />
+                </div>
+              </div>
+
+              {/* Студия */}
+              {film.studio && (
+                <div className="info-item">
+                  <span className="info-icon">
+                    <Clapperboard size={15} />
+                  </span>
+                  <div>
+                    <small>Студия</small>
+                    <InfoInlineLinks
+                      value={film.studio}
+                      param="studio"
+                      go={go}
+                    />
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+        </section>
 
       <div className="detail-lower">
         <div className="detail-main">
@@ -1954,131 +2082,7 @@ function MovieDetailContent({
           </ReviewDrawer>
         </div>
 
-        <aside className="detail-side">
-          <div className="info-panel-fancy">
-            <div className="info-panel-header">
-              <Sparkles size={18} />
-              <h3>Детали истории</h3>
-            </div>
-        
-            <div className="info-grid">
-        
-              {/* Режиссёр */}
-              <div className="info-item">
-                <span className="info-icon">
-                  <Users size={15} />
-                </span>
-                <div>
-                  <small>Режиссёр</small>
-                  <InfoInlineLinks
-                    value={film.director}
-                    go={go}
-                  />
-                </div>
-              </div>
-        
-              {film.franchise && <div className="info-item"><span className="info-icon"><Layers3 size={15} /></span><div><small>Франшиза</small><b>{film.franchise}</b></div></div>}
-              {film.festivalRecognized && <div className="info-item"><span className="info-icon"><Award size={15} /></span><div><small>Отметка редакции</small><b>Фестивальное кино</b></div></div>}
-              {film.cast && <div className="info-item"><span className="info-icon"><UsersRound size={15} /></span><details className="detail-cast"><summary>В ролях<span>{film.cast.replace(/[;\n\r]+/g, ', ').split(',').slice(0, 2).join(', ')}{film.cast.replace(/[;\n\r]+/g, ', ').split(',').length > 2 ? ' и другие' : ''}</span></summary><InfoInlineLinks value={film.cast.replace(/[;\n\r]+/g, ', ')} go={go} /></details></div>}
 
-              {/* Год выпуска */}
-              <div className="info-item">
-                <span className="info-icon">
-                  <CalendarDays size={15} />
-                </span>
-                <div>
-                  <small>Год выпуска</small>
-                  <InfoInlineLinks
-                    value={String(film.year)}
-                    param="year"
-                    go={go}
-                  />
-                </div>
-              </div>
-        
-              {/* Длительность */}
-              <div className="info-item">
-                <span className="info-icon">
-                  <Clock3 size={15} />
-                </span>
-                <div>
-                  <small>Длительность</small>
-                  <b>{film.duration} мин</b>
-                </div>
-              </div>
-        
-              {/* Количество серий */}
-              {film.episodes && (
-                <div className="info-item">
-                  <span className="info-icon">
-                    <Layers3 size={15} />
-                  </span>
-                  <div>
-                    <small>Кол-во серий</small>
-                    <b>{film.episodes}</b>
-                  </div>
-                </div>
-              )}
-        
-              {/* Страна */}
-              <div className="info-item">
-                <span className="info-icon">
-                  <Globe2 size={15} />
-                </span>
-                <div>
-                  <small>Страна</small>
-                  <InfoInlineLinks
-                    value={film.country}
-                    go={go}
-                  />
-                </div>
-              </div>
-        
-              {/* Категория */}
-              <div className="info-item">
-                <span className="info-icon">
-                  <Film size={15} />
-                </span>
-                <div>
-                  <small>Категория</small>
-                  <InfoInlineLinks
-                    value={film.category}
-                    param="category"
-                    go={go}
-                  />
-                </div>
-              </div>
-        
-              {/* Студия */}
-              {film.studio && (
-                <div className="info-item">
-                  <span className="info-icon">
-                    <Clapperboard size={15} />
-                  </span>
-                  <div>
-                    <small>Студия</small>
-                    <InfoInlineLinks
-                      value={film.studio}
-                      param="studio"
-                      go={go}
-                    />
-                  </div>
-                </div>
-              )}
-        
-            </div>
-          </div>
-        
-          {['admin', 'moderator'].includes(data.user?.role || '') && (
-            <button
-              className="outline-btn manage-film"
-              onClick={() => edit(film)}
-            >
-              <Pencil size={16} />
-              Редактировать материал
-            </button>
-          )}
-        </aside>
       </div>
 
       {related.length > 0 && (
@@ -3517,7 +3521,7 @@ function MovieForm({
 
           <div className="form-two">
             <label>
-              Внешняя ссылка «Где посмотреть»
+              Внешняя ссылка «Где посмотреть ещё»
               <input
                 type="url"
                 value={form.watchUrl}
