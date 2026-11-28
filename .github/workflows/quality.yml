@@ -77,6 +77,7 @@ jobs:
           run_suite test:settings:browser
           run_suite test:account:browser
           run_suite test:shell:browser
+          run_suite test:experience:browser
           run_suite test:frame:browser
           run_suite test:series:browser
           run_suite test:detail:browser

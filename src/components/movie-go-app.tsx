@@ -2,12 +2,15 @@
 
 import CinemaRoulette from './cinema-roulette';
 import CineDayBanner from './cine-day-banner';
-import EveningDiscovery from './evening-discovery';
 import type { CineDay } from '@/lib/cine-day';
 import { HeaderLocation } from './city-cinema';
 import ShowtimesPage from './showtimes-page';
 import HeaderAccount from './header-account';
-import { AppSidebar, SiteFooter, useSidebarLayout } from './shell-navigation';
+import { SiteFooter } from './shell-navigation';
+import CinemaNavigation from './cinema-navigation';
+import CinemaHomeStage from './cinema-home-stage';
+import MovieQuickView, { useMovieQuickView } from './movie-quick-view';
+import { previewMovieId } from '@/lib/cinema-spaces';
 import { DetailDescription, DetailTags, detailTitleStyle } from './material-detail-parts';
 import MaterialPlayer from './material-player';
 import { playbackSource } from '@/lib/playback-source';
@@ -51,7 +54,6 @@ import {
   type LeaderboardLimit,
   type LeaderboardMetric,
 } from '@/lib/leaderboard';
-import BrandLogo from './brand-logo';
 import { playerEmbedUrl } from '@/lib/player-url';
 import { resolveSiteRoute } from '@/lib/site-routes';
 import { catalogTokens, filterCatalog, parseCatalogOptions, catalogGenreCounts, type CatalogOptions } from '@/lib/catalog-filter';
@@ -63,7 +65,6 @@ import { achievementDefs, ACHIEVEMENT_TIERS } from '@/lib/achievements';
 import type { AchievementProgress, AchievementId } from '@/lib/achievements';
 import type { OwnershipStats } from '@/lib/ownership';
 import OwnershipBadge from './ownership-badge';
-import HeroStats from './hero-stats';
 import SeriesPanel from './series-panel';
 import { isSeries } from '@/lib/series';
 import DailyGame from './daily-game';
@@ -354,7 +355,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const router = useRouter(), path = usePathname(), searchParams = useSearchParams();
   const [serverData, setData] = useState<Data>({ ...blank, films: initialFilms });
   const [data, addOptimistic] = useOptimistic(serverData, applyCollectionUpdate<Data>);
-  const sidebar = useSidebarLayout();
+  const quickView = useMovieQuickView();
   const pendingActions = useRef(new Set<string>());
   const refreshVersion = useRef(0);
   const [loading, setLoading] = useState(true);
@@ -552,10 +553,19 @@ useEffect(() => {
 
   
   const go = (url: string) => {
+    quickView.discard();
     router.push(url);
     setNoticeOpen(false);
     setProfileOpen(false);
     window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  const browseGo = (url: string) => {
+    const id = previewMovieId(url);
+    if (id && data.films.some(film => film.id === id)) {
+      setSearchFocused(false); setNoticeOpen(false); setProfileOpen(false);
+      quickView.open(id);
+    } else go(url);
   };
 
   const action = (payload: Record<string, unknown>, success?: string): Promise<boolean> => {
@@ -662,26 +672,30 @@ const nav = [
 ];
 
 const startRoulette = () => setRoulette(true);
-const sidebarGroups = [
+const navigationGroups = [
   {
-    label: en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ',
+    label: en ? 'DISCOVER' : 'ОТКРЫВАТЬ',
     items: [
       nav[0], nav[1],
       { id: 'showtimes', label: en ? 'Cinema showtimes' : 'Афиша и сеансы', icon: Clapperboard, url: '/showtimes' },
-      ...nav.slice(2, 7),
+      nav[2], nav[6],
     ].map(item => ({
       ...item,
       count: item.id === 'watchlist' ? data.bookmarks.length
         : item.id === 'favorites' ? data.favoriteIds.length : undefined,
     })),
   },
-  { label: en ? 'COMMUNITY' : 'СООБЩЕСТВО', items: nav.slice(7) },
+  { label: en ? 'TOGETHER' : 'ВМЕСТЕ', items: [nav[5], ...nav.slice(7),
+    { id: 'friends', label: words.friends, icon: UserPlus, url: '/friends', requiresAuth: true },
+    { id: 'chat', label: en ? 'Chat' : 'Чат', icon: MessageCircle, url: '/chat', requiresAuth: true, count: data.unreadMessages },
+  ] },
   {
-    label: en ? 'PERSONAL' : 'ЛИЧНОЕ',
+    label: en ? 'MY CINEMA' : 'МОЁ КИНО',
     items: [
+      {...nav[3], count: data.bookmarks.length},
+      {...nav[4], count: data.favoriteIds.length},
+      { id: 'wrapped', label: en ? 'My cinema year' : 'Мой киногод', icon: CalendarDays, url: '/wrapped', requiresAuth: true },
       { id: 'profile', label: words.profile, icon: Users, url: '/profile', requiresAuth: true },
-      { id: 'friends', label: words.friends, icon: UserPlus, url: '/friends', requiresAuth: true },
-      { id: 'chat', label: en ? 'Chat' : 'Чат', icon: MessageCircle, url: '/chat', requiresAuth: true, count: data.unreadMessages },
       ...(canAccessAdmin(data.user) ? [{ id: 'admin', label: words.admin, icon: Shield, url: '/admin' }] : []),
       ...(data.user?.role === 'admin' ? [{ id: 'about-admin', label: en ? 'About the project' : 'О проекте', icon: BookOpen, url: '/about-admin' }] : []),
     ],
@@ -691,7 +705,7 @@ const sidebarGroups = [
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
     <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
-      <div className={`app-shell shell-navigation cinema-design ${filmId ? 'has-cinema-atmosphere' : ''}`} data-sidebar={sidebar.layout} data-sidebar-compact={sidebar.compact} data-live={liveStatus} data-hud-busy={hudPending > 0 || loading}>
+      <div className={`app-shell shell-navigation cinema-design cinema-experience ${filmId ? 'has-cinema-atmosphere' : ''}`} data-live={liveStatus} data-hud-busy={hudPending > 0 || loading}>
         <a className="skip-navigation" href="#main-content" onClick={event => {
           event.preventDefault();
           const main = document.getElementById('main-content');
@@ -699,32 +713,14 @@ return (
           main?.scrollIntoView({ block: 'start', behavior: 'instant' });
         }}>{en ? 'Skip to content' : 'Перейти к содержимому'}</a>
         {filmId > 0 && <AmbientCanvas poster={data.films.find(f => f.id === filmId)?.poster} backdrop={data.films.find(f => f.id === filmId)?.backdrop} />}
-        <AppSidebar
-          groups={sidebarGroups}
-          active={active === 'room' ? 'watchroom' : active}
-          signedIn={!!data.user}
-          go={go}
-          auth={() => setAuthOpen(true)}
-          roulette={startRoulette}
-          en={en}
-          live={liveStatus === 'live'}
-          layout={sidebar.layout}
-          compact={sidebar.compact}
-          onLayout={mode => {
-            if (!sidebar.setLayout(mode)) notify(en
-              ? 'Menu layout changed for this visit; browser storage is unavailable.'
-              : 'Вид меню изменён на этот визит: браузер не разрешил запоминание.');
-          }}
-        />
+
 
         <div className="main-wrap">
           <HeaderLocation key={path} en={en} go={go}/>
           <header className="topbar">
             <div id="movie-context-slot" />
 
-            <button type="button" className="mobile-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
-              <BrandLogo sizes="96px" />
-            </button>
+            <CinemaNavigation page={active} groups={navigationGroups} go={go} auth={() => setAuthOpen(true)} signedIn={!!data.user} en={en} />
 
             <div className="top-search" role="search" onFocus={() => setSearchFocused(true)} onBlur={e => {
               if (!e.currentTarget.contains(e.relatedTarget)) setSearchFocused(false);
@@ -767,7 +763,7 @@ return (
                       .slice(0, 5);
 
                     return results.length ? results.map(f => (
-                      <button key={f.id} className="hot-search-item" onClick={() => { go('/movie/' + f.id); setSearch(''); }}>
+                      <button key={f.id} className="hot-search-item" onClick={() => { browseGo('/movie/' + f.id); setSearch(''); }}>
                         <PosterThumb film={f} movieId={f.id} src={f.poster} alt={f.title} />
                         <div className="hot-item-info">
                           <b>{f.title}</b>
@@ -814,24 +810,24 @@ return (
           </header>
 
           <main className="content" id="main-content" tabIndex={-1} key={path}>
-            {active === 'home' ? <HomePage films={data.films} data={data} go={url => { if (url.startsWith('/catalog?genre=')) setSearch(''); go(url); }} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} action={action} />
-              : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
+            {active === 'home' ? <HomePage films={data.films} data={data} go={url => { if (url.startsWith('/catalog?genre=')) setSearch(''); browseGo(url); }} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} action={action} />
+              : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={browseGo} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'showtimes' ? <ShowtimesPage en={en} />
-              : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema key={`${searchParams.get('mode')}:${searchParams.get('country')}:${data.user?.id || 'guest'}`} initialMode={searchParams.get('mode') || ''} initialCountry={searchParams.get('country') || ''} films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={go} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
-              : active === 'top' ? <TopMaterials films={data.films} go={go} en={en} watchedIds={watchedIds} signedIn={!!data.user} />
+              : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema key={`${searchParams.get('mode')}:${searchParams.get('country')}:${data.user?.id || 'guest'}`} initialMode={searchParams.get('mode') || ''} initialCountry={searchParams.get('country') || ''} films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={browseGo} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
+              : active === 'top' ? <TopMaterials films={data.films} go={browseGo} en={en} watchedIds={watchedIds} signedIn={!!data.user} />
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} onSeriesUpdated={refresh} />)
-              : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={go} action={action} notify={notify} auth={() => setAuthOpen(true)} />
-              : active === 'watchlist' ? <Watchlist data={data} go={go} auth={() => setAuthOpen(true)} />
-              : active === 'favorites' ? <FavoritesPage data={data} go={go} auth={() => setAuthOpen(true)} />
+              : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={browseGo} action={action} notify={notify} auth={() => setAuthOpen(true)} />
+              : active === 'watchlist' ? <Watchlist data={data} go={browseGo} auth={() => setAuthOpen(true)} />
+              : active === 'favorites' ? <FavoritesPage data={data} go={browseGo} auth={() => setAuthOpen(true)} />
               : active === 'leaderboard' ? <Leaderboard data={data} go={go} />
               : active === 'achievements' ? <Achievements data={data} auth={() => setAuthOpen(true)} go={go} />
               : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
               : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
-              : active === 'viewuser' ? <ViewUserProfile key={`${viewUserId}:${data.user?.id ?? 'guest'}`} userId={viewUserId} data={data} go={go} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
-              : active === 'compare' ? <ComparePage key={compareId} data={data} compareId={compareId} go={go} auth={() => setAuthOpen(true)} />
-              : active === 'wrapped' ? <WrappedPage data={data} go={go} auth={() => setAuthOpen(true)} />
-              : active === 'collab' ? <CollectionShowcase films={data.films} go={go} watchedIds={watchedIds} signedIn={!!data.user} personal={<CollabLists data={data} go={go} action={action} auth={() => setAuthOpen(true)} />} />
+              : active === 'viewuser' ? <ViewUserProfile key={`${viewUserId}:${data.user?.id ?? 'guest'}`} userId={viewUserId} data={data} go={browseGo} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
+              : active === 'compare' ? <ComparePage key={compareId} data={data} compareId={compareId} go={browseGo} auth={() => setAuthOpen(true)} />
+              : active === 'wrapped' ? <WrappedPage data={data} go={browseGo} auth={() => setAuthOpen(true)} />
+              : active === 'collab' ? <CollectionShowcase films={data.films} go={browseGo} watchedIds={watchedIds} signedIn={!!data.user} personal={<CollabLists data={data} go={browseGo} action={action} auth={() => setAuthOpen(true)} />} />
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
@@ -857,6 +853,12 @@ return (
           ...(canAccessAdmin(data.user) ? [{ id: 'admin', label: 'Центр управления', url: '/admin', icon: Shield }] : []),
           ...(data.user?.role === 'admin' ? [{ id: 'about-admin', label: 'О проекте', url: '/about-admin', icon: BookOpen }] : []),
         ]} />
+        {quickView.id !== null && <MovieQuickView key={quickView.id} film={data.films.find(film => film.id === quickView.id)} saved={data.bookmarks.some(item => item.movieId === quickView.id)} favorite={favoriteIds.has(quickView.id)} signedIn={!!data.user} action={action} en={en} close={quickView.close} auth={() => {quickView.close(); setAuthOpen(true);}} full={() => {
+          const id = quickView.id;
+          quickView.discard();
+          router.replace('/movie/' + id);
+          window.scrollTo({top: 0, behavior: 'instant'});
+        }} />}
         {authOpen && <AuthModal close={() => setAuthOpen(false)} refresh={refresh} notify={notify} />}
 
 {roulette && <CinemaRoulette films={data.films} watchedIds={watchedIds} savedIds={new Set(data.bookmarks.map(item => item.movieId))} signedIn={!!data.user} en={en} close={() => setRoulette(false)} open={id => {setRoulette(false);go('/movie/' + id);}} auth={() => {setRoulette(false);setAuthOpen(true);}} bookmark={id => action({action: 'bookmark', movieId: id}, 'Добавлено в желаемое')}/>}
@@ -1133,7 +1135,6 @@ function Gate({ title, description, auth }: { title: string; description: string
 // --- Pages ---
 
 function HomePage({ films, data, go, roulette, auth, en, action }: { films: FilmType[]; data: Data; go: (s: string) => void; roulette: () => void; auth: () => void; en: boolean; action: (payload: Record<string, unknown>, success?: string) => Promise<boolean>; }) {
-  const featured = useMemo(() => films.find(f => (f as any).featured) || films[0], [films]);
 
   const [capsuleMovie, setCapsuleMovie] = useState<{
   id: number;
@@ -1174,54 +1175,9 @@ const rating = data.ratings.find(x => x.movieId === f.id);
   });
 };
 
-  if (!featured) return <div className="home-stage">
-    <section className="empty-state"><Sparkles size={32} /><h1>{en ? 'Every story starts somewhere.' : 'У каждой истории есть начало.'}</h1><p>{en ? 'The catalog is taking shape. New cinema discoveries will appear here.' : 'Каталог пока пуст. Здесь появятся новые истории и кинооткрытия.'}</p><button type="button" className="primary-btn" onClick={() => go('/catalog')}>{en ? 'Open catalog' : 'Открыть каталог'}<ArrowRight size={16}/></button></section>
-    <EveningDiscovery films={films} go={go} en={en} />
-  </div>;
-
   return (
     <>
-      <div className="welcome-line home-welcome">
-        <div>
-          <span className="eyebrow"><span className="pulse-dot" /> {en ? 'CINEMA. PEOPLE. DISCOVERIES.' : 'КИНО. ЛЮДИ. ОТКРЫТИЯ.'}</span>
-          <h1>{en ? 'Beyond the screen.' : 'За пределами кадра.'}<br /><em>{en ? 'Into your story.' : 'Ближе к твоей истории.'}</em></h1>
-          <p>{data.user ? (en ? `Welcome back, ${data.user.username}. ` : `С возвращением, ${data.user.username}. `) : ''}{en ? 'Discover stories. Save what moves you. Share the feeling.' : 'Находи новое. Сохраняй любимое. Разделяй впечатления.'}</p>
-        </div>
-        <span className="date-pill"><CalendarDays size={15} />{new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-      </div>
-
-      <div className="home-stage">
-      <div className="hero" style={{ backgroundImage: `linear-gradient(90deg,rgba(8,10,15,.97) 0%,rgba(8,10,15,.81) 37%,rgba(8,10,15,.16) 83%),linear-gradient(0deg,rgba(8,10,15,.52),transparent 50%),url('${featured.backdrop || featured.poster}')` }}>
-        <div className="hero-grain" />
-        <div className="hero-content">
-          <span className="hero-tag"><span className="pulse-dot" /> {en ? 'IN THE SPOTLIGHT' : 'В ЦЕНТРЕ ВНИМАНИЯ'} <span className="tag-line" /> moviemovie selection</span>
-          <div className="hero-bottom">
-            <div className="hero-topline"><span>{en ? 'THE NEXT CHAPTER OF YOUR STORY' : 'НОВЫЙ ЭПИЗОД ТВОЕЙ ИСТОРИИ'}</span><span>✦</span></div>
-            <h2>{featured.title}</h2>
-            <p>{featured.description}</p>
-            <div className="hero-meta">
-              <span><Star size={15} fill="currentColor" /> {formatFilmRating(featured)} <i>/ 10</i></span>
-              <span>{featured.year}</span>
-              <span>{featured.category}</span>
-              <span>{featured.duration} мин</span>
-            </div>
-            <div className="hero-buttons">
-              <button className="primary-btn" onClick={() => go('/movie/' + featured.id)}><Play size={17} fill="currentColor" /> {en ? 'Explore this story' : 'Подробнее о фильме'} <ArrowRight size={17} /></button>
-              <button className="hero-icon-btn" onClick={roulette} title="Случайный материал"><Shuffle size={19} /></button>
-            </div>
-          </div>
-        </div>
-        <div className="hero-corner">moviemovie ORIGINAL SELECTION <span>↗</span></div>
-        <HeroStats
-          films={films}
-          peopleCount={data.people.length}
-          watchesCount={data.user ? data.watches.length : null}
-          en={en}
-        />
-      </div>
-
-      <EveningDiscovery films={films} go={go} en={en} />
-      </div>
+      <CinemaHomeStage films={films} go={go} roulette={roulette} en={en} username={data.user?.username} peopleCount={data.people.length} watchedCount={data.user ? data.watches.length : null} savedIds={data.bookmarks.map(item => item.movieId)} />
 
       <CineDayBanner films={films} initialTag={data.cineDay?.filter} go={go} en={en}/>
 
@@ -1279,25 +1235,6 @@ const rating = data.ratings.find(x => x.movieId === f.id);
         </div>
       )}
 
-      <div className="editorial-row">
-        <div className="editorial-feature" onClick={() => films[2] && go('/movie/' + films[2].id)} style={{ backgroundImage: `linear-gradient(90deg,rgba(10,12,19,.94),rgba(10,12,19,.55)),url('${films[2]?.poster || ''}')` }}>
-          <div className="editorial-icon"><Sparkles size={21} /></div>
-          <span className="eyebrow">{en ? 'EDITOR’S PICK' : 'ВЫБОР РЕДАКЦИИ'}</span>
-          <h3>{en ? <>Stories that<br />stay with you</> : <>Истории, которые<br />остаются с тобой</>}</h3>
-          <p>{en ? 'More than watching. A journey beyond the screen.' : 'Не просто просмотр. Настоящее путешествие за пределы экрана.'}</p>
-          <span className="editorial-link">{en ? 'Explore the collection' : 'Открыть подборку'} <ArrowUpRight size={17} /></span>
-        </div>
-        <div className="roulette-banner">
-          <div className="roulette-orbit"><Shuffle size={30} /></div>
-          <div>
-            <span className="eyebrow">{en ? 'CAN’T DECIDE?' : 'НЕ МОЖЕШЬ РЕШИТЬ?'}</span>
-            <h3>{en ? 'Leave it to chance.' : 'Пусть решит случай.'}</h3>
-            <p>{en ? 'One click away from your next favorite story.' : 'Один клик — и новая история уже ждёт тебя.'}</p>
-            <button className="primary-btn" onClick={roulette}>{en ? 'Spin the roulette' : 'Крутить рулетку'} <ArrowRight size={17} /></button>
-          </div>
-          <span className="banner-decoration">{"//"}</span>
-        </div>
-      </div>
 
 {data.user && data.watches.length > 0 && (
   <>

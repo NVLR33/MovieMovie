@@ -307,7 +307,7 @@ try {
   await page
     .locator(".user-trigger-name")
     .getByText(user.username, { exact: true })
-    .waitFor();
+    .waitFor({ state: "attached" });
   await openMenu();
   await menu
     .getByRole("link", { name: "Центр управления", exact: true })

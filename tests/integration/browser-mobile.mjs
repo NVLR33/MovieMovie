@@ -294,10 +294,11 @@ try {
   await more.waitFor({ state: 'detached' });
   await dock.waitFor({ state: 'hidden' });
   await actions.waitFor({ state: 'hidden' });
-  assert.equal(await page.locator('.sidebar').isVisible(), true);
+  assert.equal(await page.locator('.cinema-nav').isVisible(), true);
+  assert.equal(await page.locator('.sidebar').count(), 0);
   assert.deepEqual(errors, []);
   console.log(
-    'Passed mobile production browser: five tabs / eight breakpoints, guest auth, More dialog focus/Escape/history, keyboard viewport, sticky material actions after scroll, 20 accessible half-step ratings + real persistence, review draft, safe area, rotation and unchanged desktop sidebar. Screenshots: /tmp/mm-mobile-screenshots',
+    'Passed mobile production browser: five tabs / eight breakpoints, guest auth, More dialog focus/Escape/history, keyboard viewport, sticky material actions after scroll, 20 accessible half-step ratings + real persistence, review draft, safe area, rotation and full-width desktop spaces navigation. Screenshots: /tmp/mm-mobile-screenshots',
   );
 } finally {
   await browser.close();

@@ -42,12 +42,10 @@ try {
       await page.locator('meta[property="og:image"]').getAttribute("content"),
       /\/brand\/moviemovie-social.png$/,
     );
-    for (const selector of [
-      width <= 760 ? ".mobile-brand" : ".side-brand",
-      ".footer-logo",
-    ]) {
+    for (const selector of [".cinema-brand", ".footer-logo"]) {
       const logo = page.locator(`${selector} .brand-logo`);
       await logo.waitFor({ state: "visible" });
+      await logo.scrollIntoViewIfNeeded();
       await logo.evaluate((im) => im.decode());
       const dimensions = await logo.evaluate((im) => ({
         w: im.getBoundingClientRect().width,
@@ -69,6 +67,7 @@ try {
       ),
       `horizontal overflow at ${width}`,
     );
+    await page.evaluate(() => scrollTo(0, 0));
     const wrongCase = await page.evaluate(() => {
       const result = [],
         walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);

@@ -27,6 +27,7 @@ import '../components/community-section.css';
 import '../components/header-account.css';
 import '../components/shell-navigation.css';
 import '../components/visual-system.css';
+import '../components/cinema-experience.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 
