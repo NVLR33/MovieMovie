@@ -1,0 +1,246 @@
+/* Home's closing community section, not the global site footer. Shared rows keep
+   content and actions aligned without fixed heights, clipping, or fake leaders. */
+.community-section .community-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0 16px;
+}
+.community-section .community-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-row: span 3;
+  grid-column: auto;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 22px;
+  border: 1px solid var(--border-hi);
+  border-radius: 18px;
+  background: var(--surface);
+  transition: border-color 0.2s ease;
+}
+@supports (grid-template-rows: subgrid) {
+  .community-section .community-card {
+    grid-template-rows: subgrid;
+  }
+}
+.community-section .community-card:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+.community-section .community-card-heading {
+  min-width: 0;
+  padding-bottom: 18px;
+}
+.community-section .cc-icon {
+  width: 36px;
+  height: 36px;
+  margin: 0 0 14px;
+  border-radius: 11px;
+}
+.community-section .community-card h3 {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 7px;
+  text-wrap: balance;
+}
+.community-section .community-card p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.community-section .community-card-heading p {
+  max-width: 46ch;
+}
+.community-section .community-card-body {
+  min-width: 0;
+  padding-bottom: 20px;
+}
+.community-section .weekly-preview {
+  margin: 0;
+}
+.community-section .weekly-preview-heading,
+.community-section .daily-game-heading {
+  margin: 0 0 12px;
+  gap: 5px;
+}
+.community-section .weekly-preview-heading > b,
+.community-section .daily-game-heading b {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.community-section .weekly-preview-heading > small,
+.community-section .daily-game-heading small {
+  font-size: 10px;
+  line-height: 1.6;
+}
+.community-section .weekly-leaders {
+  margin-top: 0;
+}
+.community-section .weekly-leader {
+  min-height: 58px;
+}
+.community-section .community-card .weekly-empty,
+.community-section .community-unavailable {
+  padding: 14px;
+  border: 1px dashed var(--border-hi);
+  border-radius: 11px;
+  background: var(--glass);
+}
+.community-section .daily-game {
+  flex: none;
+}
+.community-section .daily-game-question legend {
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+.community-section .daily-game-option {
+  min-height: 44px;
+  padding: 10px;
+}
+.community-section .daily-game-feedback {
+  min-height: 0;
+}
+.community-section .daily-game-feedback p {
+  padding-top: 10px;
+  margin: 0;
+}
+.community-section .daily-game-note {
+  margin: 10px 0 0;
+  font-size: 10px;
+}
+.community-section .community-card-footer {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.community-section .community-card-footer > button {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 0;
+  gap: 10px;
+  color: var(--accent);
+  font-size: 11px;
+  text-align: left;
+  line-height: 1.6;
+}
+.community-section .community-card-footer > button:hover {
+  gap: 10px;
+  color: var(--text);
+}
+.community-section .community-card-footer svg {
+  flex-shrink: 0;
+}
+.community-section .community-discovery-links {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.community-section .community-shortcut {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 15px;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface2);
+  color: var(--text);
+  text-align: left;
+}
+.community-section .community-shortcut > svg {
+  color: var(--accent);
+}
+.community-section .community-shortcut > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.community-section .community-shortcut b {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.community-section .community-shortcut small {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--muted);
+  font-weight: 400;
+}
+.community-section .community-shortcut:hover {
+  gap: 10px;
+  background: var(--accent-glow);
+  border-color: var(--accent);
+}
+.community-section :is(h3, p, small, b) {
+  overflow-wrap: anywhere;
+}
+.community-section button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+:root[data-theme="light"] .community-section .pink-icon {
+  color: #be185d !important;
+}
+:root[data-theme="light"] .community-section .blue-icon {
+  color: #1d4ed8 !important;
+}
+@media (max-width: 1100px) {
+  .community-section .community-cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .community-section .community-card {
+    grid-template-rows: auto auto auto;
+    grid-row: auto;
+    grid-column: auto;
+  }
+  .community-section .community-card-heading {
+    padding-bottom: 14px;
+  }
+  .community-section .community-card-body {
+    padding-bottom: 16px;
+  }
+}
+@media (max-width: 600px) {
+  .community-section .community-card {
+    padding: 18px;
+  }
+  .community-section .community-card h3 {
+    font-size: 14px;
+    text-wrap: initial;
+  }
+  .community-section .community-card-heading p {
+    max-width: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .community-section .community-card {
+    transition: none;
+  }
+}
+
+/* The title already has an underline; do not let the seasonal ornament become
+   an extra flex item or squeeze the heading on a phone. */
+:root[data-season]:not([data-season="off"])
+  .community-section
+  > .section-heading::after {
+  display: none;
+}
+:root[data-theme="light"] .community-section .daily-game-option.is-correct,
+:root[data-theme="light"] .community-section .daily-feedback-correct {
+  color: #047857;
+}
+:root[data-theme="light"] .community-section .daily-game-option.is-incorrect {
+  color: #be123c;
+}

@@ -75,6 +75,8 @@ jobs:
           run_suite test:showcase:browser
           run_suite test:pulse:browser
           run_suite test:settings:browser
+          run_suite test:account:browser
+          run_suite test:shell:browser
           run_suite test:series:browser
           run_suite test:detail:browser
           run_suite test:brand:browser
@@ -84,6 +86,7 @@ jobs:
           run_suite test:city-series:browser
           run_suite test:location:browser
           run_suite test:cine-day:browser
+          run_suite test:community:browser
           run_suite test:roulette:browser
           run_suite test:playback:browser
           run_suite test:ui

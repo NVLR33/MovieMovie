@@ -33,6 +33,16 @@ try{
  await pg.exec('UPDATE mg_movies SET views=views+1 WHERE id=1');assert.equal((await pg.query('SELECT poster FROM mg_movies WHERE id=1')).rows[0].poster,'data:image/png;base64,old');
  for(const [table,col]of[['mg_movies','poster'],['mg_users','avatar'],['mg_users','header_image']]){let denied=false;try{await pg.query(`UPDATE ${table} SET ${col}=$1 WHERE id=1`,['data:image/png;base64,new'])}catch(error){denied=error.code==='22023'}assert(denied)}
  await user(1);await action({action:'profile',headerImage:'data:image/png;base64,new'},400);await action({action:'profile',headerImage:'https://storage.test/header.png'});
+ // Notification mutations are explicit, ownership-scoped and safely reversible.
+ await user(null);await action({action:'notifyRead'},401);
+ await pg.exec("INSERT INTO mg_notifications(id,user_id,message,read)VALUES(901,1,'Owned one',false),(902,1,'Owned two',false),(903,2,'Other user',false)");
+ await user(1);await action({action:'notifyRead',id:903},404);await action({action:'notifyRead',id:99999},404);
+ await action({action:'notifyRead',id:'bad'},400);await action({action:'notifyRead',id:901,read:'false'},400);await action({action:'notifyRead',read:false},400);
+ await action({action:'notifyRead',id:901});assert.equal((await pg.query('SELECT read FROM mg_notifications WHERE id=901')).rows[0].read,true);
+ assert.equal((await pg.query('SELECT read FROM mg_notifications WHERE id=902')).rows[0].read,false);
+ await action({action:'notifyRead',id:901,read:false});assert.equal((await pg.query('SELECT read FROM mg_notifications WHERE id=901')).rows[0].read,false);
+ await action({action:'notifyRead'});assert.equal((await pg.query('SELECT count(*)::int n FROM mg_notifications WHERE user_id=1 AND NOT read')).rows[0].n,0);
+ assert.equal((await pg.query('SELECT read FROM mg_notifications WHERE id=903')).rows[0].read,false);
  // Idempotent desired bookmark state, including concurrent/repeated requests.
  await action({action:'bookmark',movieId:1,saved:true});await action({action:'bookmark',movieId:1,saved:true});assert.equal((await pg.query('SELECT count(*)::int n FROM mg_bookmarks')).rows[0].n,1);
  await action({action:'bookmark',movieId:1,saved:false});assert.equal((await pg.query('SELECT count(*)::int n FROM mg_bookmarks')).rows[0].n,0);

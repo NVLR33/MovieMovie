@@ -5,6 +5,8 @@ import CineDayBanner from './cine-day-banner';
 import type { CineDay } from '@/lib/cine-day';
 import { HeaderLocation } from './city-cinema';
 import ShowtimesPage from './showtimes-page';
+import HeaderAccount from './header-account';
+import { AppSidebar, SiteFooter, useSidebarLayout } from './shell-navigation';
 import { DetailDescription, DetailTags, detailTitleStyle } from './material-detail-parts';
 import MaterialPlayer from './material-player';
 import { playbackSource } from '@/lib/playback-source';
@@ -351,6 +353,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
   const router = useRouter(), path = usePathname(), searchParams = useSearchParams();
   const [serverData, setData] = useState<Data>({ ...blank, films: initialFilms });
   const [data, addOptimistic] = useOptimistic(serverData, applyCollectionUpdate<Data>);
+  const sidebar = useSidebarLayout();
   const pendingActions = useRef(new Set<string>());
   const refreshVersion = useRef(0);
   const [loading, setLoading] = useState(true);
@@ -378,6 +381,7 @@ export default function MovieGoApp({ initialFilms }: { initialFilms: FilmType[] 
     return () => window.removeEventListener('keydown', focusSearch);
   }, []);
   const [authOpen, setAuthOpen] = useState(false);
+  const siteSettingsTrigger = useRef<HTMLButtonElement>(null);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [roulette, setRoulette] = useState(false);
@@ -632,7 +636,6 @@ useEffect(() => {
     login: en ? 'Sign in' : 'Войти'
   };
 
-  const unread = data.notifications.filter(n => !n.read).length;
   const route = resolveSiteRoute(path || '/');
   const filmId = route?.page === 'movie' ? route.id || 0 : 0;
   const viewUserId = route?.page === 'viewuser' ? route.id || 0 : 0;
@@ -658,75 +661,60 @@ const nav = [
 ];
 
 const startRoulette = () => setRoulette(true);
+const sidebarGroups = [
+  {
+    label: en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ',
+    items: [
+      nav[0], nav[1],
+      { id: 'showtimes', label: en ? 'Cinema showtimes' : 'Афиша и сеансы', icon: Clapperboard, url: '/showtimes' },
+      ...nav.slice(2, 7),
+    ].map(item => ({
+      ...item,
+      count: item.id === 'watchlist' ? data.bookmarks.length
+        : item.id === 'favorites' ? data.favoriteIds.length : undefined,
+    })),
+  },
+  { label: en ? 'COMMUNITY' : 'СООБЩЕСТВО', items: nav.slice(7) },
+  {
+    label: en ? 'PERSONAL' : 'ЛИЧНОЕ',
+    items: [
+      { id: 'profile', label: words.profile, icon: Users, url: '/profile', requiresAuth: true },
+      { id: 'friends', label: words.friends, icon: UserPlus, url: '/friends', requiresAuth: true },
+      { id: 'chat', label: en ? 'Chat' : 'Чат', icon: MessageCircle, url: '/chat', requiresAuth: true, count: data.unreadMessages },
+      ...(canAccessAdmin(data.user) ? [{ id: 'admin', label: words.admin, icon: Shield, url: '/admin' }] : []),
+      ...(data.user?.role === 'admin' ? [{ id: 'about-admin', label: en ? 'About the project' : 'О проекте', icon: BookOpen, url: '/about-admin' }] : []),
+    ],
+  },
+];
 
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
     <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
-      <div className={`app-shell ${filmId ? 'has-cinema-atmosphere' : ''}`} data-live={liveStatus} data-hud-busy={hudPending > 0 || loading}>
+      <div className={`app-shell shell-navigation ${filmId ? 'has-cinema-atmosphere' : ''}`} data-sidebar={sidebar.layout} data-sidebar-compact={sidebar.compact} data-live={liveStatus} data-hud-busy={hudPending > 0 || loading}>
+        <a className="skip-navigation" href="#main-content" onClick={event => {
+          event.preventDefault();
+          const main = document.getElementById('main-content');
+          main?.focus({ preventScroll: true });
+          main?.scrollIntoView({ block: 'start', behavior: 'instant' });
+        }}>{en ? 'Skip to content' : 'Перейти к содержимому'}</a>
         {filmId > 0 && <AmbientCanvas poster={data.films.find(f => f.id === filmId)?.poster} backdrop={data.films.find(f => f.id === filmId)?.backdrop} />}
-        <aside className="sidebar">
-          <button type="button" className="side-brand" onClick={() => go('/')} aria-label="moviemovie — на главную">
-            <BrandLogo sizes="(max-width: 760px) 160px, (max-width: 1050px) 48px, 160px" priority />
-          </button>
-          <div className="side-scroll">
-            <div className="nav-group-label">{en ? 'EXPLORE' : 'ИССЛЕДОВАТЬ'}</div>
-            <nav className="nav-list">
-              {nav.slice(0, 7).map(n => (
-                <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
-                  <n.icon size={19} />
-                  <span>{n.label}</span>
-                  {n.id === 'watchlist' && data.bookmarks.length > 0 && <small>{data.bookmarks.length}</small>}
-                </button>
-              ))}
-            </nav>
-
-            <div className="nav-group-label section-gap">{en ? 'COMMUNITY' : 'СООБЩЕСТВО'}</div>
-            <nav className="nav-list">
-              {nav.slice(7).map(n => (
-                <button key={n.id} className={`nav-item ${active === n.id ? 'active' : ''}`} onClick={() => go(n.url)}>
-                  <n.icon size={19} />
-                  <span>{n.label}</span>
-                </button>
-              ))}
-            </nav>
-
-            <div className="nav-group-label section-gap">{en ? 'PERSONAL' : 'ЛИЧНОЕ'}</div>
-            <nav className="nav-list">
-              <button className={`nav-item ${active === 'profile' ? 'active' : ''}`} onClick={() => data.user ? go('/profile') : setAuthOpen(true)}>
-                <Users size={19} /><span>{words.profile}</span>
-              </button>
-              <button className={`nav-item ${active === 'friends' ? 'active' : ''}`} onClick={() => data.user ? go('/friends') : setAuthOpen(true)}>
-                <Users size={19} /><span>{words.friends}</span>
-              </button>
-              <button className={`nav-item ${active === 'chat' ? 'active' : ''}`} onClick={() => data.user ? go('/chat') : setAuthOpen(true)}>
-                <MessageCircle size={19} /><span>{en ? 'Chat' : 'Чат'}</span>
-                {data.unreadMessages > 0 && <small>{data.unreadMessages}</small>}
-              </button>
-              {canAccessAdmin(data.user) && (
-                <button className={`nav-item ${active === 'admin' ? 'active' : ''}`} onClick={() => go('/admin')}>
-                  <Shield size={19} /><span>{words.admin}</span>
-                </button>
-              )}
-              {data.user?.role === 'admin' && (
-                <button className={`nav-item ${active === 'about-admin' ? 'active' : ''}`} onClick={() => go('/about-admin')}>
-                  <BookOpen size={19} /><span>О проекте</span>
-                </button>
-              )}
-            </nav>
-
-            <div className="sidebar-discover">
-              <div className="discover-icon"><Sparkles size={18} /></div>
-              <h4>Не знаешь, что посмотреть?</h4>
-              <p>Доверь выбор киновселенной.</p>
-              <button onClick={startRoulette}>Случайный фильм <ArrowUpRight size={14} /></button>
-            </div>
-          </div>
-
-          <div className="sidebar-bottom">
-            <div className="side-status"><span className="status-dot" /> ВСЁ РАБОТАЕТ КАК КИНО</div>
-            <span>© 2026 moviemovie</span>
-          </div>
-        </aside>
+        <AppSidebar
+          groups={sidebarGroups}
+          active={active === 'room' ? 'watchroom' : active}
+          signedIn={!!data.user}
+          go={go}
+          auth={() => setAuthOpen(true)}
+          roulette={startRoulette}
+          en={en}
+          live={liveStatus === 'live'}
+          layout={sidebar.layout}
+          compact={sidebar.compact}
+          onLayout={mode => {
+            if (!sidebar.setLayout(mode)) notify(en
+              ? 'Menu layout changed for this visit; browser storage is unavailable.'
+              : 'Вид меню изменён на этот визит: браузер не разрешил запоминание.');
+          }}
+        />
 
         <div className="main-wrap">
           <HeaderLocation key={path} en={en} go={go}/>
@@ -797,55 +785,34 @@ return (
             </div>
 
             <div className="top-actions">
+              <button type="button" className="header-discover-button" aria-label={en?'Open cinema roulette':'Открыть кинорулетку'} title={en?'Choose a film for tonight':'Подобрать фильм на вечер'} onClick={startRoulette}><Shuffle size={17}/><span>{en?'Pick a film':'Выбрать фильм'}</span></button>
               {data.user && <ExperienceHud key={data.user.id} xp={serverData.user?.xp ?? null} go={go} en={en} />}
               <span className={`live-connection live-${liveStatus}`} role="status" title={liveStatus === 'live' ? 'Живые обновления подключены' : 'Восстанавливаем живые обновления; резервное обновление включено'}><i /><span>{liveStatus === 'live' ? 'Live' : 'Соединение…'}</span></span>
-              <SiteSettings key={path} onOpen={() => { setNoticeOpen(false); setProfileOpen(false); setSearchFocused(false); }} theme={theme} lang={lang} season={seasonMode} calendarSeason={getCalendarSeason()} animations={seasonAnimations} glow={seasonGlow} signedIn={!!data.user} onTheme={changeTheme} onLang={changeLang} onSeason={setSeasonMode} onAnimations={setSeasonAnimations} onGlow={setSeasonGlow} onReset={resetSiteSettings} onSync={async () => data.user ? action({ action: 'profile', theme, language: lang }) : true} onProfile={() => go('/profile')} />
+              <SiteSettings key={path} triggerRef={siteSettingsTrigger} onOpen={() => { setNoticeOpen(false); setProfileOpen(false); setSearchFocused(false); }} theme={theme} lang={lang} season={seasonMode} calendarSeason={getCalendarSeason()} animations={seasonAnimations} glow={seasonGlow} signedIn={!!data.user} onTheme={changeTheme} onLang={changeLang} onSeason={setSeasonMode} onAnimations={setSeasonAnimations} onGlow={setSeasonGlow} onReset={resetSiteSettings} onSync={async () => data.user ? action({ action: 'profile', theme, language: lang }) : true} onProfile={() => go('/profile')} />
 
-              <div className="popover-anchor">
-                <button className="icon-button notice-button" onClick={() => { setNoticeOpen(!noticeOpen); setProfileOpen(false); if (unread) action({ action: 'notifyRead' }); }}>
-                  <Bell size={19} />
-                  {unread > 0 && <i className="notice-dot" />}
-                </button>
-                {noticeOpen && (
-                  <div className="header-pop notifications">
-                    <div className="pop-head"><strong>Уведомления</strong><span>{data.notifications.length}</span></div>
-                    {data.user ? data.notifications.length ? data.notifications.slice(0, 8).map(n => (
-                      <button key={n.id} onClick={() => go(n.link || '/profile')} className="notice-row">
-                        <span className="notice-ico"><Bell size={15} /></span>
-                        <span>{n.message}<small>{new Date(n.createdAt).toLocaleDateString('ru-RU')}</small></span>
-                      </button>
-                    )) : <div className="empty-mini">Пока здесь тихо ✨</div> : <div className="empty-mini">Войдите, чтобы видеть уведомления</div>}
-                  </div>
-                )}
-              </div>
-
-              <span className="top-divider" />
-
-              <div className="popover-anchor">
-                <button className="user-trigger" onClick={() => data.user ? setProfileOpen(!profileOpen) : setAuthOpen(true)}>
-                  <Avatar name={data.user?.username || 'G'} src={data.user?.avatar} size={34} frame={data.user?.avatarFrame} />
-                  <span className="user-trigger-name">{data.user?.username || words.login}</span>
-                  <ChevronDown size={14} />
-                </button>
-                {profileOpen && (
-                  <div className="header-pop user-pop">
-                    <strong>{data.user?.username}</strong>
-                    <small>{data.user?.email}</small>
-                    <button onClick={() => go('/profile')}><Users size={16} /> Мой профиль</button>
-                    <button onClick={() => go('/watchlist')}><Bookmark size={16} /> Буду смотреть</button>
-                    <button onClick={async () => {
-                      await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
-                      await refresh();
-                      setProfileOpen(false);
-                      go('/');
-                    }}><LogOut size={16} /> Выйти</button>
-                  </div>
-                )}
-              </div>
+              <HeaderAccount key={data.user?.id || 'guest'} user={data.user} notices={data.notifications}
+                open={noticeOpen ? 'notifications' : profileOpen ? 'account' : null}
+                onOpen={panel => { setNoticeOpen(panel === 'notifications'); setProfileOpen(panel === 'account'); setSearchFocused(false); }}
+                go={go} action={action} auth={() => setAuthOpen(true)} en={en}
+                settings={() => { setProfileOpen(false); setNoticeOpen(false); requestAnimationFrame(() => siteSettingsTrigger.current?.click()); }}
+                counts={{ watchlist: data.bookmarks.length, favorites: data.favoriteIds.length }}
+                triggerAvatar={<Avatar name={data.user?.username || 'G'} src={data.user?.avatar} size={34} frame={data.user?.avatarFrame} />}
+                portrait={<Avatar name={data.user?.username || 'G'} src={data.user?.avatar} size={52} frame={data.user?.avatarFrame} />}
+                logout={async () => {
+                  if (pendingActions.current.size) throw new Error('Pending collection changes');
+                  const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
+                  if (!response.ok) throw new Error('Logout failed');
+                  refreshVersion.current++;
+                  setData({ ...blank, films: serverData.films });
+                  setNoticeOpen(false); setProfileOpen(false);
+                  go('/');
+                  await refresh();
+                }}
+              />
             </div>
           </header>
 
-          <main className="content" key={path}>
+          <main className="content" id="main-content" tabIndex={-1} key={path}>
             {active === 'home' ? <HomePage films={data.films} data={data} go={url => { if (url.startsWith('/catalog?genre=')) setSearch(''); go(url); }} roulette={startRoulette} auth={() => setAuthOpen(true)} en={en} action={action} />
               : active === 'catalog' ? (<Catalog key={`${searchParams.toString()}:${search}`} films={data.films} go={go} searchValue={search} en={en} canAdd={canCreateMaterial(data.user)} onAdd={() => setEditFilm(null)} onSuggest={() => data.user ? setSuggestOpen(true) : setAuthOpen(true)} watchedIds={watchedIds} />)
               : active === 'showtimes' ? <ShowtimesPage en={en} />
@@ -873,13 +840,10 @@ return (
             }
           </main>
 
-          <footer className="footer">
-            <button type="button" className="footer-logo" onClick={() => go('/')} aria-label="moviemovie — на главную">
-              <BrandLogo sizes="128px" />
-            </button>
-            <p>Твоя история. Твоё кино. Твоя вселенная.</p>
-            <span>Сделано с любовью к кино · 2026</span>
-          </footer>
+          <SiteFooter go={go} en={en} onTop={() => {
+            document.getElementById('main-content')?.focus({ preventScroll: true });
+            window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+          }} />
         </div>
 
         <MobileNavigation key={path} page={active} go={go} auth={() => setAuthOpen(true)} signedIn={!!data.user} en={en} destinations={[
@@ -1451,29 +1415,44 @@ const rating = data.ratings.find(x => x.movieId === f.id);
       </section>
 
       <section className="home-section community-section">
-        <SectionTitle kicker={en ? 'THE moviemovie COMMUNITY' : 'СООБЩЕСТВО moviemovie'} title={en ? 'Movies are better together' : 'Кино лучше вместе'} link={en ? 'Leaderboard' : 'Таблица лидеров'} onClick={() => go('/leaderboard')} />
+        <SectionTitle kicker={en ? 'THE moviemovie COMMUNITY' : 'СООБЩЕСТВО moviemovie'} title={en ? 'Movies are better together' : 'Кино лучше вместе'} />
         <div className="community-cards">
-          <div className="community-card">
-            <span className="cc-icon"><Trophy size={24} /></span>
-            <h3>{en ? 'Every watch moves you forward' : 'Каждый просмотр — шаг вперёд'}</h3>
-            <p>{en ? 'Watch, level up and join the weekly leaders.' : 'Смотри кино, повышай уровень и попади в тройку лидеров.'}</p>
-            <WeeklyLeaders leaders={data.weeklyLeaders || []} go={go} en={en} currentUserId={data.user?.id} />
-            <button onClick={() => go('/leaderboard')}>{en ? 'Full leaderboard' : 'Вся таблица лидеров'} <ArrowRight size={16} /></button>
-          </div>
-          <div className="community-card">
-            <span className="cc-icon pink-icon"><Gamepad2 size={24} /></span>
-            <h3>{en ? 'Play between screenings' : 'Играй между сеансами'}</h3>
-            {data.dailyGame ? <DailyGame key={data.dailyGame.id} question={data.dailyGame} go={go} en={en} /> : <>
-              <p>{en ? 'The daily question is not available yet. Explore the full mini-games section.' : 'Вопрос дня пока недоступен. Загляни в раздел мини-игр.'}</p>
-              <button onClick={() => go('/games')}>{en ? 'All mini-games' : 'Все мини-игры'} <ArrowRight size={16} /></button>
-            </>}
-          </div>
-          <div className="community-card">
-            <span className="cc-icon blue-icon"><Users size={24} /></span>
-            <h3>{en ? 'Share discoveries' : 'Делись открытиями'}</h3>
-            <p>{en ? 'Find friends, share recommendations and discuss your favorite stories.' : 'Находи друзей, отправляй рекомендации и обсуждай любимые истории.'}</p>
-            <button onClick={() => data.user ? go('/friends') : auth()}>{en ? 'Find friends' : 'Найти друзей'} <ArrowRight size={16} /></button>
-          </div>
+          <article className="community-card" aria-labelledby="community-progress-title">
+            <header className="community-card-heading">
+              <span className="cc-icon" aria-hidden="true"><Trophy size={24} /></span>
+              <h3 id="community-progress-title">{en ? 'Every watch moves you forward' : 'Каждый просмотр — шаг вперёд'}</h3>
+              <p>{en ? 'Watch, level up and join the weekly leaders.' : 'Смотри кино, повышай уровень и попади в тройку лидеров.'}</p>
+            </header>
+            <div className="community-card-body"><WeeklyLeaders leaders={data.weeklyLeaders || []} go={go} en={en} currentUserId={data.user?.id} /></div>
+            <footer className="community-card-footer"><button type="button" onClick={() => go('/leaderboard')}>{en ? 'Full leaderboard' : 'Вся таблица лидеров'} <ArrowRight size={16} /></button></footer>
+          </article>
+          <article className="community-card" aria-labelledby="community-games-title">
+            <header className="community-card-heading">
+              <span className="cc-icon pink-icon" aria-hidden="true"><Gamepad2 size={24} /></span>
+              <h3 id="community-games-title">{en ? 'Play between screenings' : 'Играй между сеансами'}</h3>
+              <p>{en ? 'Test your movie radar with a short daily warm-up.' : 'Проверь свой кинорадар в короткой ежедневной разминке.'}</p>
+            </header>
+            <div className="community-card-body">
+              {data.dailyGame ? <DailyGame key={data.dailyGame.id} question={data.dailyGame} go={go} en={en} showMore={false} /> : <p className="community-unavailable">{en ? 'The daily question is not available yet. Explore the full mini-games section.' : 'Вопрос дня пока недоступен. Загляни в раздел мини-игр.'}</p>}
+            </div>
+            <footer className="community-card-footer"><button type="button" className="daily-game-more" onClick={() => go('/games')}>{en ? 'All mini-games' : 'Все мини-игры'} <ArrowRight size={16} /></button></footer>
+          </article>
+          <article className="community-card" aria-labelledby="community-discoveries-title">
+            <header className="community-card-heading">
+              <span className="cc-icon blue-icon" aria-hidden="true"><Users size={24} /></span>
+              <h3 id="community-discoveries-title">{en ? 'Share discoveries' : 'Делись открытиями'}</h3>
+              <p>{en ? 'Find friends, share recommendations and discuss your favorite stories.' : 'Находи друзей, отправляй рекомендации и обсуждай любимые истории.'}</p>
+            </header>
+            <div className="community-card-body community-discovery-links">
+              <button type="button" className="community-shortcut" onClick={() => go('/collab')}>
+                <Layers3 size={18} aria-hidden="true" /><span><b>{en ? 'Community collections' : 'Подборки сообщества'}</b><small>{en ? 'Find a story for your next movie night' : 'Найди историю для следующего вечера'}</small></span><ArrowUpRight size={15} aria-hidden="true" />
+              </button>
+              <button type="button" className="community-shortcut" onClick={() => go('/catalog')}>
+                <MessageCircle size={18} aria-hidden="true" /><span><b>{en ? 'Talk about a film' : 'Обсудить фильм'}</b><small>{en ? 'Choose a title and leave your thoughts' : 'Выбери фильм и поделись впечатлением'}</small></span><ArrowUpRight size={15} aria-hidden="true" />
+              </button>
+            </div>
+            <footer className="community-card-footer"><button type="button" onClick={() => data.user ? go('/friends') : auth()}>{en ? 'Find friends' : 'Найти друзей'} <ArrowRight size={16} /></button></footer>
+          </article>
         </div>
       </section>
     </>
