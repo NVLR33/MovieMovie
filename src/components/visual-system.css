@@ -1,0 +1,1021 @@
+/* moviemovie / Frame system
+   Cinema imagery + editorial hierarchy + quiet bento surfaces.
+   Content stays opaque; optical glass is reserved for navigation and overlays.
+   Cover geometry, semantic rating colors, purchased profile art and auth stay owned by their features. */
+:root {
+  --bg: #0c1012;
+  --sidebar: #111719;
+  --surface: #161e20;
+  --surface2: #1d2628;
+  --surface3: #283336;
+  --text: #eff3ed;
+  --muted: #a1afb1;
+  --subtle: #7f9294;
+  --accent: #b9efce;
+  --accent2: #d9f9e5;
+  --accent-glow: #b9efce14;
+  --border: #dcece012;
+  --border-hi: #dcece027;
+  --glass: #e1ffec08;
+  --shadow: #0005;
+  --radius: 18px;
+  --radius-lg: 26px;
+  --radius-sm: 12px;
+  --font-heading: var(--font-golos), system-ui, sans-serif;
+  --frame-panel: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface2) 50%, var(--surface)),
+    var(--surface)
+  );
+  --frame-edge: inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);
+  --frame-glass: color-mix(in srgb, var(--sidebar) 82%, transparent);
+  --line: var(--border-hi);
+  --frame-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+:root[data-theme="light"] {
+  --bg: #edf0e9;
+  --sidebar: #e3e8df;
+  --surface: #fafbf7;
+  --surface2: #f0f3ec;
+  --surface3: #e0e6da;
+  --text: #1b2820;
+  --muted: #526258;
+  --subtle: #67766b;
+  --accent: #286749;
+  --accent2: #235b40;
+  --accent-glow: #28674910;
+  --border: #213d2914;
+  --border-hi: #213d292b;
+  --glass: #163d2206;
+  --shadow: #1e322012;
+}
+:root[data-theme="pink"] {
+  --bg: #160f14;
+  --sidebar: #1d151b;
+  --surface: #241b22;
+  --surface2: #2d222a;
+  --surface3: #3c2e37;
+  --text: #f9edf2;
+  --muted: #c5abb8;
+  --subtle: #aa8e9e;
+  --accent: #f4b2d1;
+  --accent2: #fcd5e7;
+  --accent-glow: #f4b2d114;
+  --border: #f8cee010;
+  --border-hi: #f8cee027;
+}
+:root[data-theme="purple"] {
+  --bg: #110f19;
+  --sidebar: #191621;
+  --surface: #211e2c;
+  --surface2: #2a2537;
+  --surface3: #383247;
+  --text: #f1edf9;
+  --muted: #b5abc7;
+  --subtle: #9e91b3;
+  --accent: #cab5ff;
+  --accent2: #e4d9ff;
+  --accent-glow: #cab5ff14;
+  --border: #e4d8ff12;
+  --border-hi: #e4d8ff27;
+}
+:root[data-theme="yellow"] {
+  --bg: #15130e;
+  --sidebar: #1d1a13;
+  --surface: #242117;
+  --surface2: #2e2a1e;
+  --surface3: #3c3728;
+  --text: #f7f1df;
+  --muted: #c1b89c;
+  --subtle: #a89b7a;
+  --accent: #f3d784;
+  --accent2: #f9e9b9;
+  --accent-glow: #f3d78414;
+  --border: #f3e6bf12;
+  --border-hi: #f3e6bf27;
+}
+/* The legacy FONT FIX declares these on body, not :root. Keep one inherited
+   family for editorial headings, feature cards and body-mounted dialogs. */
+body {
+  --font-heading: var(--font-golos), system-ui, sans-serif;
+  --font-card: var(--font-golos), system-ui, sans-serif;
+}
+/* Editorial rhythm: fewer all-caps blocks and no decorative heading gradients. */
+.cinema-design .content {
+  max-width: 1560px;
+  padding-top: 34px;
+}
+.cinema-design :is(h1, h2, h3, h4) {
+  font-family: var(--font-heading);
+  text-wrap: balance;
+}
+.cinema-design
+  :is(
+    .page-heading,
+    .showcase-page-heading,
+    .showtimes-heading,
+    .material-top-heading,
+    .ranking-library-hero
+  )
+  h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(30px, 3.6vw, 52px);
+  line-height: 1.09;
+  font-weight: 650;
+  letter-spacing: -0.045em;
+}
+.cinema-design
+  :is(
+    .section-heading,
+    .weekly-pulse-heading,
+    .home-five-heading,
+    .passport-section-heading
+  )
+  h2 {
+  font-size: clamp(23px, 2.6vw, 34px);
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+  font-weight: 650;
+}
+.cinema-design .eyebrow {
+  font-family: var(--font);
+  font-size: 9px;
+  letter-spacing: 0.17em;
+  font-weight: 650;
+}
+.cinema-design
+  :is(
+    .page-heading,
+    .showcase-page-heading,
+    .material-top-heading,
+    .showtimes-heading
+  ) {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.cinema-design :is(.page-heading, .section-heading, .home-five-heading) p {
+  line-height: 1.75;
+}
+.cinema-design .home-section {
+  margin-top: clamp(36px, 4vw, 60px);
+}
+/* Bento surfaces: the same edge, radius and depth across existing feature layouts. */
+.cinema-design
+  :is(
+    .profile-tile,
+    .hud-level-panel,
+    .hud-metric,
+    .passport-section,
+    .achievement-card,
+    .challenge-card,
+    .person-card,
+    .game-card,
+    .community-card,
+    .ranking-library-row,
+    .collection-shelf,
+    .showtime-movie,
+    .showtimes-city-panel,
+    .showtimes-external,
+    .info-panel-fancy,
+    .rating-selector-box,
+    .empty-state,
+    .gate,
+    .monthly-wrap,
+    .challenges-bar,
+    .season-pass,
+    .chat-layout,
+    .room-layout,
+    .admin-panel
+  ) {
+  background: var(--frame-panel);
+  border-color: var(--border-hi);
+  box-shadow: var(--frame-edge);
+  border-radius: var(--radius);
+  backdrop-filter: none;
+}
+.cinema-design
+  :is(
+    .profile-tile,
+    .achievement-card,
+    .challenge-card,
+    .person-card,
+    .game-card,
+    .ranking-library-row,
+    .collection-shelf,
+    .community-card
+  ) {
+  transition:
+    border-color 180ms var(--frame-ease),
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.cinema-design
+  :is(
+    .profile-tile,
+    .person-card,
+    .game-card,
+    .challenge-card,
+    .ranking-library-row,
+    .community-card
+  ):hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border-hi));
+  box-shadow: var(--frame-edge);
+}
+.cinema-design :is(.game-card, .challenge-card) h3 {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+.cinema-design .game-emoji {
+  border-radius: 14px;
+  border: 1px solid var(--border-hi);
+}
+.cinema-design .game-launch {
+  min-height: 40px;
+  align-items: center;
+}
+.cinema-design .community-section .community-card {
+  border-radius: 22px;
+}
+.cinema-design :is(.collection-shelf, .ranking-library-row, .showtime-movie) {
+  overflow: hidden;
+}
+.cinema-design .material-rank-item {
+  border-color: var(--border-hi);
+  border-radius: var(--radius);
+  background: var(--frame-panel);
+}
+.cinema-design .catalog-search {
+  background: var(--surface);
+  border-radius: 16px;
+  border-color: var(--border-hi);
+}
+.cinema-design :is(.catalog-genre-card, .catalog-format-card) {
+  border-radius: 16px;
+  box-shadow: var(--frame-edge);
+}
+.cinema-design .catalog-genre-card[aria-pressed="true"] {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--accent) 17%, var(--surface)),
+    var(--surface)
+  );
+}
+.cinema-design .filter-bar {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.cinema-design .film-card .card-info {
+  background: var(--surface);
+}
+.cinema-design .film-card .card-info h3 {
+  font-family: var(--font);
+  font-weight: 600;
+}
+/* Buttons remain tactile, not magnetic/zooming. Preserve saved-state and rating semantics. */
+.cinema-design .primary-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: 1px solid color-mix(in srgb, var(--accent) 85%, var(--text));
+  border-radius: 11px;
+  box-shadow: inset 0 1px 0 #fff3;
+  font-weight: 650;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.cinema-design .primary-btn:hover {
+  transform: none;
+  filter: none;
+  background: color-mix(in srgb, var(--accent) 86%, var(--text));
+  box-shadow: 0 3px 18px var(--accent-glow);
+}
+:root[data-theme="light"] .cinema-design .primary-btn {
+  color: #fff;
+}
+.cinema-design .outline-btn {
+  border-radius: 11px;
+  background-color: var(--surface);
+  box-shadow: var(--frame-edge);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+.cinema-design .outline-btn:hover {
+  transform: none;
+}
+.cinema-design :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.cinema-design :is(input, textarea, select) {
+  caret-color: var(--accent);
+}
+/* The optical layer. No cursor-following glare or constant animated refraction. */
+.cinema-design .sidebar {
+  background: var(--frame-glass);
+  backdrop-filter: blur(20px) saturate(125%);
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--text) 3%, transparent);
+}
+.cinema-design .topbar {
+  background: var(--frame-glass);
+  backdrop-filter: blur(24px) saturate(135%);
+  border-bottom-color: var(--border-hi);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 3%, transparent);
+}
+.cinema-design .top-search {
+  box-shadow: inset 0 1px 1px color-mix(in srgb, var(--text) 4%, transparent);
+  background: color-mix(in srgb, var(--bg) 65%, transparent);
+}
+.cinema-design .nav-item {
+  font-weight: 500;
+}
+.cinema-design .nav-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow: var(--frame-edge);
+}
+.cinema-design .nav-item.active::before {
+  box-shadow: none;
+}
+.cinema-design .side-brand {
+  height: 88px;
+}
+.cinema-design .sidebar-discover {
+  background: var(--frame-panel);
+}
+.cinema-design .header-location {
+  border-bottom-color: var(--border);
+}
+.cinema-design .shell-footer {
+  background: var(--surface);
+}
+.cinema-design .shell-footer-links h2 {
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 12px;
+}
+.cinema-design .shell-footer-brand p {
+  font-weight: 500;
+}
+:is(.account-dialog, .site-settings-dialog, .review-drawer, .mobile-sheet) {
+  border-color: var(--border-hi);
+  box-shadow:
+    var(--frame-edge),
+    0 28px 80px var(--shadow);
+}
+/* Main stage: real imagery is the visual, the right-hand bento is interactive. */
+.home-welcome {
+  gap: 24px;
+  align-items: flex-end;
+  margin: 0 0 30px;
+}
+.cinema-design .home-welcome h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(32px, 3.8vw, 54px);
+  font-weight: 550;
+  letter-spacing: -0.055em;
+  line-height: 1.03;
+  margin: 15px 0 15px;
+  text-wrap: balance;
+}
+.cinema-design .home-welcome h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+.cinema-design .home-welcome p {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 670px;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.cinema-design .home-welcome .date-pill {
+  border-radius: 40px;
+  background: transparent;
+  font-size: 10px;
+  padding: 10px 14px;
+}
+.home-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.49fr);
+  gap: 18px;
+  align-items: stretch;
+}
+.cinema-design .home-stage .hero {
+  min-width: 0;
+  height: auto;
+  min-height: 570px;
+  border: 1px solid #ffffff20;
+  border-radius: 24px;
+  box-shadow: none;
+  margin: 0;
+  background-position: center;
+  isolation: isolate;
+}
+.cinema-design .home-stage .hero-content {
+  padding: 26px;
+  min-height: 380px;
+  gap: 65px;
+  background: none;
+}
+.cinema-design .hero h2 {
+  font-family: var(--font-heading);
+  font-size: clamp(30px, 3.2vw, 46px);
+  font-weight: 550;
+  letter-spacing: -0.045em;
+  line-height: 1.04;
+  color: #fafbf7;
+  -webkit-text-fill-color: #fafbf7;
+  background: none;
+  text-shadow: none;
+  animation: none;
+  max-width: 540px;
+}
+.cinema-design .hero h2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.cinema-design .hero:hover h2 {
+  transform: none;
+  text-shadow: none;
+}
+.cinema-design .hero .hero-bottom > p {
+  color: #d4dad5;
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 440px;
+}
+.cinema-design .hero .hero-tag {
+  font-family: var(--font);
+  color: #eff5ed;
+  background: #18231f80;
+  border: 1px solid #ffffff30;
+  border-radius: 30px;
+  padding: 8px 11px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+  backdrop-filter: blur(12px);
+}
+.cinema-design .hero .hero-topline {
+  color: #c4e2cd;
+  font-size: 8px;
+  letter-spacing: 0.15em;
+}
+.cinema-design .hero .hero-meta {
+  color: #e3e8e4;
+  font-size: 11px;
+}
+.cinema-design .hero .hero-icon-btn {
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 #fff3;
+}
+.cinema-design .hero .hero-grain {
+  opacity: 0.025;
+}
+.cinema-design .hero .hero-corner {
+  display: none;
+}
+.cinema-design .home-stage .hero-stats {
+  gap: 0;
+  margin: 0 24px 22px;
+  padding-top: 16px;
+  border-top: 1px solid #ffffff26;
+}
+.cinema-design .hero-stat {
+  min-width: 0;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.cinema-design .hero-stat + .hero-stat {
+  border-left: 1px solid #ffffff26;
+}
+.cinema-design .hero-stat-icon {
+  display: none;
+}
+.cinema-design .hero-stat dd {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 500;
+}
+.cinema-design .hero-stat dt {
+  color: #c4cec7;
+  font-size: 9px;
+}
+.cinema-design .cine-day-banner {
+  border: 1px solid var(--border-hi);
+  border-radius: 16px;
+  background: var(--frame-panel);
+  box-shadow: var(--frame-edge);
+  margin-top: 16px;
+}
+.cinema-design .editorial-feature {
+  border-radius: 22px;
+  border-color: #ffffff20;
+}
+.cinema-design .roulette-banner {
+  border-radius: 22px;
+  background: var(--frame-panel);
+  box-shadow: var(--frame-edge);
+  border-color: var(--border-hi);
+}
+.cinema-design .roulette-banner h3 {
+  font-size: clamp(23px, 2.5vw, 34px);
+  font-weight: 600;
+}
+.cinema-design .roulette-orbit {
+  animation: none;
+  border-radius: 24px;
+  border-color: var(--border-hi);
+  box-shadow: var(--frame-edge);
+}
+.cinema-design .banner-decoration {
+  opacity: 0.05;
+}
+/* Mood console / all content comes from the actual catalog. */
+.evening-discovery {
+  position: relative;
+  min-width: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  border: 1px solid var(--border-hi);
+  background: var(--frame-panel);
+  box-shadow: var(--frame-edge);
+}
+.evening-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.evening-heading .eyebrow {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+.evening-orbit {
+  color: var(--accent);
+  font-size: 27px;
+  font-weight: 300;
+  line-height: 1;
+}
+.evening-intro {
+  margin: 20px 0;
+}
+.evening-intro h2 {
+  font-size: clamp(26px, 2.3vw, 34px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.08;
+}
+.evening-intro h2 em {
+  color: var(--accent);
+  font-style: normal;
+}
+.evening-intro p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+  margin-top: 12px;
+}
+.evening-moods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.evening-moods button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-content: space-between;
+  gap: 10px 5px;
+  text-align: left;
+  min-height: 78px;
+  padding: 11px;
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.evening-moods button svg {
+  grid-column: 1;
+  color: var(--muted);
+}
+.evening-moods button span {
+  grid-column: 1/-1;
+  grid-row: 2;
+  font-size: 10px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+.evening-moods button small {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 9px;
+  color: var(--subtle);
+}
+.evening-moods button:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.evening-moods button[aria-pressed="true"] {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+}
+.evening-moods button[aria-pressed="true"] :is(svg, small) {
+  color: var(--accent);
+}
+.evening-result-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  min-height: 43px;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.evening-result-heading button {
+  font-size: 9px;
+  color: var(--accent);
+  min-height: 30px;
+  padding: 3px 0 3px 8px;
+}
+.evening-result {
+  min-width: 0;
+  padding: 12px;
+  background: color-mix(in srgb, var(--bg) 48%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+.evening-film {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  border-radius: 8px;
+}
+:root .evening-poster.material-cover {
+  width: 68px;
+  border-radius: 8px;
+}
+.evening-film-copy {
+  min-width: 0;
+}
+.evening-film-copy > small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.evening-film h3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 5px 0;
+}
+.evening-film-score {
+  color: var(--gold);
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.evening-film-open {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  color: var(--accent);
+  font-size: 9px;
+}
+.evening-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 34px;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding: 10px 0 0;
+}
+.evening-next:not(:disabled):hover {
+  color: var(--accent);
+}
+.evening-empty {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  min-height: 170px;
+  color: var(--muted);
+  gap: 10px;
+  margin-bottom: 18px;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.evening-empty > svg {
+  color: var(--accent);
+}
+.evening-empty button {
+  padding: 8px 0;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.evening-catalog {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-hi);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 2px;
+}
+.evening-catalog:hover {
+  color: var(--accent);
+}
+/* Remove the old staggered/bouncing entrances. Feedback stays local to the action. */
+.cinema-design
+  :is(
+    .content,
+    .content > *,
+    .home-section,
+    .challenge-card,
+    .game-card,
+    .hero-content,
+    .hero-tag,
+    .hero-bottom,
+    .hero-meta,
+    .hero-buttons,
+    .hero-topline,
+    .nav-item small
+  ) {
+  animation: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .evening-film-copy {
+    animation: frame-reveal 240ms var(--frame-ease) both;
+  }
+  @keyframes frame-reveal {
+    from {
+      opacity: 0.3;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+@media (max-width: 1200px) {
+  .home-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .evening-discovery {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 24px;
+  }
+  .evening-heading,
+  .evening-intro,
+  .evening-moods {
+    grid-column: 1;
+  }
+  .evening-result-heading {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+  }
+  .evening-result,
+  .evening-empty {
+    grid-column: 2;
+    grid-row: 2/4;
+    margin-bottom: 0;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .evening-catalog {
+    grid-column: 1/-1;
+    margin-top: 20px;
+  }
+  .evening-film {
+    grid-template-columns: 85px minmax(0, 1fr);
+  }
+  :root .evening-poster.material-cover {
+    width: 85px;
+  }
+  .cinema-design .home-stage .hero {
+    min-height: 510px;
+  }
+}
+@media (min-width: 1201px) and (max-width: 1390px) {
+  .home-stage {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 14px;
+  }
+  .evening-discovery {
+    padding: 20px;
+  }
+  .cinema-design .home-stage .hero-content {
+    padding: 24px;
+  }
+}
+@media (max-width: 760px) {
+  .cinema-design .content {
+    padding-top: 24px;
+  }
+  .cinema-design .home-welcome {
+    margin-bottom: 24px;
+  }
+  .cinema-design .home-welcome h1 {
+    font-size: clamp(31px, 6.7vw, 43px);
+  }
+  .cinema-design .home-welcome p {
+    font-size: 11px;
+  }
+  .cinema-design .home-stage .hero {
+    min-height: 470px;
+    border-radius: 20px;
+  }
+  .cinema-design .home-stage .hero-content {
+    padding: 22px;
+    min-height: 330px;
+    gap: 46px;
+  }
+  .cinema-design .hero h2 {
+    font-size: clamp(30px, 7vw, 44px);
+  }
+  .cinema-design .home-stage .hero-stats {
+    margin: 0 16px 18px;
+  }
+  .cinema-design .hero-stat {
+    padding: 3px 6px;
+  }
+  .cinema-design .hero-stat dd {
+    font-size: 18px;
+  }
+  .cinema-design .hero-stat dt {
+    font-size: 8px;
+  }
+  .cinema-design .topbar,
+  .cinema-design .mobile-bottom-nav {
+    backdrop-filter: none;
+    background: var(--sidebar);
+  }
+  .cinema-design .mobile-bottom-nav {
+    border-color: var(--border-hi);
+    box-shadow: 0 -8px 28px var(--shadow);
+  }
+  .cinema-design .mobile-tab-icon {
+    border-radius: 12px;
+  }
+  .evening-discovery {
+    border-radius: 20px;
+    padding: 20px;
+  }
+  .cinema-design .shell-footer {
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .evening-discovery {
+    display: flex;
+    gap: 0;
+  }
+  .evening-intro {
+    margin: 15px 0 20px;
+  }
+  .evening-intro h2 {
+    font-size: 30px;
+  }
+  .evening-moods button {
+    min-height: 76px;
+  }
+  .evening-moods button span {
+    font-size: 11px;
+  }
+  .evening-result-heading {
+    margin-top: 8px;
+  }
+  .evening-result,
+  .evening-empty {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .evening-film {
+    grid-template-columns: 70px minmax(0, 1fr);
+  }
+  :root .evening-poster.material-cover {
+    width: 70px;
+  }
+  .evening-catalog {
+    margin-top: 4px;
+    min-height: 48px;
+  }
+  .evening-next {
+    min-height: 44px;
+  }
+  .cinema-design
+    :is(
+      .page-heading,
+      .showcase-page-heading,
+      .showtimes-heading,
+      .material-top-heading,
+      .ranking-library-hero
+    )
+    h1 {
+    font-size: 32px;
+  }
+  .cinema-design .filter-bar {
+    padding: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cinema-design *,
+  .cinema-design *::before,
+  .cinema-design *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .cinema-design .sidebar,
+  .cinema-design .topbar {
+    background: var(--sidebar);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cinema-design .sidebar,
+  .cinema-design .topbar {
+    background: var(--sidebar);
+    backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  .cinema-design
+    :is(
+      .sidebar,
+      .topbar,
+      .evening-discovery,
+      .evening-moods button,
+      .evening-result,
+      .primary-btn,
+      .outline-btn
+    ) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+  .evening-moods button[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+  }
+}
+
+/* Directional feedback without moving cards, imagery or hit targets. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :is(.evening-catalog, .game-launch) > svg {
+    transition: transform 180ms var(--frame-ease);
+  }
+  .evening-catalog:hover > svg,
+  .game-card:hover .game-launch > svg {
+    transform: translateX(3px);
+  }
+}
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+:root[data-theme="light"] ::selection {
+  color: #fff;
+}

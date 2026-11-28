@@ -2,6 +2,7 @@
 
 import CinemaRoulette from './cinema-roulette';
 import CineDayBanner from './cine-day-banner';
+import EveningDiscovery from './evening-discovery';
 import type { CineDay } from '@/lib/cine-day';
 import { HeaderLocation } from './city-cinema';
 import ShowtimesPage from './showtimes-page';
@@ -690,7 +691,7 @@ const sidebarGroups = [
 return (
   <WatchedIdsContext.Provider value={watchedIds}>
     <FavoriteIdsContext.Provider value={{ ids: favoriteIds, toggle: toggleFavorite, isAuthenticated: !!data.user,  }}>
-      <div className={`app-shell shell-navigation ${filmId ? 'has-cinema-atmosphere' : ''}`} data-sidebar={sidebar.layout} data-sidebar-compact={sidebar.compact} data-live={liveStatus} data-hud-busy={hudPending > 0 || loading}>
+      <div className={`app-shell shell-navigation cinema-design ${filmId ? 'has-cinema-atmosphere' : ''}`} data-sidebar={sidebar.layout} data-sidebar-compact={sidebar.compact} data-live={liveStatus} data-hud-busy={hudPending > 0 || loading}>
         <a className="skip-navigation" href="#main-content" onClick={event => {
           event.preventDefault();
           const main = document.getElementById('main-content');
@@ -1173,23 +1174,27 @@ const rating = data.ratings.find(x => x.movieId === f.id);
   });
 };
 
-  if (!featured) return null;
+  if (!featured) return <div className="home-stage">
+    <section className="empty-state"><Sparkles size={32} /><h1>{en ? 'Every story starts somewhere.' : 'У каждой истории есть начало.'}</h1><p>{en ? 'The catalog is taking shape. New cinema discoveries will appear here.' : 'Каталог пока пуст. Здесь появятся новые истории и кинооткрытия.'}</p><button type="button" className="primary-btn" onClick={() => go('/catalog')}>{en ? 'Open catalog' : 'Открыть каталог'}<ArrowRight size={16}/></button></section>
+    <EveningDiscovery films={films} go={go} en={en} />
+  </div>;
 
   return (
     <>
-      <div className="welcome-line">
+      <div className="welcome-line home-welcome">
         <div>
-          <span className="eyebrow"><span className="pulse-dot" /> {en ? 'YOUR CINEMATIC UNIVERSE STARTS HERE' : 'ТВОЯ КИНОВСЕЛЕННАЯ НАЧИНАЕТСЯ ЗДЕСЬ'}</span>
-          <h1>{en ? 'Welcome back' : 'Добро пожаловать'}{data.user ? `, ${data.user.username}` : ''}<span className="muted-h1">.</span></h1>
-          <p>{en ? 'Discover stories, collect moments, find your next favorite.' : 'Открывай истории, сохраняй впечатления, находи своё кино.'}</p>
+          <span className="eyebrow"><span className="pulse-dot" /> {en ? 'CINEMA. PEOPLE. DISCOVERIES.' : 'КИНО. ЛЮДИ. ОТКРЫТИЯ.'}</span>
+          <h1>{en ? 'Beyond the screen.' : 'За пределами кадра.'}<br /><em>{en ? 'Into your story.' : 'Ближе к твоей истории.'}</em></h1>
+          <p>{data.user ? (en ? `Welcome back, ${data.user.username}. ` : `С возвращением, ${data.user.username}. `) : ''}{en ? 'Discover stories. Save what moves you. Share the feeling.' : 'Находи новое. Сохраняй любимое. Разделяй впечатления.'}</p>
         </div>
         <span className="date-pill"><CalendarDays size={15} />{new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
       </div>
 
+      <div className="home-stage">
       <div className="hero" style={{ backgroundImage: `linear-gradient(90deg,rgba(8,10,15,.97) 0%,rgba(8,10,15,.81) 37%,rgba(8,10,15,.16) 83%),linear-gradient(0deg,rgba(8,10,15,.52),transparent 50%),url('${featured.backdrop || featured.poster}')` }}>
         <div className="hero-grain" />
         <div className="hero-content">
-          <span className="hero-tag"><span className="pulse-dot" /> В ЦЕНТРЕ ВНИМАНИЯ <span className="tag-line" /> 01 / 05</span>
+          <span className="hero-tag"><span className="pulse-dot" /> {en ? 'IN THE SPOTLIGHT' : 'В ЦЕНТРЕ ВНИМАНИЯ'} <span className="tag-line" /> moviemovie selection</span>
           <div className="hero-bottom">
             <div className="hero-topline"><span>{en ? 'THE NEXT CHAPTER OF YOUR STORY' : 'НОВЫЙ ЭПИЗОД ТВОЕЙ ИСТОРИИ'}</span><span>✦</span></div>
             <h2>{featured.title}</h2>
@@ -1213,6 +1218,9 @@ const rating = data.ratings.find(x => x.movieId === f.id);
           watchesCount={data.user ? data.watches.length : null}
           en={en}
         />
+      </div>
+
+      <EveningDiscovery films={films} go={go} en={en} />
       </div>
 
       <CineDayBanner films={films} initialTag={data.cineDay?.filter} go={go} en={en}/>
