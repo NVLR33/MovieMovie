@@ -11,6 +11,8 @@ import CinemaNavigation from './cinema-navigation';
 import CinemaHomeStage from './cinema-home-stage';
 import CatalogScreening from './catalog-screening';
 import { CommunityDirectory, CommunityNavigation } from './community-cinema';
+import CinemaChat, { CinemaChatDrawer } from './cinema-chat';
+import CinemaComparison from './cinema-comparison';
 import PersonalLibrary, { PersonalNextEvening, PersonalShelves } from './personal-cinema';
 import MovieQuickView, { useMovieQuickView } from './movie-quick-view';
 import { previewMovieId } from '@/lib/cinema-spaces';
@@ -86,7 +88,6 @@ import HiddenTrophies from './hidden-trophies';
 import UserTitleStudio, { UserTitleBadge } from './user-titles';
 import { progressionTitle, type UserTitleCollection, type UserTitleDisplay } from '@/lib/user-titles';
 import type { UnlockedHiddenAchievement } from '@/lib/hidden-achievement-types';
-import { useJsonResource } from './use-json-resource';
 import ShareCenter, { type ShareContent } from './share-modal';
 const AdminWorkspace = React.lazy(() => import('./admin-workspace'));
 const WorldCinema = React.lazy(() => import('./world-cinema'));
@@ -130,8 +131,6 @@ type Friend = { id: number; fromId: number; toId: number; status: string; };
 type Notice = { id: number; message: string; link: string | null; read: boolean; createdAt: string; };
 type Leader = Person & { watches: number; minutes: number; streak: number; ratings: number; gameScore: number; };
 type FriendActivity = { id: number; username: string; avatar: string | null; watches: number; minutes: number; lastWatch: string | null; commonFilms: number; };
-type ChatConversation = { peer: { id: number; username: string; avatar: string | null; role: string; xp: number | null; }; lastMessage: string; lastMessageAt: string; unread: number; hasFilm: boolean; };
-type ChatMessage = { id: number; fromId: number; toId: number; body: string; movieId: number | null; read: boolean; createdAt: string; film: { id: number; title: string; poster: string; year: number; category: string; } | null; };
 type ProfileData = {
   profile: User;
   stats: {
@@ -828,12 +827,12 @@ return (
               : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
               : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
               : active === 'viewuser' ? <ViewUserProfile key={`${viewUserId}:${data.user?.id ?? 'guest'}`} userId={viewUserId} data={data} go={browseGo} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
-              : active === 'compare' ? <ComparePage key={compareId} data={data} compareId={compareId} go={browseGo} auth={() => setAuthOpen(true)} />
+              : active === 'compare' ? <ComparePage key={`${compareId}:${data.user?.id || 'guest'}`} data={data} compareId={compareId} go={browseGo} auth={() => setAuthOpen(true)} />
               : active === 'wrapped' ? <WrappedPage data={data} go={browseGo} auth={() => setAuthOpen(true)} />
               : active === 'collab' ? <CollectionShowcase films={data.films} go={browseGo} watchedIds={watchedIds} signedIn={!!data.user} personal={<CollabLists data={data} go={browseGo} action={action} auth={() => setAuthOpen(true)} />} />
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
               : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-              : active === 'chat' ? <ChatPage data={data} go={go} openChat={openChat} auth={() => setAuthOpen(true)} />
+              : active === 'chat' ? <ChatPage initialPeer={Number(searchParams.get('with')) || null} data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'admin' ? <React.Suspense fallback={<p role="status">Загружаем центр управления…</p>}><AdminWorkspace data={data} go={go} action={action} edit={setEditFilm} review={setReviewSuggestion} refresh={refresh} /></React.Suspense>
               : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
               : <div className="empty-state"><h1>Страница не найдена</h1><button className="primary-btn" onClick={() => go('/')}>На главную</button></div>
@@ -910,7 +909,6 @@ return (
       setChatOpen(false);
       setChatPeerId(null);
     }}
-    notify={notify}
   />
 )}
 
@@ -3621,318 +3619,19 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
   );
 }
 
-function ChatPage({ data, go, openChat, auth }: { data: Data; go: (s: string) => void; openChat: (id: number) => void; auth: () => void; }) {
-  const [activePeer, setActivePeer] = useState<number | null>(null);
-  const [text, setText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [shareSearch, setShareSearch] = useState('');
-  const [shareOpen, setShareOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const [inbox, loadInbox] = useJsonResource<{ conversations: ChatConversation[] }>(data.user ? '/api/chat' : null);
-  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>(activePeer ? '/api/chat?with=' + activePeer : null);
-  const conversations = inbox?.conversations || [];
-  const thread = conversation?.messages || [];
-  const lastMessageId = thread[thread.length - 1]?.id;
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [lastMessageId]);
-
-  const sendMessage = async (movieId?: number) => {
-    if (!activePeer) return;
-    if (!text.trim() && !movieId) return;
-    setSending(true);
-    try {
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toId: activePeer, text: text.trim() || '', movieId: movieId || null }) });
-      if (!response.ok) return;
-      setText(''); setShareOpen(false); loadThread(); loadInbox();
-    } catch { } finally { setSending(false); }
-  };
-
-  const peer = activePeer ? data.people.find(p => p.id === activePeer) : null;
-  const acceptedFriendIds = data.friends.filter(f => f.status === 'accepted').map(f => f.fromId === data.user?.id ? f.toId : f.fromId);
-  const friendsWithoutConvo = data.people.filter(p => acceptedFriendIds.includes(p.id) && !conversations.some(c => c.peer.id === p.id));
-  const shareFilms = data.films.filter(f => !shareSearch || f.title.toLowerCase().includes(shareSearch.toLowerCase())).slice(0, 6);
-
+function ChatPage({ data, go, auth, initialPeer }: { data: Data; go: (s: string) => void; auth: () => void; initialPeer: number | null; }) {
   if (!data.user) return <Gate title="Общайся с друзьями" description="Войди, чтобы писать друзьям и делиться впечатлениями." auth={auth} />;
-
-  return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">КИНОБЕСЕДЫ</span><h1>Личные <em>сообщения.</em></h1><p>Обсуждай кино с друзьями и делись впечатлениями.</p></div>
-        <div className="heading-count"><MessageCircle size={18} />{conversations.length} диалогов</div>
-      </div>
-
-      <div className="chat-layout">
-        <div className="chat-sidebar">
-          <div className="chat-sidebar-head"><h3>Диалоги</h3><span>{conversations.reduce((n, c) => n + c.unread, 0)} непрочит.</span></div>
-          {conversations.map(c => (
-            <button key={c.peer.id} className={`chat-contact ${activePeer === c.peer.id ? 'active' : ''}`} onClick={() => setActivePeer(c.peer.id)}>
-              <Avatar name={c.peer.username} src={c.peer.avatar} size={42} />
-              <div className="chat-contact-info">
-                <b>{c.peer.username}</b><small>{c.hasFilm ? '📎 ' : ''}{c.lastMessage}</small>
-              </div>
-              {c.unread > 0 && <span className="chat-unread">{c.unread}</span>}
-              <span className="chat-time">{new Date(c.lastMessageAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span>
-            </button>
-          ))}
-
-          {friendsWithoutConvo.length > 0 && (
-            <>
-              <div className="chat-sidebar-divider">Начать диалог</div>
-              {friendsWithoutConvo.map(p => (
-                <button key={p.id} className="chat-contact" onClick={() => setActivePeer(p.id)}>
-                  <Avatar name={p.username} src={p.avatar} size={42} />
-                  <div className="chat-contact-info"><b>{p.username}</b><small>Нет сообщений</small></div>
-                </button>
-              ))}
-            </>
-          )}
-
-          {conversations.length === 0 && friendsWithoutConvo.length === 0 && (
-            <div className="chat-empty-sidebar">
-              <MessageCircle size={28} />
-              <p>Добавь друзей, чтобы начать общение</p>
-              <button className="outline-btn small" onClick={() => go('/friends')}>Найти друзей</button>
-            </div>
-          )}
-        </div>
-
-        <div className="chat-main">
-          {activePeer && peer ? (
-            <>
-              <div className="chat-header">
-                <button className="chat-header-user" onClick={() => go('/user/' + peer.id)}>
-                  <Avatar name={peer.username} src={peer.avatar} size={38} />
-                  <div><b>{peer.username}</b><small>{peer.role === 'admin' ? 'Администратор' : peer.role === 'vip' ? 'VIP участник' : `Уровень ${Math.floor((peer.xp || 0) / 500) + 1}`}</small></div>
-                </button>
-                <button className="outline-btn small" onClick={() => go('/user/' + peer.id)}><Eye size={14} /> Профиль</button>
-              </div>
-
-              <div className="chat-messages" ref={scrollRef}>
-                {thread.map(m => (
-                  <div key={m.id} className={`chat-bubble ${m.fromId === data.user?.id ? 'mine' : 'theirs'}`}>
-                    <div className="bubble-body">
-                      <p>{m.body}</p>
-                      {m.film && (
-                        <button className="shared-film-card" onClick={() => go('/movie/' + m.film!.id)}>
-                          <PosterThumb film={m.film!} movieId={m.film!.id} src={m.film!.poster} alt="" />
-                          <div><b>{m.film!.title}</b><small>{m.film!.year} · {m.film!.category}</small></div>
-                          <ArrowUpRight size={14} />
-                        </button>
-                      )}
-                    </div>
-                    <span className="bubble-time">
-                      {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                      {m.fromId === data.user?.id && <>{m.read ? ' ✓✓' : ' ✓'}</>}
-                    </span>
-                  </div>
-                ))}
-                {thread.length === 0 && <div className="chat-empty-thread"><Sparkles size={28} /><p>Напиши первое сообщение!</p></div>}
-              </div>
-
-              <div className="chat-compose">
-                {shareOpen && (
-                  <div className="chat-share-panel">
-                    <div className="chat-share-head"><b>Поделиться фильмом</b><button onClick={() => setShareOpen(false)}><X size={16} /></button></div>
-                    <input value={shareSearch} onChange={e => setShareSearch(e.target.value)} placeholder="Поиск фильма..." />
-                    <div className="chat-share-list">
-                      {shareFilms.map(f => (
-                        <button key={f.id} onClick={() => sendMessage(f.id)} className="chat-share-item">
-                          <PosterThumb film={f} movieId={f.id} src={f.poster} alt="" />
-                          <div><b>{f.title}</b><small>{f.year} · ★ {formatFilmRating(f)}</small></div>
-                          <Send size={14} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="chat-input-row">
-                  <button className="chat-attach-btn" onClick={() => setShareOpen(!shareOpen)} title="Поделиться фильмом"><Film size={19} /></button>
-                  <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Написать сообщение..." />
-                  <button className="chat-send-btn" disabled={sending || (!text.trim())} onClick={() => sendMessage()}><Send size={18} /></button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="chat-placeholder">
-              <MessageCircle size={40} />
-              <h3>Выбери собеседника</h3>
-              <p>Кликни на контакт слева, чтобы начать разговор.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
+  return <CinemaChat key={`${data.user.id}:${initialPeer}`} initialPeer={initialPeer} viewerId={data.user.id} people={data.people} relations={data.friends} films={data.films} go={go} avatar={(person,size)=><Avatar name={person.username} src={person.avatar} size={size}/>} poster={film=><PosterThumb film={film} movieId={film.id} src={film.poster} alt=""/>}/>;
 }
 
-function ChatDrawer({ peerId, data, go, close, notify }: { peerId: number; data: Data; go: (s: string) => void; close: () => void; notify: (s: string) => void; }) {
-  const [text, setText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [shareSearch, setShareSearch] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const peer = data.people.find(p => p.id === peerId);
-
-  const [conversation, loadThread] = useJsonResource<{ messages: ChatMessage[] }>('/api/chat?with=' + peerId);
-  const thread = conversation?.messages || [];
-  const lastMessageId = thread[thread.length - 1]?.id;
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [lastMessageId]);
-
-  const sendMessage = async (movieId?: number) => {
-    if (!text.trim() && !movieId) return;
-    setSending(true);
-    try {
-      const r = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toId: peerId, text: text.trim() || '', movieId: movieId || null })
-      });
-      if (r.ok) {
-        setText(''); setShareOpen(false); await loadThread();
-      } else {
-        const d = await r.json(); notify(d.error || 'Ошибка');
-      }
-    } catch {
-      notify('Ошибка отправки');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const shareFilms = data.films.filter(f => !shareSearch || f.title.toLowerCase().includes(shareSearch.toLowerCase())).slice(0, 5);
-
-  if (!peer) return null;
-
-  return (
-    <div className="chat-drawer">
-      <div className="chat-drawer-header">
-        <button className="chat-header-user" onClick={() => { close(); go('/user/' + peer.id); }}>
-          <Avatar name={peer.username} src={peer.avatar} size={34} />
-          <div><b>{peer.username}</b><small>Личный чат</small></div>
-        </button>
-        <div className="chat-drawer-actions">
-          <button onClick={() => { close(); go('/chat'); }} title="Открыть полный чат"><ExternalLink size={16} /></button>
-          <button onClick={close}><X size={18} /></button>
-        </div>
-      </div>
-
-      <div className="chat-messages chat-drawer-messages" ref={scrollRef}>
-        {thread.map(m => (
-          <div key={m.id} className={`chat-bubble ${m.fromId === data.user?.id ? 'mine' : 'theirs'}`}>
-            <div className="bubble-body">
-              <p>{m.body}</p>
-              {m.film && (
-                <button className="shared-film-card" onClick={() => { close(); go('/movie/' + m.film!.id); }}>
-                  <PosterThumb film={m.film!} movieId={m.film!.id} src={m.film!.poster} alt="" />
-                  <div><b>{m.film!.title}</b><small>{m.film!.year} · {m.film!.category}</small></div>
-                  <ArrowUpRight size={14} />
-                </button>
-              )}
-            </div>
-            <span className="bubble-time">{new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-        ))}
-        {thread.length === 0 && <div className="chat-empty-thread"><Sparkles size={24} /><p>Начни разговор!</p></div>}
-      </div>
-
-      <div className="chat-compose">
-        {shareOpen && (
-          <div className="chat-share-panel drawer-share">
-            <div className="chat-share-head"><b>Поделиться</b><button onClick={() => setShareOpen(false)}><X size={14} /></button></div>
-            <input value={shareSearch} onChange={e => setShareSearch(e.target.value)} placeholder="Поиск..." />
-            <div className="chat-share-list">
-              {shareFilms.map(f => (
-                <button key={f.id} onClick={() => sendMessage(f.id)} className="chat-share-item">
-                  <PosterThumb film={f} movieId={f.id} src={f.poster} alt="" />
-                  <div><b>{f.title}</b><small>★ {formatFilmRating(f)}</small></div>
-                  <Send size={13} />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="chat-input-row">
-          <button className="chat-attach-btn" onClick={() => setShareOpen(!shareOpen)}><Film size={17} /></button>
-          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Сообщение..." />
-          <button className="chat-send-btn" disabled={sending || (!text.trim())} onClick={() => sendMessage()}><Send size={16} /></button>
-        </div>
-      </div>
-    </div>
-  );
+function ChatDrawer({ peerId, data, go, close }: { peerId: number; data: Data; go: (s: string) => void; close: () => void; }) {
+  if (!data.user) return null;
+  return <CinemaChatDrawer key={`${data.user.id}:${peerId}`} peerId={peerId} close={close} viewerId={data.user.id} people={data.people} relations={data.friends} films={data.films} go={go} avatar={(person,size)=><Avatar name={person.username} src={person.avatar} size={size}/>} poster={film=><PosterThumb film={film} movieId={film.id} src={film.poster} alt=""/>}/>;
 }
 
 function ComparePage({ data, compareId, go, auth }: { data: Data; compareId: number; go: (s: string) => void; auth: () => void; }) {
-  const [compData, setCompData] = useState<ProfileData | null>(null);
-  const [compareError, setCompareError] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    // Reset for a newly mounted comparison; failed requests must not spin forever.
-    fetch('/api/profile?id=' + compareId, { signal: controller.signal, cache: 'no-store' }).then(async response => {
-      if (!response.ok) throw new Error();
-      const snapshot = await response.json();
-      if (!controller.signal.aborted) { setCompData(snapshot.profile ? snapshot : null); setCompareError(!snapshot.profile); }
-    }).catch(() => { if (!controller.signal.aborted) { setCompData(null); setCompareError(true); } });
-    return () => controller.abort();
-  }, [compareId]);
-
   if (!data.user) return <Gate title="Битва вкусов" description="Войди, чтобы сравнить свои вкусы с друзьями." auth={auth} />;
-  if (!compData) return <div className="empty-state">{compareError ? 'Не удалось загрузить сравнение. Проверь подключение или выбери другого пользователя.' : 'Загрузка...'}</div>;
-
-  const myRatingsMap = new Map(data.ratings.map(r => [r.movieId, r.value]));
-  const disputes = compData.ratings
-    .filter(r => myRatingsMap.has(r.movieId))
-    .map(r => ({ film: data.films.find(f => f.id === r.movieId), my: myRatingsMap.get(r.movieId)!, their: r.value }))
-    .sort((a, b) => Math.abs(b.my - b.their) - Math.abs(a.my - a.their))
-    .slice(0, 5);
-
-  const agreements = compData.ratings
-    .filter(r => myRatingsMap.has(r.movieId) && Math.abs(r.value - myRatingsMap.get(r.movieId)!) <= 1 && r.value >= 8)
-    .map(r => ({ film: data.films.find(f => f.id === r.movieId), my: myRatingsMap.get(r.movieId)!, their: r.value }))
-    .slice(0, 5);
-
-  return (
-    <>
-      <button className="back-link" onClick={() => go('/user/' + compareId)}>← Назад к профилю</button>
-      <div className="page-heading">
-        <div><span className="eyebrow">КИНО-БАТТЛ ДРУЗЕЙ</span><h1>Сравнение вкусов.</h1><p>Ты и {compData.profile.username}</p></div>
-      </div>
-
-      <div className="compare-section">
-        <SectionTitle title="Главные споры" />
-        {disputes.length ? disputes.map((d, i) => (
-          <div key={i} className="compare-row">
-            <PosterThumb film={d.film || undefined} movieId={d.film?.id} src={d.film?.poster} alt="" />
-            <div className="compare-info"><b>{d.film?.title}</b></div>
-            <div className="compare-scores">
-              <div className="mine"><span>Ты</span><b>{d.my}</b></div>
-              <div className="theirs"><span>Они</span><b>{d.their}</b></div>
-            </div>
-          </div>
-        )) : <p className="muted">Нет общих оценок для споров.</p>}
-      </div>
-
-      <div className="compare-section">
-        <SectionTitle title="Единодушие" />
-        {agreements.length ? agreements.map((d, i) => (
-          <div key={i} className="compare-row">
-            <PosterThumb film={d.film || undefined} movieId={d.film?.id} src={d.film?.poster} alt="" />
-            <div className="compare-info"><b>{d.film?.title}</b></div>
-            <div className="compare-scores">
-              <div className="mine"><span>Ты</span><b>{d.my}</b></div>
-              <div className="theirs"><span>Они</span><b>{d.their}</b></div>
-            </div>
-          </div>
-        )) : <p className="muted">Пока нет совпадений.</p>}
-      </div>
-    </>
-  );
+  return <CinemaComparison viewer={data.user} compareId={compareId} ratings={data.ratings} films={data.films} go={go} avatar={(person,size)=><Avatar name={person.username} src={person.avatar} size={size}/>} poster={film=><PosterThumb film={film} movieId={film.id} src={film.poster} alt=""/>}/>;
 }
 
 /* ============================================
