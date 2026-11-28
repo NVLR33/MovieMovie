@@ -14,6 +14,9 @@ import { CommunityDirectory, CommunityNavigation } from './community-cinema';
 import CinemaChat, { CinemaChatDrawer } from './cinema-chat';
 import CinemaComparison from './cinema-comparison';
 import {CinemaLocalRoom,CinemaRoomLobby} from './cinema-room';
+import {gameModes,buildPracticeRound,type PracticeQuestion} from '@/lib/cinema-practice';
+import {GameLobby,PlayNavigation,PracticeDialog} from './cinema-play';
+import {achievementState,selectAchievements,nearestAchievement,challengeCatalogPath} from '@/lib/cinema-progression';
 import PersonalLibrary, { PersonalNextEvening, PersonalShelves } from './personal-cinema';
 import MovieQuickView, { useMovieQuickView } from './movie-quick-view';
 import { previewMovieId } from '@/lib/cinema-spaces';
@@ -824,7 +827,7 @@ return (
               : active === 'leaderboard' ? <Leaderboard data={data} go={go} />
               : active === 'achievements' ? <Achievements data={data} auth={() => setAuthOpen(true)} go={go} />
               : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-              : active === 'games' ? <Games films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
+              : active === 'games' ? <Games key={data.user?.id || 'guest'} go={go} films={data.films} action={action} user={data.user} auth={() => setAuthOpen(true)} />
               : active === 'friends' ? <Friends data={data} action={action} auth={() => setAuthOpen(true)} go={go} openChat={openChat} />
               : active === 'viewuser' ? <ViewUserProfile key={`${viewUserId}:${data.user?.id ?? 'guest'}`} userId={viewUserId} data={data} go={browseGo} action={action} openChat={openChat} auth={() => setAuthOpen(true)} />
               : active === 'compare' ? <ComparePage key={`${compareId}:${data.user?.id || 'guest'}`} data={data} compareId={compareId} go={browseGo} auth={() => setAuthOpen(true)} />
@@ -2556,109 +2559,386 @@ function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
 }
 
 
-function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s: string) => void; }) {
+function Achievements({
+  data,
+  auth,
+  go,
+}: {
+  data: Data;
+  auth: () => void;
+  go: (s: string) => void;
+}) {
   const [expandedAch, setExpandedAch] = useState<string | null>(null);
-  if (!data.user) return <Gate title="Собирай свою историю" description="Открывай достижения, улучшай их от бронзы до платины и получай награды." auth={auth} />;
+  const [query, setQuery] = useState(''),
+    [category, setCategory] = useState('all'),
+    [scope, setScope] = useState<'all' | 'locked' | 'unlocked' | 'maxed'>(
+      'all',
+    );
+  if (!data.user)
+    return (
+      <Gate
+        title="Собирай свою историю"
+        description="Открывай достижения, улучшай их от бронзы до платины и получай награды."
+        auth={auth}
+      />
+    );
 
   const hiddenAwards = data.hiddenAchievements || [];
-  const unlocked = hiddenAwards.length + achievementDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length;
+  const unlocked =
+    hiddenAwards.length +
+    achievementDefs.filter(
+      (a) => (data.achievementProgress[a.id] ?? 0) >= a.targets[0],
+    ).length;
   const total = achievementDefs.length + hiddenAwards.length;
-  const pct = Math.round(unlocked / total * 100);
-  const cats = [...new Set(achievementDefs.map(a => (a as any).category || 'Прочее'))];
+  const pct = Math.round((unlocked / total) * 100);
+  const cats = [...new Set(achievementDefs.map((a) => a.category))];
+  const visible = selectAchievements(
+    data.achievementProgress,
+    query,
+    category,
+    scope,
+  );
+  const focus = nearestAchievement(data.achievementProgress);
+  const reset = () => {
+    setQuery('');
+    setCategory('all');
+    setScope('all');
+  };
 
   return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">ТВОИ ПОБЕДЫ</span><h1>Коллекция <em>достижений.</em></h1><p>Маленькие победы складываются в большую историю.</p></div>
-        <div className="heading-count"><Award size={19} />{unlocked} / {total} открыто</div>
-      </div>
-
-      <div className="achievement-summary">
-        <span className="achievement-summary-icon">✦</span>
-        <div><h3>Твоя коллекция растёт</h3><p>Каждое из {achievementDefs.length} обычных достижений имеет 4 уровня: Бронза, Серебро, Золото и Платина. Редкость каждого тира зависит от доли владельцев среди всех зарегистрированных пользователей.</p></div>
-        <strong>{pct}%</strong>
-      </div>
-
-      <div className="rarity-guide">
-        <span>Обычная ≥50%</span><span>Необычная ≥20%</span><span>Редкая ≥10%</span><span>Эпическая ≥3%</span><span>Легендарная &lt;3%</span>
-      </div>
-      <p className="collectible-note">Показана доля владельцев открытого тира, а для закрытого достижения — Бронзы. Статистика обычных достижений пересчитывается по текущему прогрессу; их календарные условия считаются по UTC.</p>
-
-      <div className="ach-progress-outer"><div className="ach-progress-inner" style={{ width: pct + '%' }} /></div>
-
-      <div className="ach-cats-row">
-        {cats.map(cat => {
-          const catDefs = achievementDefs.filter(a => (a as any).category === cat);
-          const catUnlocked = catDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length;
-          return <div key={cat} className="ach-cat-pill"><span>{cat}</span><b>{catUnlocked}/{catDefs.length}</b></div>;
-        })}
-      </div>
-
-      <p className="collectible-note">Переворот открывает оформление уже заслуженного трофея на этом устройстве. Награды и XP не начисляются повторно.</p>
-      <HiddenTrophies awards={hiddenAwards} revealUserId={data.user.id} />
-
-      {cats.map(cat => {
-        const catDefs = achievementDefs.filter(a => (a as any).category === cat);
-        return (
-          <div key={cat} className="ach-category-section">
-            <div className="ach-category-header"><h3>{cat}</h3><span>{catDefs.filter(a => (data.achievementProgress[a.id] ?? 0) >= a.targets[0]).length}/{catDefs.length}</span></div>
-            <div className="achievement-grid">
-              {catDefs.map(a => {
-                const value = (data.achievementProgress[a.id] ?? 0);
-                const tier = a.targets.filter(t => value >= t).length;
-                const next = a.targets[Math.min(tier, a.targets.length - 1)];
-                const pctBar = Math.min(100, (value / next) * 100);
-
-                return (
-                  <div
-                    className={`achievement-card ${tier ? 'unlocked' : 'locked'} ${tier === 4 ? 'maxed' : ''} achievement-level-${tier} ${expandedAch === a.id ? 'expanded' : ''}`}
-                    key={a.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={expandedAch === a.id}
-                    onKeyDown={event => {
-                      if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
-                        event.preventDefault(); setExpandedAch(expandedAch === a.id ? null : a.id);
-                      }
-                    }}
-                    onClick={() => setExpandedAch(expandedAch === a.id ? null : a.id)}
-                  >
-                    <div className="achievement-top">
-                      <span className="achievement-icon">{tier ? <AchievementReveal key={`${data.user!.id}:${a.id}:${tier}`} userId={data.user!.id} achievementId={a.id} tier={tier} icon={a.icon} name={`${a.name} · ${ACHIEVEMENT_TIERS[tier - 1]}`} /> : a.icon}</span>
-                      <span className="achievement-tier">{tier ? `${tier === 4 ? '✦ ' : ''}${ACHIEVEMENT_TIERS[tier - 1]}` : 'ЗАКРЫТО'}</span>
-                    </div>
-                    <h3>{a.name}</h3><p>{a.description}</p>
-                    <OwnershipBadge stats={data.achievementStats[a.id]?.[Math.max(0, tier - 1)]} tier={Math.max(1, tier)} />
-
-                    <div className="achievement-progress">
-                      <div><span>{Math.min(value, next)} / {next} {a.unit}</span><b>{tier === 4 ? 'Максимальный уровень' : `Следующий: ${ACHIEVEMENT_TIERS[tier]}`}</b></div>
-                      <div className="bar-track"><i style={{ width: `${pctBar}%` }} /></div>
-                    </div>
-
-                    <div className="tier-dots">{a.targets.map((t, i) => <span key={t} className={value >= t ? 'filled' : ''}>{['I', 'II', 'III', 'IV'][i]}</span>)}</div>
-
-                    {expandedAch === a.id && (
-                      <div className="ach-detail" onClick={e => e.stopPropagation()}>
-                        <div className="ach-tiers-detail">
-                          {a.targets.map((t, i) => (
-                            <div key={i} className={`ach-tier-row ${value >= t ? 'done' : ''}`}>
-                              <span>{ACHIEVEMENT_TIERS[i]}</span><b>{t} {a.unit}</b>
-                              {value >= t ? <Check size={14} /> : <small>{Math.max(0, t - value)} осталось</small>}
-                              <OwnershipBadge stats={data.achievementStats[a.id]?.[i]} tier={i + 1} compact />
-                            </div>
-                          ))}
-                        </div>
-                        <button className="outline-btn small" onClick={() => go(a.id === 'archaeologist' ? '/catalog?category=' + encodeURIComponent('Фильм') + '&year=before1960' : a.id === 'serial_completion' ? '/catalog?category=' + encodeURIComponent('Сериал') : '/catalog')}><Compass size={14} /> Открыть каталог</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+    <section className="cinema-achievements">
+      <PlayNavigation active="achievements" go={go} />
+      <div className="achievement-stage">
+        <header>
+          <span className="eyebrow">ПРОГРЕСС / ЛИЧНАЯ КОЛЛЕКЦИЯ</span>
+          <h1>
+            Не просто значки.
+            <br />
+            <em>Твой путь в кино.</em>
+          </h1>
+          <p>
+            Каждая история оставляет след. Четыре уровня обычных достижений — от
+            Бронзы до Платины — и трофеи, которые раскрываются со временем.
+          </p>
+          <div className="practice-numbers">
+            <div>
+              <b>
+                {unlocked} / {total}
+              </b>
+              <span>открыто, включая скрытые</span>
+            </div>
+            <div>
+              <b>{pct}%</b>
+              <span>коллекции</span>
             </div>
           </div>
-        );
-      })}
-    </>
+        </header>
+        <aside className="achievement-focus">
+          <span className="eyebrow">
+            {focus ? 'БЛИЖЕ К СЛЕДУЮЩЕМУ УРОВНЮ' : 'ВСЕ ОБЫЧНЫЕ УРОВНИ ОТКРЫТЫ'}
+          </span>
+          <span className="achievement-focus-icon">
+            <Trophy size={38} strokeWidth={1.3} />
+          </span>
+          <h2>{focus?.definition.name || 'Большой путь позади.'}</h2>
+          <p>
+            {focus?.definition.description ||
+              'Все обычные достижения достигли максимального уровня. Скрытые трофеи раскрываются по своим условиям.'}
+          </p>
+          {focus && (
+            <>
+              <strong>
+                {focus.value} / {focus.next}{' '}
+                <small>{focus.definition.unit}</small>
+              </strong>
+              <p>
+                Следующий уровень: {ACHIEVEMENT_TIERS[focus.tier]}. Выбран по
+                доле прогресса до следующего порога.
+              </p>
+              <button
+                className="outline-btn"
+                onClick={() => {
+                  setQuery('');
+                  setScope('all');
+                  setCategory(focus.definition.category);
+                  setExpandedAch(focus.definition.id);
+                  requestAnimationFrame(() =>
+                    document
+                      .getElementById('achievement-' + focus.definition.id)
+                      ?.focus(),
+                  );
+                }}
+              >
+                Рассмотреть достижение <ArrowUpRight size={16} />
+              </button>
+            </>
+          )}
+        </aside>
+      </div>
+      <div
+        className="achievement-library"
+        id="achievement-cabinet"
+        tabIndex={-1}
+      >
+        <aside className="achievement-tools">
+          <span className="eyebrow">СОБРАНО И ВПЕРЕДИ</span>
+          <h2>Твоя коллекция</h2>
+          <label>
+            <Search size={17} />
+            <input
+              aria-label="Найти достижение"
+              value={query}
+              placeholder="Название или условие…"
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <label>
+            <span>Состояние</span>
+            <select
+              aria-label="Состояние достижения"
+              value={scope}
+              onChange={(e) => setScope(e.target.value as typeof scope)}
+            >
+              <option value="all">Все достижения</option>
+              <option value="locked">Ещё закрыты</option>
+              <option value="unlocked">Открыты</option>
+              <option value="maxed">Платина</option>
+            </select>
+          </label>
+          <div
+            className="achievement-categories"
+            role="group"
+            aria-label="Категория достижений"
+          >
+            <button
+              type="button"
+              aria-pressed={category === 'all'}
+              onClick={() => setCategory('all')}
+            >
+              Все категории <small>{achievementDefs.length}</small>
+            </button>
+            {cats.map((cat) => (
+              <button
+                type="button"
+                key={cat}
+                aria-pressed={category === cat}
+                onClick={() => setCategory(cat)}
+              >
+                {cat}
+                <small>
+                  {achievementDefs.filter((a) => a.category === cat).length}
+                </small>
+              </button>
+            ))}
+          </div>
+          <button className="outline-btn" onClick={reset}>
+            Сбросить фильтры
+          </button>
+          <span role="status" className="practice-note">
+            Показано {visible.length} из {achievementDefs.length} обычных
+          </span>
+        </aside>
+        <div className="achievement-results">
+          <div className="rarity-guide">
+            <span>Обычная ≥50%</span>
+            <span>Необычная ≥20%</span>
+            <span>Редкая ≥10%</span>
+            <span>Эпическая ≥3%</span>
+            <span>Легендарная &lt;3%</span>
+          </div>
+          <p className="collectible-note">
+            Показана доля владельцев открытого тира, а для закрытого достижения
+            — Бронзы. Статистика обычных достижений пересчитывается по текущему
+            прогрессу; их календарные условия считаются по UTC.
+          </p>
+
+          <div className="ach-progress-outer">
+            <div className="ach-progress-inner" style={{ width: pct + '%' }} />
+          </div>
+
+          <p className="collectible-note">
+            Переворот открывает оформление уже заслуженного трофея на этом
+            устройстве. Награды и XP не начисляются повторно.
+          </p>
+          <HiddenTrophies awards={hiddenAwards} revealUserId={data.user.id} />
+
+          {cats.map((cat) => {
+            const catDefs = visible.filter((a) => a.category === cat);
+            if (!catDefs.length) return null;
+            return (
+              <div key={cat} className="ach-category-section">
+                <div className="ach-category-header">
+                  <h3>{cat}</h3>
+                  <span>
+                    {
+                      catDefs.filter(
+                        (a) =>
+                          (data.achievementProgress[a.id] ?? 0) >= a.targets[0],
+                      ).length
+                    }
+                    /{catDefs.length}
+                  </span>
+                </div>
+                <div className="achievement-grid">
+                  {catDefs.map((a) => {
+                    const {
+                      value,
+                      tier,
+                      next,
+                      percent: pctBar,
+                    } = achievementState(
+                      a.targets,
+                      data.achievementProgress[a.id] ?? 0,
+                    );
+
+                    return (
+                      <article
+                        id={'achievement-' + a.id}
+                        tabIndex={-1}
+                        className={`achievement-card ${tier ? 'unlocked' : 'locked'} ${tier === 4 ? 'maxed' : ''} achievement-level-${tier} ${expandedAch === a.id ? 'expanded' : ''}`}
+                        key={a.id}
+                      >
+                        <div className="achievement-top">
+                          <span className="achievement-icon">
+                            {tier ? (
+                              <AchievementReveal
+                                key={`${data.user!.id}:${a.id}:${tier}`}
+                                userId={data.user!.id}
+                                achievementId={a.id}
+                                tier={tier}
+                                icon={a.icon}
+                                name={`${a.name} · ${ACHIEVEMENT_TIERS[tier - 1]}`}
+                              />
+                            ) : (
+                              a.icon
+                            )}
+                          </span>
+                          <span className="achievement-tier">
+                            {tier
+                              ? `${tier === 4 ? '✦ ' : ''}${ACHIEVEMENT_TIERS[tier - 1]}`
+                              : 'ЗАКРЫТО'}
+                          </span>
+                        </div>
+                        <h3>{a.name}</h3>
+                        <p>{a.description}</p>
+                        <button
+                          type="button"
+                          className="achievement-detail-toggle"
+                          aria-label={'Уровни достижения: ' + a.name}
+                          aria-expanded={expandedAch === a.id}
+                          aria-controls={'achievement-detail-' + a.id}
+                          onClick={() =>
+                            setExpandedAch(expandedAch === a.id ? null : a.id)
+                          }
+                        >
+                          Уровни <ChevronDown size={15} />
+                        </button>
+                        <OwnershipBadge
+                          stats={
+                            data.achievementStats[a.id]?.[Math.max(0, tier - 1)]
+                          }
+                          tier={Math.max(1, tier)}
+                        />
+
+                        <div className="achievement-progress">
+                          <div>
+                            <span>
+                              {Math.min(value, next)} / {next} {a.unit}
+                            </span>
+                            <b>
+                              {tier === 4
+                                ? 'Максимальный уровень'
+                                : `Следующий: ${ACHIEVEMENT_TIERS[tier]}`}
+                            </b>
+                          </div>
+                          <div className="bar-track">
+                            <i style={{ width: `${pctBar}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="tier-dots">
+                          {a.targets.map((t, i) => (
+                            <span
+                              key={t}
+                              className={value >= t ? 'filled' : ''}
+                            >
+                              {['I', 'II', 'III', 'IV'][i]}
+                            </span>
+                          ))}
+                        </div>
+
+                        {expandedAch === a.id && (
+                          <div
+                            className="ach-detail"
+                            id={'achievement-detail-' + a.id}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="ach-tiers-detail">
+                              {a.targets.map((t, i) => (
+                                <div
+                                  key={i}
+                                  className={`ach-tier-row ${value >= t ? 'done' : ''}`}
+                                >
+                                  <span>{ACHIEVEMENT_TIERS[i]}</span>
+                                  <b>
+                                    {t} {a.unit}
+                                  </b>
+                                  {value >= t ? (
+                                    <Check size={14} />
+                                  ) : (
+                                    <small>
+                                      {Math.max(0, t - value)} осталось
+                                    </small>
+                                  )}
+                                  <OwnershipBadge
+                                    stats={data.achievementStats[a.id]?.[i]}
+                                    tier={i + 1}
+                                    compact
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            <button
+                              className="outline-btn small"
+                              onClick={() =>
+                                go(
+                                  a.id === 'archaeologist'
+                                    ? '/catalog?category=' +
+                                        encodeURIComponent('Фильм') +
+                                        '&year=before1960'
+                                    : a.id === 'serial_completion'
+                                      ? '/catalog?category=' +
+                                        encodeURIComponent('Сериал')
+                                      : '/catalog',
+                                )
+                              }
+                            >
+                              <Compass size={14} /> Открыть каталог
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {!visible.length && (
+            <div className="empty-state">
+              <h3>Таких достижений не нашли</h3>
+              <p>
+                Измени состояние, категорию или запрос. Открытые скрытые трофеи
+                показаны отдельно.
+              </p>
+              <button className="outline-btn" onClick={reset}>
+                Показать все достижения
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -2667,188 +2947,212 @@ function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p:
   return <CommunityDirectory key={data.user.id} viewerId={data.user.id} people={data.people} relations={data.friends} go={go} action={action} openChat={openChat} avatar={person=><Avatar name={person.username} src={person.avatar} size={56}/>} />;
 }
 
-const gameModes = [
-  { id: 'story', icon: '📖', name: 'Угадай по сюжету', description: 'Узнай фильм по описанию истории', color: 'violet' },
-  { id: 'year', icon: '📅', name: 'Год премьеры', description: 'В каком году это вышло?', color: 'amber' },
-  { id: 'director', icon: '🎥', name: 'Кто режиссёр?', description: 'Угадай автора за кадром', color: 'blue' },
-  { id: 'genre', icon: '🎭', name: 'Жанровый детектив', description: 'Подбери правильный жанр', color: 'pink' },
-  { id: 'poster', icon: '🖼️', name: 'Угадай по постеру', description: 'Узнай кино по кадру без подсказок', color: 'green' },
-  { id: 'duration', icon: '⏱️', name: 'Хронометраж', description: 'Сколько идёт эта история?', color: 'amber' },
-  { id: 'country', icon: '🌎', name: 'Карта кино', description: 'Угадай страну производства', color: 'blue' },
-  { id: 'original', icon: '🔤', name: 'Оригинальное имя', description: 'Как называется фильм в оригинале?', color: 'violet' },
-  { id: 'category', icon: '🎞️', name: 'Тип истории', description: 'Фильм, сериал или аниме?', color: 'pink' },
-  { id: 'higher', icon: '🏆', name: 'Рейтинговая битва', description: 'У кого оценка выше?', color: 'green' },
-  { id: 'wordle', icon: '🟩', name: 'Кино-Вордли', description: 'Выбери название по буквенной подсказке', color: 'green' },
-  { id: 'hangman', icon: '🔡', name: 'Кино-Поле Чудес', description: 'Угадай название по буквам', color: 'amber' },
-  { id: 'anagram', icon: '🔀', name: 'Кино-Анаграмма', description: 'Собери буквы названия в правильном порядке', color: 'violet' },
-  { id: 'truths', icon: '🤥', name: 'Две правды, одна ложь', description: 'Найди ложный факт о фильме', color: 'pink' },
-  { id: 'chrono', icon: '⏳', name: 'Хроно-Слайдер', description: 'Выбери самый ранний фильм', color: 'blue' },
-  { id: 'connections', icon: '🧩', name: 'Кино-Связи', description: 'Выбери фильм по общему жанровому признаку', color: 'green' }
-];
 
-function Games({ films, action, user, auth }: { films: FilmType[]; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; user: User | null; auth: () => void; }) {
-  const [mode, setMode] = useState<typeof gameModes[number] | null>(null);
+function Games({
+  films,
+  action,
+  user,
+  auth,
+  go,
+}: {
+  go: (href: string) => void;
+  films: FilmType[];
+  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+  user: User | null;
+  auth: () => void;
+}) {
+  const [mode, setMode] = useState<(typeof gameModes)[number] | null>(null);
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
   const [choice, setChoice] = useState<string | null>(null);
   const [gameError, setGameError] = useState('');
+  const gameErrorRef = useRef<HTMLParagraphElement>(null);
   const finishingGame = useRef(false);
-  const [questions, setQuestions] = useState<{ movieId?: number; question: string; options: string[]; correct: string; poster?: string }[]>([]);
-
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<'idle' | 'saved' | 'failed'>('idle');
+  const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const make = (id: string) => {
+    if (finishingGame.current) return;
     setGameError('');
-    const usable = [...new Map(films.map(film => [film.id, film])).values()];
-    if (usable.length < 2) { setGameError('Для викторины нужны хотя бы два разных материала в каталоге.'); return; }
-    const source = [...usable].sort(() => Math.random() - 0.5).slice(0, 5);
-    const pool = (field: (f: FilmType) => string, current: FilmType) =>
-      [...new Set([field(current), ...usable.filter(f => f.id !== current.id).sort(() => Math.random() - 0.5).map(field)])]
-        .slice(0, 4)
-        .sort(() => Math.random() - 0.5);
-
-    const qs = source.map(f => {
-      let question = '', correct = '', options: string[] = [], poster: string | undefined;
-      switch (id) {
-        case 'story': { question = `Какая история скрывается за этим описанием? «${f.description.slice(0, 120)}...»`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'year': { question = `В каком году вышло «${f.title}»?`; correct = String(f.year); options = pool(x => String(x.year), f); break; }
-        case 'director': { question = `Кто снял «${f.title}»?`; correct = f.director || 'Неизвестно'; options = pool(x => x.director || 'Неизвестно', f); break; }
-        case 'genre': { question = `Какой жанр есть у «${f.title}»?`; correct = f.genre.split(',')[0].trim(); options = pool(x => x.genre.split(',')[0].trim(), f); break; }
-        case 'poster': { question = 'Как называется этот фильм?'; correct = f.title; options = pool(x => x.title, f); poster = f.poster; break; }
-        case 'duration': { question = `Сколько длится «${f.title}»?`; correct = `${f.duration} мин`; options = pool(x => `${x.duration} мин`, f); break; }
-        case 'country': { question = `Какая страна создала «${f.title}»?`; correct = f.country || 'Неизвестно'; options = pool(x => x.country || 'Неизвестно', f); break; }
-        case 'original': { question = `Как звучит оригинальное название «${f.title}»?`; correct = f.originalTitle || f.title; options = pool(x => x.originalTitle || x.title, f); break; }
-        case 'category': { question = `К какой категории относится «${f.title}»?`; correct = f.category; options = pool(x => x.category, f); break; }
-        case 'wordle': { question = `Угадай фильм: жанр «${f.genre.split(',')[0].trim()}», ${f.year} год, ${f.country}`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'hangman': { const hidden = f.title.replace(/[а-яёa-z]/gi, '_'); question = `Угадай: ${hidden} (${f.category}, ${f.year})`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'anagram': { const shuffled = f.title.split('').sort(() => Math.random() - 0.5).join(''); question = `Собери название: «${shuffled}» (${f.category})`; correct = f.title; options = pool(x => x.title, f); break; }
-        case 'truths': { const lie = `Год выпуска — ${f.year + 1}`; question = `Найди ЛОЖЬ о «${f.title}»:`; correct = lie; options = [`Год выпуска — ${f.year}`, `Категория — ${f.category}`, lie].sort(() => Math.random() - 0.5); break; }
-        case 'chrono': { question = `Какой из этих фильмов вышел раньше всех?`; correct = [...source].sort((a, b) => a.year - b.year)[0].title; options = source.slice(0, 4).map(x => x.title).sort(() => Math.random() - 0.5); break; }
-        case 'connections': {
-          question = `Какой фильм НЕ связан общим жанром «${f.genre.split(',')[0].trim()}»?`;
-          const outsider = usable.find(x => !catalogTokens(x.genre).includes(catalogTokens(f.genre)[0]));
-          if (!outsider) return { movieId: f.id, question, correct: '', options: [] };
-          correct = outsider.title;
-          options = [...source.filter(x => x.genre.includes(f.genre.split(',')[0].trim())).slice(0, 3).map(x => x.title), outsider.title].sort(() => Math.random() - 0.5);
-          break;
-        }
-        default: {
-          const others = usable.filter(x => x.rating !== f.rating);
-          if (!others.length) return { movieId: f.id, question: '', correct: '', options: [] };
-          const opponent = others[Math.floor(Math.random() * others.length)];
-          correct = f.rating >= opponent.rating ? f.title : opponent.title;
-          options = [f.title, opponent.title];
-          question = `Что оценили выше: «${f.title}» или другое кино?`;
-        }
-      }
-      return { movieId: f.id, question, correct, options, poster };
-    });
-
-    const valid = qs.map(question => ({ ...question, options: [...new Set(question.options)].filter(Boolean) })).filter(question => question.options.length >= 2 && question.options.includes(question.correct));
-    if (!valid.length) { setGameError('В каталоге недостаточно разных данных для этого режима. Попробуй другой.'); return; }
-    setQuestions(Array.from({ length: 5 }, (_, index) => valid[index % valid.length]));
-    setMode(gameModes.find(g => g.id === id) || null);
+    const roundQuestions = buildPracticeRound(films, id);
+    if (!roundQuestions.length) {
+      setGameError(
+        'Для этого режима недостаточно данных: нужны четыре разных ответа на каждый вопрос. Попробуй другой режим.',
+      );
+      requestAnimationFrame(() => gameErrorRef.current?.focus());
+      return;
+    }
+    setQuestions(roundQuestions);
+    setMode(gameModes.find((g) => g.id === id) || null);
     setRound(0);
     setScore(0);
     setChoice(null);
+    setSaved('idle');
+  };
+  const saveResult = async () => {
+    if (!user || finishingGame.current || saved === 'saved') return;
+    finishingGame.current = true;
+    setSaving(true);
+    try {
+      const ok = await action(
+        { action: 'game', game: mode?.id, score },
+        'Результат тренировки сохранён',
+      );
+      setSaved(ok ? 'saved' : 'failed');
+    } catch {
+      setSaved('failed');
+    } finally {
+      finishingGame.current = false;
+      setSaving(false);
+    }
   };
 
   const next = async () => {
+    if (finishingGame.current) return;
     if (round === 4) {
-      if (finishingGame.current) return;
-      finishingGame.current = true;
-      try {
-      if (user) await action({ action: 'game', game: mode?.id, score }, 'Результат тренировки сохранён');
+      await saveResult();
       setRound(5);
-      } finally { finishingGame.current = false; }
     } else {
-      setRound(round + 1);
+      setRound((value) => value + 1);
       setChoice(null);
     }
   };
 
   return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">ИГРА НАЧИНАЕТСЯ</span><h1>Проверь свой <em>кинорадар.</em></h1><p>16 игр. Сотни вопросов. Сколько историй ты узнаешь?</p></div>
-        <div className="heading-count"><Gamepad2 size={19} />{gameModes.length} режимов</div>
-      </div>
-      <div className="games-intro">
-        <span className="games-intro-icon"><Zap size={27} /></span>
-        <div><h3>Играй. Узнавай. Тренируйся.</h3><p>Пять вопросов за раунд. Тренировочные результаты сохраняются без начисления XP: ответы пока проверяются в браузере.</p></div>
-        <span>ПРАКТИКА</span>
-      </div>
-
-      <div className="games-grid">
-        {gameModes.map((g, i) => (
-          <button key={g.id} className={`game-card game-${g.color}`} onClick={() => make(g.id)}>
-            <div className="game-card-top"><span className="game-emoji">{g.icon}</span><small>ИГРА {String(i + 1).padStart(2, '0')}</small></div>
-            <div><h3>{g.name}</h3><p>{g.description}</p></div>
-            <span className="game-launch">Играть <ArrowUpRight size={17} /></span>
-          </button>
-        ))}
-      </div>
-
-      {gameError && <p className="collectible-note" role="status">{gameError}</p>}
-      {mode && (
-        <div className="modal-backdrop" onClick={() => setMode(null)}>
-          <div className="glass-modal game-modal" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setMode(null)}><X size={20} /></button>
-            <span className="eyebrow">{mode.icon} {mode.name.toUpperCase()}</span>
-
-            {round < 5 && questions[round] ? (
-              <>
-                <div className="game-counter"><span>ВОПРОС {round + 1} / 5</span><b>{score} ОЧКОВ</b></div>
-                <div className="game-progress"><i style={{ width: `${(round + 1) * 20}%` }} /></div>
-
-                {questions[round].poster && (
-                  <PosterThumb
-                    movieId={questions[round].movieId}
-                    src={questions[round].poster}
-                    alt="Загадочный постер"
-                    imgClassName="game-poster"
-                    wrapStyle={{ display: 'block' }}
-                  />
-                )}
-
-                <h2>{questions[round].question}</h2>
-
-                <div className="game-options">
-                  {questions[round].options.map((option, i) => (
-                    <button
-                      key={i}
-                      disabled={choice !== null}
-                      className={choice !== null ? (option === questions[round].correct ? 'correct' : choice === option ? 'incorrect' : '') : ''}
-                      onClick={() => {
-                        if (choice !== null) return;
-                        setChoice(option);
-                        if (option === questions[round].correct) setScore(score + 1);
-                      }}
-                    >
-                      <span>{String.fromCharCode(65 + i)}</span>{option}
-                      {choice !== null && option === questions[round].correct && <Check size={18} />}
-                    </button>
-                  ))}
-                </div>
-
-                {choice !== null && (
-                  <div className="game-next">
-                    <span>{choice === questions[round].correct ? 'Верно! Ты знаешь своё кино ✨' : 'Не совсем. Но теперь ты знаешь ответ!'}</span>
-                    <button className="primary-btn small" onClick={next}>{round === 4 ? 'Результат' : 'Следующий вопрос'} <ArrowRight size={15} /></button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="game-result">
-                <span>🏆</span><h2>Игра окончена!</h2><p>Ты ответил правильно на <b>{score} из 5</b> вопросов.</p>
-                <div className="result-points">{score} / 5</div>
-                {!user && <p>Войди, чтобы сохранять результаты тренировок.</p>}
-                <button className="primary-btn" onClick={() => make(mode.id)}><RotateCcw size={17} /> Сыграть ещё</button>
-                <button className="text-link" onClick={() => { setMode(null); if (!user) auth(); }}>{user ? 'К другим играм' : 'Войти в аккаунт'}</button>
-              </div>
-            )}
-          </div>
-        </div>
+    <section className="cinema-games">
+      <PlayNavigation active="games" go={go} />
+      {gameError && (
+        <p
+          className="practice-error"
+          ref={gameErrorRef}
+          tabIndex={-1}
+          role="alert"
+        >
+          {gameError}
+        </p>
       )}
-    </>
+      <GameLobby start={make} busy={saving} />
+      {mode && (
+        <PracticeDialog close={() => setMode(null)} label={mode.name}>
+          <span className="eyebrow">
+            {mode.icon} {mode.name.toUpperCase()}
+          </span>
+
+          {round < 5 && questions[round] ? (
+            <>
+              <div className="game-counter" aria-live="polite">
+                <span>ВОПРОС {round + 1} / 5</span>
+                <b>{score} ОЧКОВ</b>
+              </div>
+              <div className="game-progress">
+                <i style={{ width: `${(round + 1) * 20}%` }} />
+              </div>
+
+              {questions[round].poster && (
+                <PosterThumb
+                  movieId={questions[round].movieId}
+                  src={questions[round].poster}
+                  alt="Загадочный постер"
+                  imgClassName="game-poster"
+                  wrapStyle={{ display: 'block' }}
+                />
+              )}
+
+              <h2>{questions[round].question}</h2>
+
+              <div className="game-options">
+                {questions[round].options.map((option, i) => (
+                  <button
+                    key={i}
+                    disabled={choice !== null}
+                    className={
+                      choice !== null
+                        ? option === questions[round].correct
+                          ? 'correct'
+                          : choice === option
+                            ? 'incorrect'
+                            : ''
+                        : ''
+                    }
+                    onClick={() => {
+                      if (choice !== null) return;
+                      setChoice(option);
+                      if (option === questions[round].correct)
+                        setScore(score + 1);
+                    }}
+                  >
+                    <span>{String.fromCharCode(65 + i)}</span>
+                    {option}
+                    {choice !== null && option === questions[round].correct && (
+                      <Check size={18} />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {choice !== null && (
+                <div className="game-next">
+                  <span>
+                    {choice === questions[round].correct
+                      ? 'Верно! Ты знаешь своё кино ✨'
+                      : 'Не совсем. Но теперь ты знаешь ответ!'}
+                  </span>
+                  <button
+                    className="primary-btn small"
+                    disabled={saving}
+                    onClick={next}
+                  >
+                    {round === 4 ? 'Результат' : 'Следующий вопрос'}{' '}
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="game-result">
+              <span>🏆</span>
+              <h2>Игра окончена!</h2>
+              <p>
+                Ты ответил правильно на <b>{score} из 5</b> вопросов.
+              </p>
+              <div className="result-points">{score} / 5</div>
+              {!user && <p>Войди, чтобы сохранять результаты тренировок.</p>}
+              {user && (
+                <p role="status">
+                  {saved === 'saved'
+                    ? 'Результат сохранён. XP за тренировку не начисляется.'
+                    : saved === 'failed'
+                      ? 'Результат не сохранён. Можно повторить отправку.'
+                      : 'Сохраняем результат…'}
+                </p>
+              )}
+              {saved === 'failed' && (
+                <button
+                  type="button"
+                  className="outline-btn"
+                  disabled={saving}
+                  onClick={saveResult}
+                >
+                  {saving ? 'Сохраняем…' : 'Повторить сохранение'}
+                </button>
+              )}
+              <button className="primary-btn" onClick={() => make(mode.id)}>
+                <RotateCcw size={17} /> Сыграть ещё
+              </button>
+              <button
+                className="text-link"
+                onClick={() => {
+                  setMode(null);
+                  if (!user) auth();
+                }}
+              >
+                {user ? 'К другим играм' : 'Войти в аккаунт'}
+              </button>
+            </div>
+          )}
+        </PracticeDialog>
+      )}
+    </section>
   );
 }
 
@@ -3815,74 +4119,328 @@ function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string
   return <CinemaRoomLobby key={data.user.id} films={data.films} viewer={data.user} people={data.people} relations={data.friends} go={go} action={action} avatar={person=><Avatar name={person.username} src={person.avatar} size={36}/>} />;
 }
 
-function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; auth: () => void; }) {
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getUTCMonth() + 1);
-  const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+function ChallengesPage({
+  data,
+  go,
+  action,
+  auth,
+}: {
+  data: Data;
+  go: (s: string) => void;
+  action: (p: Record<string, unknown>, s?: string) => Promise<boolean>;
+  auth: () => void;
+}) {
+  const [selectedMonth, setSelectedMonth] = useState(
+    new Date().getUTCMonth() + 1,
+  );
+  const [challengeScope, setChallengeScope] = useState<'all' | 'todo' | 'done'>(
+    'all',
+  );
+  const months = [
+    'Январь',
+    'Февраль',
+    'Март',
+    'Апрель',
+    'Май',
+    'Июнь',
+    'Июль',
+    'Август',
+    'Сентябрь',
+    'Октябрь',
+    'Ноябрь',
+    'Декабрь',
+  ];
   const currentMonth = new Date().getUTCMonth() + 1;
 
-  if (!data.user) return <Gate title="Испытания ждут" description="Войди, чтобы принять вызов и заработать XP за каждый челлендж." auth={auth} />;
+  if (!data.user)
+    return (
+      <Gate
+        title="Испытания ждут"
+        description="Войди, чтобы принять вызов и заработать XP за каждый челлендж."
+        auth={auth}
+      />
+    );
 
-  const filtered = data.challenges.filter((c: any) => c.month === selectedMonth);
+  const monthChallenges = data.challenges.filter(
+    (c: any) => c.month === selectedMonth,
+  );
+  const filtered = monthChallenges.filter(
+    (c: any) =>
+      challengeScope === 'all' ||
+      (challengeScope === 'done' ? c.completed : !c.completed),
+  );
+  const focus = data.challenges
+    .filter((c: any) => c.current && !c.completed && c.target > 0)
+    .sort(
+      (a: any, b: any) =>
+        b.progress / b.target - a.progress / a.target ||
+        String(a.id).localeCompare(String(b.id)),
+    )[0];
   const totalCurrent = data.challenges.filter((c: any) => c.current).length;
-  const completedCurrent = data.challenges.filter((c: any) => c.current && c.completed).length;
-  const totalXP = data.challenges.filter((c: any) => c.completed).reduce((n: number, c: any) => n + c.xpReward, 0);
+  const completedCurrent = data.challenges.filter(
+    (c: any) => c.current && c.completed,
+  ).length;
+  const totalXP = data.challenges
+    .filter((c: any) => c.completed)
+    .reduce((n: number, c: any) => n + c.xpReward, 0);
 
   return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">ИСПЫТАНИЯ КИНОВСЕЛЕННОЙ</span><h1>Челленджи <em>месяца.</em></h1><p>Каждый месяц — новые задания. Каждый вызов — новый опыт.</p></div>
-        <div className="heading-count"><Flame size={19} />{completedCurrent}/{totalCurrent} в этом месяце</div>
-      </div>
-
-      <div className="challenge-overview">
-        <div className="challenge-overview-card"><span className="challenge-ov-icon">🔥</span><div><b>{completedCurrent} / {totalCurrent}</b><small>выполнено в этом месяце</small></div></div>
-        <div className="challenge-overview-card"><span className="challenge-ov-icon">⚡</span><div><b>{totalXP} XP</b><small>заработано за все челленджи</small></div></div>
-        <div className="challenge-overview-card"><span className="challenge-ov-icon">🏆</span><div><b>{data.challenges.filter((c: any) => c.completed).length}</b><small>челленджей закрыто</small></div></div>
-        <div className="challenge-overview-card"><span className="challenge-ov-icon">📅</span><div><b>{data.challenges.length}</b><small>доступно за весь год</small></div></div>
-      </div>
-
-      <p className="collectible-note">Редкость и процент выполнения рассчитаны среди всех зарегистрированных пользователей за {data.challenges[0]?.year || new Date().getUTCFullYear()} год. Повторные записи одного участника не увеличивают процент.</p>
-
-      <div className="challenge-month-tabs" role="group" aria-label="Месяц челленджей">
-        {months.map((m, i) => (
-          <button type="button" aria-pressed={selectedMonth === i + 1} key={i} className={`challenge-month-tab ${selectedMonth === i + 1 ? 'active' : ''} ${i + 1 === currentMonth ? 'current' : ''}`} onClick={() => setSelectedMonth(i + 1)}>
-            <span className="month-num">{String(i + 1).padStart(2, '0')}</span>{m}{i + 1 === currentMonth && <span className="month-now">сейчас</span>}
-          </button>
-        ))}
-      </div>
-
-      <div className="challenge-grid">
-        {filtered.length ? filtered.map((c: any) => {
-          const pct = c.target ? Math.min(100, Math.round(c.progress / c.target * 100)) : 0;
-          return (
-            <div className={`challenge-card ${c.completed ? 'challenge-done' : ''} ${c.current ? 'challenge-active' : ''}`} key={c.id}>
-              <div className="challenge-card-top">
-                <span className="challenge-card-icon">{c.icon}</span>
-                <div className="challenge-card-reward"><Zap size={13} /> +{c.xpReward} XP</div>
-              </div>
-              <h3>{c.title}</h3><p>{c.description}</p>
-              <OwnershipBadge stats={c.community} completed />
-              {(c.filterGenre || c.filterCategory) && (
-                <div className="challenge-req-hint"><b>Смотреть:</b> {c.filterGenre ? `Жанр «${c.filterGenre}»` : ''}{c.filterGenre && c.filterCategory ? ' или ' : ''}{c.filterCategory ? `Категория «${c.filterCategory}»` : ''}</div>
-              )}
-              <div className="challenge-progress-section">
-                <div className="challenge-progress-header"><span>{c.progress} / {c.target}</span><b>{pct}%</b></div>
-                <div className="challenge-track"><i style={{ width: `${pct}%` }} /></div>
-              </div>
-              {c.completed ? (
-                <div className="challenge-badge"><CheckCircle2 size={16} /> Выполнено!</div>
-              ) : c.current ? (
-                <div className="challenge-status-row">
-                  <div className="challenge-status"><Flame size={14} /> Активный</div>
-                  <button className="challenge-catalog-link" onClick={e => { e.stopPropagation(); go('/catalog?search=' + encodeURIComponent(c.filterGenre || c.filterCategory || '')); }}><Compass size={13} /> В каталог</button>
-                </div>
-              ) : (
-                <div className="challenge-status muted"><CalendarDays size={14} /> {months[c.month - 1]}</div>
-              )}
+    <section className="cinema-challenges">
+      <PlayNavigation active="challenges" go={go} />
+      <div className="challenge-stage">
+        <header>
+          <span className="eyebrow">ПРОГРЕСС / КАЛЕНДАРЬ ВПЕЧАТЛЕНИЙ</span>
+          <h1>
+            У месяца
+            <br />
+            <em>свой сюжет.</em>
+          </h1>
+          <p>
+            Не список обязательств, а повод открыть новую историю. Календарь,
+            условия и твой реальный прогресс — перед глазами.
+          </p>
+          <div className="practice-numbers">
+            <div>
+              <b>
+                {completedCurrent} / {totalCurrent}
+              </b>
+              <span>выполнено сейчас</span>
             </div>
-          );
-        }) : <div className="challenge-empty"><p>В {months[selectedMonth - 1].toLowerCase()} пока нет челленджей.</p></div>}
+            <div>
+              <b>{data.challenges.length}</b>
+              <span>испытаний в календаре</span>
+            </div>
+          </div>
+        </header>
+        <aside className="challenge-focus">
+          <span className="eyebrow">
+            {focus ? 'В ЭТОМ МЕСЯЦЕ' : 'ТЕКУЩИЙ МЕСЯЦ'}
+          </span>
+          <span className="achievement-focus-icon">
+            <Flame size={38} strokeWidth={1.3} />
+          </span>
+          <h2>
+            {focus?.title ||
+              (totalCurrent
+                ? 'Все текущие испытания закрыты.'
+                : 'Свободный маршрут.')}
+          </h2>
+          <p>
+            {focus?.description ||
+              'Выбирай другой месяц или продолжай смотреть кино в своём ритме.'}
+          </p>
+          {focus && (
+            <strong>
+              {focus.progress} / {focus.target}
+            </strong>
+          )}
+          <button
+            className="outline-btn"
+            onClick={() => {
+              setSelectedMonth(currentMonth);
+              setChallengeScope('all');
+              requestAnimationFrame(() =>
+                document.getElementById('challenge-calendar')?.focus(),
+              );
+            }}
+          >
+            К текущему месяцу <ArrowUpRight size={16} />
+          </button>
+        </aside>
       </div>
-    </>
+      <div className="challenge-overview">
+        <div className="challenge-overview-card">
+          <span className="challenge-ov-icon">🔥</span>
+          <div>
+            <b>
+              {completedCurrent} / {totalCurrent}
+            </b>
+            <small>выполнено в этом месяце</small>
+          </div>
+        </div>
+        <div className="challenge-overview-card">
+          <span className="challenge-ov-icon">⚡</span>
+          <div>
+            <b>{totalXP} XP</b>
+            <small>заработано за все челленджи</small>
+          </div>
+        </div>
+        <div className="challenge-overview-card">
+          <span className="challenge-ov-icon">🏆</span>
+          <div>
+            <b>{data.challenges.filter((c: any) => c.completed).length}</b>
+            <small>челленджей закрыто</small>
+          </div>
+        </div>
+        <div className="challenge-overview-card">
+          <span className="challenge-ov-icon">📅</span>
+          <div>
+            <b>{data.challenges.length}</b>
+            <small>доступно за весь год</small>
+          </div>
+        </div>
+      </div>
+
+      <p className="collectible-note">
+        Редкость и процент выполнения рассчитаны среди всех зарегистрированных
+        пользователей за{' '}
+        {data.challenges[0]?.year || new Date().getUTCFullYear()} год. Повторные
+        записи одного участника не увеличивают процент.
+      </p>
+
+      <div className="challenge-calendar" id="challenge-calendar" tabIndex={-1}>
+        <aside className="challenge-month-index">
+          <span className="eyebrow">ВЕСЬ ГОД / UTC</span>
+          <h2>Двенадцать глав</h2>
+          <div
+            className="challenge-month-tabs"
+            role="group"
+            aria-label="Месяц челленджей"
+          >
+            {months.map((m, i) => (
+              <button
+                type="button"
+                aria-pressed={selectedMonth === i + 1}
+                key={i}
+                className={`challenge-month-tab ${selectedMonth === i + 1 ? 'active' : ''} ${i + 1 === currentMonth ? 'current' : ''}`}
+                onClick={() => setSelectedMonth(i + 1)}
+              >
+                <span className="month-num">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                {m}
+                {i + 1 === currentMonth && (
+                  <span className="month-now">сейчас</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </aside>
+        <section
+          className="challenge-month-content"
+          aria-label="Испытания выбранного месяца"
+        >
+          <header>
+            <div>
+              <span className="eyebrow">
+                {data.challenges[0]?.year || new Date().getUTCFullYear()}
+              </span>
+              <h2>{months[selectedMonth - 1]}</h2>
+            </div>
+            <span role="status">
+              {filtered.length} / {monthChallenges.length}
+            </span>
+          </header>
+          <div
+            className="challenge-scope"
+            role="group"
+            aria-label="Состояние челленджей"
+          >
+            {(
+              [
+                ['all', 'Все испытания'],
+                ['todo', 'Не выполнены'],
+                ['done', 'Выполнены'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                type="button"
+                key={id}
+                aria-pressed={challengeScope === id}
+                onClick={() => setChallengeScope(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="challenge-grid">
+            {filtered.length ? (
+              filtered.map((c: any) => {
+                const pct = c.target
+                  ? Math.min(100, Math.round((c.progress / c.target) * 100))
+                  : 0;
+                return (
+                  <div
+                    className={`challenge-card ${c.completed ? 'challenge-done' : ''} ${c.current ? 'challenge-active' : ''}`}
+                    key={c.id}
+                  >
+                    <div className="challenge-card-top">
+                      <span className="challenge-card-icon">{c.icon}</span>
+                      <div className="challenge-card-reward">
+                        <Zap size={13} /> +{c.xpReward} XP
+                      </div>
+                    </div>
+                    <h3>{c.title}</h3>
+                    <p>{c.description}</p>
+                    <OwnershipBadge stats={c.community} completed />
+                    {(c.filterGenre || c.filterCategory) && (
+                      <div className="challenge-req-hint">
+                        <b>Смотреть:</b>{' '}
+                        {c.filterGenre ? `Жанр «${c.filterGenre}»` : ''}
+                        {c.filterGenre && c.filterCategory ? ' и ' : ''}
+                        {c.filterCategory
+                          ? `Категория «${c.filterCategory}»`
+                          : ''}
+                      </div>
+                    )}
+                    <div className="challenge-progress-section">
+                      <div className="challenge-progress-header">
+                        <span>
+                          {c.progress} / {c.target}
+                        </span>
+                        <b>{pct}%</b>
+                      </div>
+                      <div className="challenge-track">
+                        <i style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                    {c.completed ? (
+                      <div className="challenge-badge">
+                        <CheckCircle2 size={16} /> Выполнено!
+                      </div>
+                    ) : c.current ? (
+                      <div className="challenge-status-row">
+                        <div className="challenge-status">
+                          <Flame size={14} /> Активный
+                        </div>
+                        <button
+                          className="challenge-catalog-link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            go(challengeCatalogPath(c));
+                          }}
+                        >
+                          <Compass size={13} /> В каталог
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="challenge-status muted">
+                        <CalendarDays size={14} /> {months[c.month - 1]}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="challenge-empty">
+                <p>
+                  {monthChallenges.length
+                    ? 'Под этот фильтр испытаний нет.'
+                    : `В ${months[selectedMonth - 1].toLowerCase()} пока нет челленджей.`}
+                </p>
+                {challengeScope !== 'all' && (
+                  <button
+                    className="outline-btn"
+                    onClick={() => setChallengeScope('all')}
+                  >
+                    Показать все испытания
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </section>
   );
 }
