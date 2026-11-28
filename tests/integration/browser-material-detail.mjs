@@ -98,16 +98,42 @@ try {
       0,
       "No tall sidebar",
     );
-    for (const box of [factsBox, ratingBox, commentsBox]) {
+    assert(
+      Math.abs(commentsBox.width - heroBox.width) < 2,
+      `full-width discussion ${width}`,
+    );
+    assert(
+      factsBox.y >= heroBox.y + heroBox.height,
+      "Dossier follows the opening",
+    );
+    if (width > 600) {
       assert(
-        Math.abs(box.width - heroBox.width) < 2,
-        `full-width blocks ${width}`,
+        Math.abs(factsBox.y - ratingBox.y) < 2,
+        `dossier/verdict bento aligned ${width}`,
+      );
+      assert(
+        factsBox.x + factsBox.width < ratingBox.x,
+        `independent columns ${width}`,
+      );
+      assert(
+        Math.abs(ratingBox.x + ratingBox.width - heroBox.x - heroBox.width) < 2,
+        `bento uses full canvas ${width}`,
+      );
+    } else {
+      for (const box of [factsBox, ratingBox])
+        assert(
+          Math.abs(box.width - heroBox.width) < 2,
+          `stacked phone panels ${width}`,
+        );
+      assert(
+        ratingBox.y >= factsBox.y + factsBox.height,
+        "Dossier before verdict on phones",
       );
     }
     assert(
-      factsBox.y >= heroBox.y + heroBox.height &&
-        ratingBox.y >= factsBox.y + factsBox.height,
-      "Metadata comes before rating",
+      commentsBox.y >=
+        Math.max(factsBox.y + factsBox.height, ratingBox.y + ratingBox.height),
+      "Discussion clears both columns",
     );
     const relatedBox = await page
       .locator(".movie-detail-page > .home-section")
@@ -447,15 +473,23 @@ try {
       }
     }
   }
-  // Empty rating has one real grid column; rated material still shows the histogram.
+  // No phantom histogram slot: the empty verdict owns the entire panel interior.
   assert.equal(await page.locator(".rating-stats-box").count(), 0);
-  assert.equal(
-    (
-      await page
-        .locator(".rating-panel-advanced")
-        .evaluate((el) => getComputedStyle(el).gridTemplateColumns)
-    ).split(" ").length,
-    1,
+  assert(
+    await page.locator(".rating-panel-advanced").evaluate((el) => {
+      const content = el
+        .querySelector(".rating-selector-box")
+        .getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return (
+        Math.abs(
+          content.width -
+            (el.clientWidth -
+              parseFloat(style.paddingLeft) -
+              parseFloat(style.paddingRight)),
+        ) < 2
+      );
+    }),
   );
   await db.query(
     "insert into mg_ratings(user_id,movie_id,value)values($1,$2,8)",
@@ -467,7 +501,7 @@ try {
   await page.locator(".material-editor-dialog[open]").waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: full-width compact facts/rating/comments without sidebar gaps, colored persistent collection states and admin entry in two themes, material layout 8 widths, full adaptive title, real three-line synopsis/reveal, four visible tags/reveal, removed header actions, comment draft/focus, compact seasons modal/keyboard/deep-link/guest auth.",
+    "PASS: story ticket and responsive dossier/verdict bento with full-width comments and no sidebar gaps, colored persistent collection states and admin entry in two themes, material layout 8 widths, full adaptive title, real three-line synopsis/reveal, four visible tags/reveal, removed header actions, comment draft/focus, compact seasons modal/keyboard/deep-link/guest auth.",
   );
 } finally {
   if (ids.length) {

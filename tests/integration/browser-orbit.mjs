@@ -1,3 +1,4 @@
+import { continueMoviePreview } from './movie-preview-controls.mjs';
 import { chooseTheme } from './settings-controls.mjs';
 // Production spatial diary on a disposable marker-guarded local database.
 import assert from 'node:assert/strict';
@@ -248,6 +249,7 @@ try {
   await dialog
     .getByRole('link', { name: 'Открыть материал', exact: true })
     .click();
+  await continueMoviePreview(page, `/movie/${ids[25]}`);
   await page.waitForURL(`**/movie/${ids[25]}`);
   // Keep privacy-mode checks in their own context, without mutating the normal session.
   const restricted = await browser.newContext({

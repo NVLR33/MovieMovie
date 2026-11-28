@@ -113,6 +113,25 @@ try {
       expected.length,
     );
     assert.deepEqual(await titles(), expected.map((s) => 'Плитка ' + s).sort());
+    const preview = page.locator('.catalog-screening');
+    if (expected.length) {
+      await preview.waitFor();
+      assert(
+        expected
+          .map((s) => 'Плитка ' + s)
+          .includes(await preview.locator('h2').innerText()),
+        'Spotlight belongs to the current filtered results',
+      );
+      assert.equal(
+        await preview.getByRole('button').isDisabled(),
+        expected.length < 2,
+      );
+    } else
+      assert.equal(
+        await preview.count(),
+        0,
+        'No unrelated title for an empty selection',
+      );
   }
   async function count(genre) {
     return Number(

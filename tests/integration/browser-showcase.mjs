@@ -1,3 +1,4 @@
+import { continueMoviePreview } from './movie-preview-controls.mjs';
 import { assertMaterialCovers } from './material-cover-contract.mjs';
 import { chooseTheme } from './settings-controls.mjs';
 // Production collections UI, disposable local SQL with mandatory fixture marker only.
@@ -219,6 +220,7 @@ try {
     .waitFor();
   await page.goto(deepLink);
   await detail.locator('.showcase-film').first().click();
+  await continueMoviePreview(page);
   await page.waitForURL('**/movie/*');
   await page.goto(base + '/collab?view=studio');
   await showcase
@@ -252,6 +254,7 @@ try {
   );
   await guestPage.locator('.showcase-film').first().focus();
   await guestPage.keyboard.press('Enter');
+  await continueMoviePreview(guestPage);
   await guestPage.waitForURL('**/movie/*');
   await guestPage.goto(base + '/collab?view=personal');
   await guestPage
