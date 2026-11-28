@@ -35,6 +35,7 @@ import '../components/cinema-conversations.css';
 import '../components/cinema-together.css';
 import '../components/cinema-play.css';
 import '../components/cinema-journeys.css';
+import '../components/cinema-pet-workspace.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 
