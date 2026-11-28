@@ -46,7 +46,10 @@
     "brand:assets": "node scripts/generate-brand-assets.mjs",
     "test:brand:browser": "node tests/integration/browser-brand.mjs",
     "test:detail:browser": "node tests/integration/browser-material-detail.mjs",
-    "test:location:browser": "node tests/integration/browser-location-showtimes.mjs"
+    "test:location:browser": "node tests/integration/browser-location-showtimes.mjs",
+    "test:community:browser": "node tests/integration/browser-community.mjs",
+    "test:account:browser": "node tests/integration/browser-header-account.mjs",
+    "test:shell:browser": "node tests/integration/browser-shell-navigation.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

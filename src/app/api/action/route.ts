@@ -384,7 +384,18 @@ export async function POST(req: NextRequest) {
         await tx.insert(notifications).values({ userId: request.fromId, actorId: user.id, message: `${user.username} принял(а) вашу заявку`, link: '/friends' });
       });
     } else if (action === 'notifyRead') {
-      await db.update(notifications).set({ read: true }).where(eq(notifications.userId, user.id));
+      if (body.read !== undefined && typeof body.read !== 'boolean') throw new RequestError('Некорректное состояние уведомления');
+      const read = body.read !== false;
+      if (body.id === undefined) {
+        if (!read) throw new RequestError('Укажите уведомление');
+        // Preserve the legacy explicit mark-all action; opening the UI no longer calls it.
+        await db.update(notifications).set({ read: true }).where(eq(notifications.userId, user.id));
+      } else {
+        const changed = await db.update(notifications).set({ read })
+          .where(and(eq(notifications.userId, user.id), eq(notifications.id, databaseId(body.id))))
+          .returning({ id: notifications.id });
+        if (!changed.length) throw new RequestError('Уведомление не найдено', 404);
+      }
     } else if (action === 'profile') {
       const patch: Partial<typeof users.$inferInsert> = {};
 

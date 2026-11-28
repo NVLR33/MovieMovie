@@ -7,6 +7,7 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -216,6 +217,7 @@ export default function SiteSettings({
   onSync,
   onProfile,
   onOpen,
+  triggerRef,
 }: {
   theme: string;
   lang: string;
@@ -233,11 +235,13 @@ export default function SiteSettings({
   onSync: () => Promise<boolean>;
   onProfile: () => void;
   onOpen?: () => void;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const en = lang === 'en',
     [open, setOpen] = useState(false),
     [sync, setSync] = useState<'idle' | 'busy' | 'ok' | 'failed'>('idle');
-  const trigger = useRef<HTMLButtonElement>(null),
+  const internalTrigger = useRef<HTMLButtonElement>(null),
+    trigger = triggerRef ?? internalTrigger,
     [ambient, setAmbient] = useAmbientPreference(),
     themeGroup = useId(),
     languageGroup = useId(),
