@@ -141,7 +141,7 @@ try {
   await panel.locator(".evening-film").waitFor();
   assert.match(
     await page
-      .locator(".home-welcome h1")
+      .locator(".spotlight-story h1")
       .evaluate((e) => getComputedStyle(e).fontFamily),
     /Golos/,
   );
@@ -214,9 +214,17 @@ try {
   await panel.locator(".evening-catalog").click();
   await page.waitForURL("**/catalog?mood=mind");
   await page.locator(".film-grid .film-card").first().waitFor();
+  await page.waitForFunction(
+    () => document.querySelectorAll(".film-grid .film-card").length === 2,
+  );
   assert.equal(await page.locator(".film-grid .film-card").count(), 2);
   await open();
   await panel.locator(".evening-film").click();
+  await page.locator("dialog.movie-quick-view[open]").waitFor();
+  await page
+    .locator("dialog.movie-quick-view")
+    .getByRole("link", { name: "Полная карточка", exact: true })
+    .click();
   await page.waitForURL(`**/movie/${films[1].id}`);
   await page.locator(".movie-detail-page").waitFor();
   // All five themes share the new vocabulary; no horizontal overflow on key form factors.
@@ -229,15 +237,15 @@ try {
       await fit(`home ${t}/${width}`);
       assert(await panel.isVisible());
       const ps = await panel.boundingBox(),
-        hero = await page.locator(".home-stage .hero").boundingBox();
+        hero = await page.locator(".spotlight-stage").boundingBox();
       assert(
         ps.x >= 0 && ps.x + ps.width <= width + 1,
         `console fits ${t}/${width}`,
       );
-      if (width > 1200)
-        assert(Math.abs(ps.y - hero.y) < 2, `bento alignment ${t}/${width}`);
-      else
-        assert(ps.y >= hero.y + hero.height - 1, `stacked stage ${t}/${width}`);
+      assert(
+        ps.y >= hero.y + hero.height - 1,
+        `mood console follows cinematic stage ${t}/${width}`,
+      );
       if ([390, 1440, 1920].includes(width))
         await page.screenshot({ path: `${shots}/home-${t}-${width}.png` });
     }
