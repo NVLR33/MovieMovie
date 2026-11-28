@@ -1,0 +1,998 @@
+/* The discovery workspace and the story file have their own compositions.
+   Shared posters, semantic collection states and feature dialogs stay feature-owned. */
+.catalog-workspace {
+  min-width: 0;
+}
+.catalog-editorial-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 320px);
+  gap: 28px;
+  align-items: stretch;
+  margin-bottom: 28px;
+}
+.cinema-experience .catalog-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin: 0;
+  padding: 10px 0 24px;
+  border: 0;
+}
+.cinema-experience .catalog-heading > div:first-child {
+  grid-column: 1/-1;
+}
+.cinema-experience .catalog-heading h1 {
+  font-size: clamp(32px, 4.6vw, 66px);
+  line-height: 1.02;
+  margin: 16px 0;
+  letter-spacing: -0.055em;
+}
+.cinema-experience .catalog-heading p {
+  max-width: 58ch;
+  line-height: 1.7;
+}
+.cinema-experience .catalog-heading .heading-count {
+  font-size: 11px;
+  padding: 0;
+  background: none;
+  border: 0;
+  justify-content: flex-start;
+}
+.cinema-experience .catalog-heading > .primary-btn {
+  font-size: 11px;
+  min-height: 38px;
+  padding: 9px 14px;
+}
+.cinema-experience .catalog-top-entry {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  width: auto;
+  padding: 26px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at top right, var(--accent-glow), transparent 80%),
+    var(--surface);
+  text-align: left;
+}
+.catalog-top-entry > svg:first-child {
+  width: 28px;
+  height: 28px;
+}
+.catalog-top-entry > span {
+  max-width: 22ch;
+  position: relative;
+  font-size: clamp(17px, 1.7vw, 23px);
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  font-weight: 550;
+}
+.catalog-top-entry > svg:last-child {
+  position: absolute;
+  right: 24px;
+  top: 28px;
+  width: 20px;
+  height: 20px;
+  transform: rotate(-40deg);
+}
+.catalog-workbench {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.catalog-console {
+  min-width: 0;
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface);
+}
+.catalog-console-heading {
+  margin-bottom: 24px;
+}
+.catalog-console-heading h2 {
+  font-size: 23px;
+  letter-spacing: -0.04em;
+  margin: 10px 0;
+}
+.catalog-jump-results {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 11px;
+  padding: 8px 0;
+}
+.cinema-experience .catalog-console .catalog-search {
+  padding: 10px;
+  gap: 8px;
+  min-height: 46px;
+  border-radius: 12px;
+  margin: 0 0 28px;
+  background: var(--bg);
+}
+.catalog-console .catalog-search input {
+  min-width: 0;
+  width: 100%;
+  font-size: 11px;
+}
+.catalog-console .catalog-search > svg {
+  width: 16px;
+  flex-shrink: 0;
+}
+.catalog-console .catalog-search > span {
+  display: none;
+}
+.catalog-console .catalog-mood-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.catalog-console .catalog-mood-heading > .eyebrow {
+  width: 100%;
+  font-size: 9px;
+}
+.catalog-console .catalog-all-filters {
+  order: 1;
+  width: 100%;
+  justify-content: space-between;
+}
+.catalog-console .catalog-moods {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+}
+.catalog-console .catalog-moods button {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 40px;
+  font-size: 11px;
+}
+.catalog-console .catalog-mood-note {
+  margin: 12px 0 20px;
+  font-size: 10px;
+  line-height: 1.7;
+}
+.catalog-console .catalog-filter-panel {
+  padding: 16px 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.catalog-console .catalog-filter-panel > header {
+  align-items: flex-start;
+  gap: 8px;
+}
+.catalog-console .catalog-filter-panel > header > svg {
+  flex-shrink: 0;
+}
+.catalog-console .catalog-filter-panel h2 {
+  font-size: 15px;
+}
+.catalog-console .catalog-filter-panel p {
+  font-size: 10px;
+}
+.catalog-console .catalog-filter-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.catalog-console .catalog-filter-fields select {
+  width: 100%;
+  min-width: 0;
+  font-size: 11px;
+}
+.catalog-console .catalog-active-filters {
+  margin-bottom: 0;
+  gap: 6px;
+}
+.catalog-canvas {
+  min-width: 0;
+}
+.cinema-experience .catalog-canvas .catalog-discovery {
+  margin: 0 0 24px;
+}
+.catalog-canvas .catalog-discovery-heading {
+  margin-bottom: 14px;
+}
+.catalog-canvas .catalog-discovery-heading h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 8px 0;
+}
+.catalog-canvas .catalog-discovery-heading p {
+  font-size: 10px;
+}
+.cinema-experience .catalog-canvas .catalog-genre-tile {
+  flex-basis: 96px;
+  min-width: 96px;
+  min-height: 112px;
+  padding: 10px;
+  border-radius: 15px;
+  gap: 7px;
+}
+.catalog-canvas .catalog-genre-tile b {
+  font-size: 10px;
+}
+.catalog-canvas .catalog-genre-icon {
+  width: 22px;
+  height: 22px;
+}
+.catalog-canvas .catalog-genre-count-note {
+  font-size: 9px;
+  margin-bottom: 18px;
+}
+.catalog-canvas .catalog-format-choices {
+  gap: 5px;
+}
+.catalog-canvas .catalog-format-choices button {
+  padding: 9px;
+  font-size: 10px;
+}
+.catalog-result-deck {
+  border-top: 1px solid var(--border-hi);
+  padding-top: 24px;
+  scroll-margin-top: 180px;
+}
+.catalog-deck-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.catalog-deck-heading h2 {
+  font-size: clamp(23px, 2.4vw, 32px);
+  letter-spacing: -0.04em;
+  margin: 8px 0 0;
+}
+.catalog-deck-heading .material-view-control {
+  margin: 0;
+}
+.catalog-canvas .catalog-results-toolbar {
+  margin: 0 0 16px;
+  align-items: center;
+}
+.catalog-canvas .catalog-result-summary span {
+  display: none;
+}
+.catalog-canvas .catalog-sort select {
+  max-width: 190px;
+}
+.catalog-screening {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-hi);
+  border-radius: 18px;
+  background:
+    linear-gradient(110deg, var(--accent-glow), transparent 75%), var(--surface);
+}
+.catalog-screening-cover {
+  width: 72px;
+}
+.catalog-screening-copy {
+  min-width: 0;
+}
+.catalog-screening-copy > .eyebrow {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.catalog-screening-copy h2 {
+  font-size: clamp(17px, 1.65vw, 24px);
+  letter-spacing: -0.025em;
+  margin: 9px 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.catalog-screening-copy p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 10px;
+  margin: 0 0 8px;
+}
+.catalog-screening-copy p span {
+  opacity: 0.5;
+  margin: 0 5px;
+}
+.catalog-screening-copy a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 650;
+}
+.catalog-screening-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+.catalog-screening-step > span {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.catalog-screening-step small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.catalog-screening-step button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-hi);
+  border-radius: 50%;
+  background: var(--surface2);
+}
+.catalog-screening-step button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.catalog-canvas .film-grid {
+  --card-min: 145px;
+}
+
+/* A story file, an action ticket and an editorial dossier instead of stacked strips. */
+.detail-edition-label {
+  color: var(--subtle);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+}
+.cinema-experience .movie-detail-page .detail-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: clamp(150px, 17%, 220px) minmax(0, 1fr) 278px;
+  gap: 26px;
+  align-items: start;
+  padding: 40px 28px 28px;
+  border: 1px solid var(--border-hi);
+  border-radius: 26px;
+  background-color: var(--surface);
+  background-image: none;
+}
+.movie-detail-page .detail-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, var(--surface) 10%, transparent 80%),
+    linear-gradient(0deg, var(--surface) 0%, transparent 100%),
+    var(--movie-backdrop);
+  background-position: center;
+  background-size: cover;
+  opacity: 0.18;
+}
+.cinema-experience .movie-detail-page .detail-intro {
+  max-width: none;
+  align-self: center;
+}
+.cinema-experience .movie-detail-page .detail-poster {
+  align-self: center;
+}
+.cinema-experience .movie-detail-page .detail-intro h1 {
+  margin: 12px 0;
+}
+.cinema-experience .movie-detail-page .detail-badges {
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+.cinema-experience .movie-detail-page .original-title {
+  color: var(--muted);
+}
+.cinema-experience .movie-detail-page .detail-description {
+  margin: 18px 0;
+  color: var(--text);
+  opacity: 0.85;
+}
+.cinema-experience .movie-detail-page .detail-tag-group {
+  margin-bottom: 0;
+}
+.cinema-experience .movie-detail-page .genre-list button {
+  color: var(--muted);
+  background: var(--surface);
+  border-color: var(--border-hi);
+}
+.detail-ticket {
+  min-width: 0;
+  align-self: stretch;
+  padding: 20px;
+  background: var(--bg);
+  border: 1px solid var(--border-hi);
+  border-radius: 16px;
+}
+.detail-ticket-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 18px;
+  border-bottom: 1px dashed var(--border-hi);
+}
+.detail-ticket-heading .eyebrow {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.detail-ticket-status {
+  font-size: 17px;
+  letter-spacing: -0.035em;
+}
+.cinema-experience .movie-detail-page .detail-ticket .detail-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 20px 0;
+}
+.detail-ticket .detail-statistics {
+  gap: 10px;
+}
+.cinema-experience .detail-ticket .detail-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+.cinema-experience .detail-ticket .detail-actions > button,
+.cinema-experience .detail-ticket .detail-play-actions,
+.cinema-experience .detail-ticket .detail-play-actions > button {
+  width: 100%;
+}
+.cinema-experience .detail-ticket .detail-library-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 8px;
+  margin: 12px 0;
+}
+.detail-ticket .detail-library-actions .magnetic-button,
+.detail-ticket .detail-library-actions .magnetic-btn {
+  min-width: 0;
+}
+.cinema-experience .detail-ticket .detail-library-actions > :first-child {
+  grid-column: 1/-1;
+}
+.cinema-experience .detail-ticket .detail-library-actions .outline-btn {
+  width: 100%;
+  padding: 10px;
+  min-height: 40px;
+}
+.cinema-experience .detail-ticket .detail-library-actions .square-btn {
+  width: 38px;
+  height: 40px;
+}
+.detail-ticket-note {
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-hi);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+  margin: 0;
+}
+.cinema-experience .movie-detail-page .detail-hero-tools {
+  grid-column: 1/-1;
+  margin: -22px 0 -10px;
+}
+.cinema-experience .movie-detail-page .detail-hero-footer {
+  grid-column: 1/-1;
+  margin-top: -8px;
+}
+.detail-chapters {
+  display: flex;
+  gap: 30px;
+  border-bottom: 1px solid var(--border-hi);
+  padding: 0 8px;
+  margin: 16px 0 28px;
+}
+.detail-chapters a {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  color: var(--text);
+  font-size: 12px;
+}
+.detail-chapters a span {
+  color: var(--accent);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.detail-chapters a:hover {
+  color: var(--accent);
+}
+.detail-body-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.cinema-experience .movie-detail-page .detail-body-workspace .detail-facts {
+  margin: 0;
+}
+.cinema-experience .movie-detail-page .detail-body-workspace .detail-lower,
+.cinema-experience .movie-detail-page .detail-body-workspace .detail-main {
+  display: contents;
+}
+.cinema-experience .movie-detail-page .detail-body-workspace .info-panel-fancy {
+  padding: 26px;
+  border-radius: 20px;
+  margin: 0;
+}
+.cinema-experience .movie-detail-page .detail-body-workspace .info-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cinema-experience
+  .movie-detail-page
+  .detail-body-workspace
+  .rating-panel-advanced {
+  padding: 26px;
+  border-radius: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-self: stretch;
+}
+.detail-body-workspace .rating-selector-box {
+  flex: 1 1 100%;
+}
+.detail-body-workspace .rating-stats-box {
+  flex: 1 1 100%;
+}
+.cinema-experience
+  .movie-detail-page
+  .detail-body-workspace
+  .community-review-entry {
+  grid-column: 1/-1;
+  margin: 0;
+  border-radius: 20px;
+}
+:is(#story-file, #story-verdict, #story-related) {
+  scroll-margin-top: 180px;
+}
+@media (min-width: 1500px) {
+  .catalog-workbench {
+    grid-template-columns: 306px minmax(0, 1fr);
+    gap: 32px;
+  }
+  .cinema-experience .movie-detail-page .detail-hero {
+    grid-template-columns: 220px minmax(0, 1fr) 310px;
+    gap: 40px;
+    padding: 40px;
+  }
+}
+@media (max-width: 1180px) {
+  .catalog-workbench {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 18px;
+  }
+  .catalog-console {
+    padding: 16px;
+  }
+  .cinema-experience .movie-detail-page .detail-hero {
+    grid-template-columns: 148px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .detail-ticket {
+    grid-column: 1/-1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 28px;
+  }
+  .detail-ticket-heading {
+    grid-column: 1;
+  }
+  .cinema-experience .movie-detail-page .detail-ticket .detail-rating {
+    grid-column: 1;
+    grid-row: 2/4;
+  }
+  .cinema-experience .detail-ticket .detail-actions {
+    grid-column: 2;
+    grid-row: 1/3;
+  }
+  .cinema-experience .detail-ticket .detail-library-actions {
+    grid-column: 2;
+  }
+  .detail-ticket-note {
+    grid-column: 1/-1;
+  }
+  .detail-body-workspace {
+    gap: 18px;
+  }
+  .cinema-experience
+    .movie-detail-page
+    .detail-body-workspace
+    .info-panel-fancy,
+  .cinema-experience
+    .movie-detail-page
+    .detail-body-workspace
+    .rating-panel-advanced {
+    padding: 20px;
+  }
+  .cinema-experience .movie-detail-page .detail-body-workspace .info-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .catalog-editorial-head {
+    grid-template-columns: minmax(0, 1fr) 230px;
+    gap: 20px;
+  }
+  .catalog-workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .catalog-console {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 24px;
+    padding: 22px;
+  }
+  .catalog-console-heading {
+    grid-column: 1;
+    margin-bottom: 12px;
+  }
+  .cinema-experience .catalog-console .catalog-search {
+    grid-column: 1;
+    margin-bottom: 18px;
+  }
+  .catalog-console .catalog-mood-heading {
+    grid-column: 2;
+    grid-row: 1/3;
+    align-self: start;
+  }
+  .catalog-console .catalog-moods {
+    grid-column: 1/-1;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .catalog-console .catalog-moods button {
+    width: auto;
+    flex: 1 1 auto;
+  }
+  .catalog-console .catalog-mood-note,
+  .catalog-console .catalog-filter-panel,
+  .catalog-console .catalog-active-filters {
+    grid-column: 1/-1;
+  }
+  .catalog-console .catalog-filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalog-canvas {
+    margin-top: 12px;
+  }
+}
+@media (max-width: 600px) {
+  .catalog-editorial-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin-bottom: 18px;
+  }
+  .cinema-experience .catalog-heading {
+    padding-bottom: 20px;
+  }
+  .cinema-experience .catalog-heading h1 {
+    font-size: 43px;
+  }
+  .cinema-experience .catalog-top-entry {
+    border-radius: 16px;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+  }
+  .catalog-top-entry > span {
+    font-size: 13px;
+    max-width: none;
+    flex: 1;
+  }
+  .catalog-top-entry > svg:first-child {
+    width: 20px;
+    flex-shrink: 0;
+  }
+  .catalog-top-entry > svg:last-child {
+    position: static;
+    flex-shrink: 0;
+    width: 16px;
+  }
+  .catalog-console {
+    padding: 16px;
+    gap: 0 14px;
+    border-radius: 18px;
+  }
+  .catalog-console-heading .eyebrow {
+    font-size: 8px;
+  }
+  .catalog-console-heading h2 {
+    font-size: 20px;
+  }
+  .catalog-console .catalog-mood-heading > .eyebrow {
+    font-size: 8px;
+    line-height: 1.6;
+  }
+  .catalog-console .catalog-all-filters {
+    font-size: 10px;
+    padding: 9px;
+  }
+  .catalog-console .catalog-moods {
+    gap: 6px;
+  }
+  .catalog-console .catalog-moods button {
+    flex: 1 1 45%;
+    font-size: 10px;
+  }
+  .catalog-console .catalog-filter-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .catalog-console .catalog-search {
+    grid-column: 1/-1;
+  }
+  .catalog-console .catalog-mood-heading {
+    grid-row: 1/2;
+  }
+  .catalog-screening {
+    grid-template-columns: 54px minmax(0, 1fr) 30px;
+    gap: 12px;
+    padding: 14px;
+  }
+  .catalog-screening-cover {
+    width: 54px;
+  }
+  .catalog-screening-copy > .eyebrow {
+    font-size: 7px;
+    letter-spacing: 0.5px;
+  }
+  .catalog-screening-copy > .eyebrow svg {
+    display: none;
+  }
+  .catalog-screening-copy h2 {
+    font-size: 16px;
+    margin: 7px 0;
+  }
+  .catalog-screening-step > span {
+    font-size: 15px;
+  }
+  .catalog-screening-step small {
+    display: block;
+    font-size: 9px;
+  }
+  .catalog-screening-step button {
+    width: 30px;
+    height: 36px;
+  }
+  .catalog-screening-copy p {
+    font-size: 9px;
+  }
+  .catalog-deck-heading h2 {
+    font-size: 24px;
+  }
+  .catalog-result-deck {
+    scroll-margin-top: 180px;
+  }
+  .detail-edition-label {
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+  .cinema-experience .movie-detail-page .detail-hero {
+    padding: 20px 16px 16px;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 20px 14px;
+    border-radius: 20px;
+  }
+  .cinema-experience .movie-detail-page .detail-poster {
+    align-self: start;
+  }
+  .cinema-experience .movie-detail-page .detail-intro {
+    display: contents;
+  }
+  .cinema-experience .movie-detail-page .detail-badges {
+    grid-column: 1/-1;
+    margin: 0;
+    order: -2;
+  }
+  .cinema-experience .movie-detail-page .detail-intro h1 {
+    grid-column: 2;
+    grid-row: auto;
+    margin: 0;
+    align-self: center;
+    font-size: clamp(22px, 6vw, var(--detail-title-max, 38px));
+  }
+  .cinema-experience .movie-detail-page .original-title,
+  .cinema-experience .movie-detail-page .detail-description,
+  .cinema-experience .movie-detail-page .detail-tag-group {
+    grid-column: 1/-1;
+    margin: 0;
+  }
+  .cinema-experience .movie-detail-page .detail-description {
+    font-size: 12px;
+  }
+  .detail-ticket {
+    display: block;
+    padding: 18px;
+  }
+  .cinema-experience .movie-detail-page .detail-ticket .detail-rating {
+    flex-direction: row;
+    align-items: center;
+    margin: 16px 0;
+    gap: 16px;
+  }
+  .detail-ticket-status {
+    font-size: 18px;
+  }
+  .cinema-experience .detail-ticket .detail-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cinema-experience .detail-ticket .detail-play-actions {
+    grid-column: 1/-1;
+  }
+  .cinema-experience .detail-ticket .detail-actions > button:only-child {
+    grid-column: 1/-1;
+  }
+  .cinema-experience .detail-ticket .detail-actions > button {
+    font-size: 10px;
+    padding: 10px 8px;
+  }
+  .cinema-experience .movie-detail-page .detail-hero-tools {
+    margin: 0;
+  }
+  .detail-chapters {
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0;
+    margin: 10px 0 20px;
+  }
+  .detail-chapters a {
+    gap: 6px;
+    font-size: 10px;
+    min-height: 48px;
+  }
+  .detail-chapters a span {
+    font-size: 8px;
+  }
+  .detail-body-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .cinema-experience .movie-detail-page .detail-body-workspace .info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cinema-experience
+    .movie-detail-page
+    .detail-body-workspace
+    .rating-panel-advanced {
+    display: flex;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .movie-detail-page .detail-hero::before {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .catalog-screening,
+  .catalog-console,
+  .detail-ticket,
+  .cinema-experience .catalog-top-entry {
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+  .movie-detail-page .detail-hero::before {
+    display: none;
+  }
+  .catalog-jump-results,
+  .catalog-screening-copy a,
+  .detail-chapters a {
+    color: LinkText;
+  }
+}
+@media (min-width: 1300px) {
+  .detail-body-workspace .rating-selector-box {
+    flex: 1 1 230px;
+    min-width: 0;
+  }
+  .detail-body-workspace .rating-stats-box {
+    flex: 1 1 120px;
+  }
+  .detail-body-workspace .fancy-stars {
+    gap: 1px;
+  }
+  .detail-body-workspace .star-wrapper {
+    width: 25px;
+    height: 32px;
+  }
+  .detail-body-workspace .base-star {
+    width: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .cinema-experience .catalog-console .catalog-search {
+    grid-column: 1/-1;
+    margin-bottom: 18px;
+  }
+  .cinema-experience .movie-detail-page .detail-poster,
+  .cinema-experience .movie-detail-page .detail-badges,
+  .cinema-experience
+    .movie-detail-page
+    .detail-hero:has(.detail-hero-tools)
+    .detail-poster,
+  .cinema-experience
+    .movie-detail-page
+    .detail-hero:has(.detail-hero-tools)
+    .detail-badges,
+  .cinema-experience
+    .movie-detail-page
+    .detail-hero:has(.detail-hero-tools)
+    .detail-intro
+    h1 {
+    grid-row: auto;
+  }
+  .cinema-experience .movie-detail-page .detail-hero-tools {
+    order: -3;
+  }
+}
+.cinema-experience .movie-detail-page .detail-ticket .detail-watch-toggle {
+  color: var(--text);
+  border-color: var(--border-hi);
+  background: var(--surface2);
+}
+.cinema-experience .movie-detail-page .detail-ticket .watched-done {
+  color: #6ee7b7;
+  border-color: #6ee7b744;
+  background: #6ee7b70a;
+}
+:root[data-theme="light"]
+  .cinema-experience
+  .movie-detail-page
+  .detail-ticket
+  .watched-done {
+  color: #176640;
+  border-color: #17664050;
+  background: #1766400a;
+}
+.cinema-experience .movie-detail-page .detail-text-toggle,
+.cinema-experience .movie-detail-page .watch-external {
+  color: var(--accent);
+}
+.cinema-experience .movie-detail-page .rating-of {
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .cinema-experience .movie-detail-page.detail-long-title .detail-badges {
+    order: 0;
+    grid-column: 2;
+    align-self: center;
+  }
+  .cinema-experience .movie-detail-page.detail-long-title .detail-intro h1 {
+    grid-column: 1/-1;
+    font-size: clamp(21px, 5.5vw, 25px);
+  }
+}

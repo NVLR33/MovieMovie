@@ -138,7 +138,20 @@ try {
       .locator('.film-grid .film-card')
       .filter({ has: page.getByRole('img', { name: title, exact: true }) })
       .click();
-    await page.getByRole('heading', { name: title, exact: true }).waitFor();
+    // Browsing now opens a quick look; ambient extraction belongs to the full page.
+    const quick = page.locator('dialog.movie-quick-view');
+    await quick.getByRole('heading', { name: title, exact: true }).waitFor();
+    assert.equal(
+      await page.evaluate(() => document.documentElement.dataset.ambient),
+      undefined,
+    );
+    await quick
+      .getByRole('link', { name: 'Полная карточка', exact: true })
+      .click();
+    await page
+      .locator('.movie-detail-page')
+      .getByRole('heading', { name: title, exact: true })
+      .waitFor();
   };
   await page.goto(base + '/movie/1');
   await ready();
@@ -202,7 +215,35 @@ try {
       .includes('255'),
   );
   current = await state();
-  assert(current.text.includes('24, 25, 36'));
+  const contrast = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.setProperty('transition', 'none', 'important');
+    probe.style.setProperty('animation', 'none', 'important');
+    document.body.append(probe);
+    const luminance = (variable) => {
+      probe.style.color = `var(${variable})`;
+      const rgb = getComputedStyle(probe)
+        .color.match(/[\d.]+/g)
+        .slice(0, 3)
+        .map(Number)
+        .map((v) => {
+          v /= 255;
+          return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+        });
+      return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+    };
+    const foreground = luminance('--text'),
+      background = luminance('--bg');
+    probe.remove();
+    return (
+      (Math.max(foreground, background) + 0.05) /
+      (Math.min(foreground, background) + 0.05)
+    );
+  });
+  assert(
+    contrast >= 7,
+    `Light theme retains strong text contrast, got ${contrast}`,
+  );
   assert.equal(current.reads, 1);
   await page.screenshot({
     path: '/tmp/mm-ambient-screenshots/light-desktop.png',

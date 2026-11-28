@@ -9,6 +9,7 @@ import HeaderAccount from './header-account';
 import { SiteFooter } from './shell-navigation';
 import CinemaNavigation from './cinema-navigation';
 import CinemaHomeStage from './cinema-home-stage';
+import CatalogScreening from './catalog-screening';
 import MovieQuickView, { useMovieQuickView } from './movie-quick-view';
 import { previewMovieId } from '@/lib/cinema-spaces';
 import { DetailDescription, DetailTags, detailTitleStyle } from './material-detail-parts';
@@ -1474,12 +1475,13 @@ function Catalog({
   const facets = useMemo(() => catalogGenreCounts(films, options, watchedIds), [films, options, watchedIds]);
 
   return (
-    <>
+    <div className="catalog-workspace">
+      <div className="catalog-editorial-head">
       <div className="page-heading catalog-heading">
         <div>
           <span className="eyebrow">{en ? 'THE STORY LIBRARY' : 'БИБЛИОТЕКА ВПЕЧАТЛЕНИЙ'}</span>
-          <h1>{en ? 'Explore the' : 'Исследуй'} <em>{en ? 'cinematic universe.' : 'киновселенную.'}</em></h1>
-          <p>{en ? 'Your next favorite story is waiting right here.' : 'Твоё следующее любимое кино уже где-то здесь.'}</p>
+          <h1>{en ? 'Less scrolling.' : 'Меньше поиска.'}<br/><em>{en ? 'More cinema.' : 'Больше кино.'}</em></h1>
+          <p>{en ? 'Set the mood. Find your story. Keep exploring without losing your place.' : 'Задай настроение. Найди свою историю. Открывай кино, не теряя место в подборке.'}</p>
         </div>
         <div className="heading-count"><Film size={19} />{films.length} {en ? 'stories' : 'историй'}</div>
 {canAdd ? (
@@ -1501,6 +1503,10 @@ function Catalog({
 
       <button type="button" className="catalog-top-entry" onClick={() => go('/top')}><Crown size={18} /><span>{en ? 'Looking for the best? Explore the top 10, 50 and 100.' : 'Ищешь лучшее? Открой топ-10, 50 и 100 материалов.'}</span><ArrowRight size={16} /></button>
 
+      </div>
+      <div className="catalog-workbench">
+      <aside className="catalog-console" aria-label={en ? 'Selection console' : 'Пульт подбора'}>
+      <header className="catalog-console-heading"><span className="eyebrow">{en ? 'YOUR SELECTION' : 'ТВОЯ ВЫБОРКА'}</span><h2>{en ? 'Set your course' : 'Настроить курс'}</h2><a className="catalog-jump-results" href="#catalog-results">{en ? 'Jump to results' : 'К результатам'} <ArrowRight size={15}/></a></header>
       <div className="catalog-search">
         <Search size={20} />
         <input aria-label={en ? 'Search catalog' : 'Поиск в каталоге'} value={query} onChange={e => update('query', e.target.value)} placeholder={en ? 'Title, genre, director or keyword...' : 'Название, жанр, режиссёр или ключевое слово...'} />
@@ -1508,7 +1514,7 @@ function Catalog({
         <span>{en ? 'Live search' : 'Поиск сразу'}</span>
       </div>
 
-      <CatalogDiscovery genre={genre} category={category} counts={facets.counts} total={facets.total} en={en} onGenre={value => update('genre', value)} onCategory={value => update('category', value)} />
+
 
       <div className="catalog-mood-heading"><span className="eyebrow">{en ? 'WHAT IS YOUR MOOD?' : 'КАКОЕ СЕГОДНЯ НАСТРОЕНИЕ?'}</span><button type="button" className="outline-btn small catalog-all-filters" aria-label={en ? 'All filters' : 'Все фильтры'} aria-expanded={filtersOpen} aria-controls="catalog-precise-filters" onClick={() => setFiltersOpen(value => !value)}><SlidersHorizontal size={15} />{en ? 'All filters' : 'Все фильтры'}{preciseCount > 0 && ` · ${preciseCount}`}</button></div>
       <div className="catalog-moods" role="group" aria-label={en ? 'Choose a mood' : 'Выбери настроение'}>
@@ -1539,13 +1545,18 @@ function Catalog({
       </div>
 
       <CatalogActiveFilters options={options} en={en} onRemove={key => update(key, defaults[key])} onReset={reset} />
-      <MaterialViewControls en={en} />
+      </aside>
+      <section className="catalog-canvas" aria-label={en ? 'Catalog results' : 'Результаты каталога'}>
+      <CatalogDiscovery genre={genre} category={category} counts={facets.counts} total={facets.total} en={en} onGenre={value => update('genre', value)} onCategory={value => update('category', value)} />
+      <div className="catalog-result-deck" id="catalog-results" tabIndex={-1}>
+      <div className="catalog-deck-heading"><div><span className="eyebrow">{en ? 'THE BIG SCREEN' : 'БОЛЬШОЙ ЭКРАН'}</span><h2>{en ? 'Your next discovery' : 'Твоё следующее открытие'}</h2></div><MaterialViewControls en={en} /></div>
       <div className="catalog-results-toolbar">
         <p className="catalog-result-summary" role="status" aria-live="polite">{en ? 'Found' : 'Найдено'}: <strong>{filtered.length}</strong><span>{en ? 'titles in your selection' : 'историй по твоему выбору'}</span></p>
         <label className="catalog-sort"><span>{en ? 'Sort order' : 'Сортировка'}</span><select aria-label={en ? 'Sort order' : 'Сортировка'} value={sort} onChange={e => update('sort', e.target.value)}>
           <option value="popular">{en ? 'Popular' : 'Популярные'}</option><option value="rating">{en ? 'By rating' : 'По рейтингу'}</option><option value="new">{en ? 'Newest first' : 'Сначала новые'}</option><option value="old">{en ? 'Oldest first' : 'Сначала старые'}</option>
         </select></label>
       </div>
+      <CatalogScreening key={JSON.stringify(options)} films={filtered} open={go} en={en} />
       {filtered.length ? (
         <FilmGrid films={filtered} go={go} watchedIds={watchedIds} selectable />
       ) : (
@@ -1556,7 +1567,10 @@ function Catalog({
           <button type="button" className="outline-btn" onClick={reset}>{en ? 'Show the whole catalog' : 'Показать весь каталог'}</button>
         </div>
       )}
-    </>
+      </div>
+      </section>
+      </div>
+    </div>
   );
 }
 
@@ -1642,15 +1656,15 @@ function MovieDetailContent({
   };
 
   return (
-    <div className="movie-detail-page">
+    <div className={`movie-detail-page ${film.title.length > 75 ? 'detail-long-title' : ''}`}>
       {trailerOpen && film.trailerUrl && <TrailerDialog url={film.trailerUrl} title={film.title} close={()=>setTrailerOpen(false)} />}
       <MobileMovieActions title={film.title} rating={myRating} saved={saved} rate={() => setMobileRatingOpen(true)} reviews={() => setReviewsOpen(true)} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
       {mobileRatingOpen && <MobileRatingSheet rating={myRating} title={film.title} save={rate} close={closeMobileRating} />}
       <MovieContextBar anchor={posterAnchor} title={film.title} rating={formatFilmRating(film)} saved={saved} bookmark={() => requireAuth(() => action({ action: 'bookmark', movieId: film.id }, saved ? 'Удалено из желаемого' : 'Добавлено в желаемое'))} />
-      <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button>
+      <div className="movie-page-toolbar"><button className="back-link" onClick={() => go('/catalog')}>← Назад в каталог</button><span className="detail-edition-label">moviemovie / STORY FILE</span>
       </div>
 
-      <div className={`detail-hero tone-${materialTone(film)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: `linear-gradient(90deg,var(--bg) 1%,rgba(12,14,20,.95) 33%,rgba(12,14,20,.55) 70%),linear-gradient(0deg,var(--bg),transparent 60%),url('${film.backdrop || film.poster}')` } as React.CSSProperties}>
+      <div className={`detail-hero tone-${materialTone(film)}`} style={{ '--movie-backdrop': `url(${JSON.stringify(film.backdrop || film.poster)})`, backgroundImage: 'none' } as React.CSSProperties}>
         {isSeries(film.category) && <div className="detail-hero-tools">{isSeries(film.category) && <SeriesPanel key={`${film.id}:${data.user?.id || 'guest'}`} title={film.title} movieId={film.id} userId={data.user?.id ?? null} auth={() => requireAuth(() => {})} onUpdated={onSeriesUpdated} />}</div>}
         <div className="detail-poster" ref={posterAnchor}>
           <MaterialCover film={film} preview={false} className="detail-series-cover" alt={film.title}/>
@@ -1661,6 +1675,12 @@ function MovieDetailContent({
           <h1 style={detailTitleStyle(film.title)}>{film.title}</h1>
           {film.originalTitle && film.originalTitle !== film.title && <p className="original-title">{film.originalTitle}</p>}
 
+          <DetailDescription key={film.id} text={film.description || ''} />
+          <DetailTags genre={film.genre || ''} studio={film.studio || ''} go={go} />
+
+        </div>
+        <aside className="detail-ticket" aria-label="Твоё место в этой истории">
+          <div className="detail-ticket-heading"><span className="eyebrow">ТВОЁ МЕСТО В ИСТОРИИ</span><span className="detail-ticket-status">{isWatched ? 'Уже в твоей истории' : saved ? 'В планах на вечер' : 'Новая глава'}</span></div>
           <div className="detail-rating">
             <div className="detail-community-rating">
               <span className="big-rating"><Star size={22} fill="currentColor" />{formatFilmRating(film)}</span>
@@ -1674,9 +1694,6 @@ function MovieDetailContent({
               </span>
             </div>
           </div>
-
-          <DetailDescription key={film.id} text={film.description || ''} />
-          <DetailTags genre={film.genre || ''} studio={film.studio || ''} go={go} />
 
           <div className="detail-actions">
             {(film.playbackUrl || film.watchUrl) && <div className="detail-play-actions">
@@ -1743,7 +1760,8 @@ function MovieDetailContent({
 
           </div>
 
-        </div>
+          <p className="detail-ticket-note">{myRating ? `Твой вердикт: ${myRating} / 10` : 'Сохрани на потом или вернись с впечатлениями после просмотра.'}</p>
+        </aside>
         {['admin', 'moderator'].includes(data.user?.role || '') && <div className="detail-hero-footer">
             <button
               className="outline-btn manage-film"
@@ -1755,7 +1773,9 @@ function MovieDetailContent({
         </div>}
       </div>
 
-        <section className="detail-facts" aria-label="Детали истории">
+      <nav className="detail-chapters" aria-label="Разделы истории"><a href="#story-file"><span>01</span>Досье</a><a href="#story-verdict"><span>02</span>Твоя оценка</a>{related.length > 0 && <a href="#story-related"><span>03</span>Дальше в кадре</a>}</nav>
+      <div className="detail-body-workspace">
+        <section className="detail-facts" id="story-file" tabIndex={-1} aria-label="Детали истории">
           <div className="info-panel-fancy">
             <div className="info-panel-header">
               <Sparkles size={18} />
@@ -1874,7 +1894,7 @@ function MovieDetailContent({
 
       <div className="detail-lower">
         <div className="detail-main">
-          <div className="rating-panel-advanced">
+          <div className="rating-panel-advanced" id="story-verdict" tabIndex={-1}>
             <div className="rating-selector-box">
               <RatingCelebration sequence={ratingBurst} />
               <span className="eyebrow">ТВОЙ ВЕРДИКТ</span>
@@ -2009,8 +2029,9 @@ function MovieDetailContent({
 
       </div>
 
+      </div>
       {related.length > 0 && (
-        <section className="home-section">
+        <section className="home-section" id="story-related" tabIndex={-1}>
           <SectionTitle kicker="ТЕБЕ МОЖЕТ ПОНРАВИТЬСЯ" title="Похожие истории" link="Весь каталог" onClick={() => go('/catalog')} />
           <FilmGrid films={related} go={go} />
         </section>

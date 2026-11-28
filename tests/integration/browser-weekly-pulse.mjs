@@ -1,3 +1,4 @@
+import { continueMoviePreview } from './movie-preview-controls.mjs';
 import { assertMaterialCovers } from './material-cover-contract.mjs';
 import { chooseTheme } from './settings-controls.mjs';
 // Production weekly chart + optimistic controls; fixture-guarded disposable SQL only.
@@ -256,6 +257,7 @@ try {
   await leader
     .getByRole('link', { name: 'Открыть и оценить', exact: true })
     .click();
+  await continueMoviePreview(page, `/movie/${ids[0]}`);
   await page.waitForURL(`**/movie/${ids[0]}`);
   // Small and empty real-time snapshots must not be padded with all-time catalog titles.
   await context.route('**/api/data', async (route) => {
