@@ -257,7 +257,9 @@ export default function CollectionShowcase({
     go(url);
   };
   return (
-    <div className="collection-showcase">
+    <div
+      className={`collection-showcase ${view === 'personal' ? 'is-ballot-workspace' : ''}`}
+    >
       {key ? (
         <>
           <a
@@ -283,8 +285,8 @@ export default function CollectionShowcase({
               <Layers3 size={30} />
               <h1>Подборка пока недоступна</h1>
               <p>
-                В каталоге больше нет материалов с этой связью. Вернись к
-                другим историям.
+                В каталоге больше нет материалов с этой связью. Вернись к другим
+                историям.
               </p>
             </div>
           )}
@@ -294,12 +296,22 @@ export default function CollectionShowcase({
           <header className="showcase-page-heading">
             <span className="eyebrow">КИНО В НОВОМ КОНТЕКСТЕ</span>
             <h1>
-              Истории, которые <em>объединяют.</em>
+              {view === 'personal' ? (
+                <>
+                  Совместные <em>подборки.</em>
+                </>
+              ) : (
+                <>
+                  Истории, которые <em>объединяют.</em>
+                </>
+              )}
             </h1>
-            <p>
-              Студии с характером, знакомые актёры и любимые жанры — находи
-              больше, чем один фильм.
-            </p>
+            {view !== 'personal' && (
+              <p>
+                Студии с характером, знакомые актёры и любимые жанры — находи
+                больше, чем один фильм.
+              </p>
+            )}
           </header>
           <nav className="showcase-tabs" aria-label="Виды подборок">
             {Object.entries(labels).map(([value, label]) => (
@@ -384,9 +396,7 @@ export default function CollectionShowcase({
                 <div className="showcase-empty">
                   <Layers3 size={32} />
                   <h2>
-                    {query
-                      ? 'Ничего не нашлось'
-                      : 'Новые подборки ещё впереди'}
+                    {query ? 'Ничего не нашлось' : 'Новые подборки ещё впереди'}
                   </h2>
                   <p>
                     {query
