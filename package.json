@@ -53,7 +53,8 @@
     "test:frame:browser": "node tests/integration/browser-frame-design.mjs",
     "test:experience:browser": "node tests/integration/browser-cinema-experience.mjs",
     "test:pages:browser": "node tests/integration/browser-cinema-pages.mjs",
-    "test:personal:browser": "node tests/integration/browser-personal-cinema.mjs"
+    "test:personal:browser": "node tests/integration/browser-personal-cinema.mjs",
+    "test:community-cinema:browser": "node tests/integration/browser-community-cinema.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

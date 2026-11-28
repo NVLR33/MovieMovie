@@ -10,6 +10,7 @@ import { SiteFooter } from './shell-navigation';
 import CinemaNavigation from './cinema-navigation';
 import CinemaHomeStage from './cinema-home-stage';
 import CatalogScreening from './catalog-screening';
+import { CommunityDirectory, CommunityNavigation } from './community-cinema';
 import PersonalLibrary, { PersonalNextEvening, PersonalShelves } from './personal-cinema';
 import MovieQuickView, { useMovieQuickView } from './movie-quick-view';
 import { previewMovieId } from '@/lib/cinema-spaces';
@@ -2499,14 +2500,17 @@ function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
   const labels = LEADERBOARD_METRICS;
   const leaders = useMemo(() => getTopLeaders(data.leaderboard, metric, limit), [data.leaderboard, metric, limit]);
   const podium = getLeaderboardPodium(leaders);
+  const ownPlace = useMemo(()=>getTopLeaders(data.leaderboard,metric,100).findIndex(person=>person.id===data.user?.id),[data.leaderboard,metric,data.user?.id]);
   const value = (p: Leader) => metric === 'minutes' ? `${Math.floor(p.minutes / 60)} ч ${p.minutes % 60} мин` : fmt(Number(p[metric] || 0));
 
   return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">ЛУЧШИЕ ИЗ ЛУЧШИХ</span><h1>Зал <em>славы.</em></h1><p>Каждый час просмотра — новая строчка в истории сообщества.</p></div>
-        <div className="heading-count"><Trophy size={18} />{data.leaderboard.length} участников</div>
+    <section className="community-cinema community-leaderboard">
+      <CommunityNavigation active="leaders" go={go}/>
+      <div className="community-ranking-stage">
+      <header className="community-intro"><span className="eyebrow">ВМЕСТЕ / В МАСШТАБЕ КИНО</span><h1>У каждого<br/>свой <em>масштаб.</em></h1><p>Часы, истории, оценки и опыт. Меняй показатель — и смотри на сообщество под другим углом.</p><div className="community-totals"><div><b>{data.leaderboard.length}</b><span>участников в рейтинге</span></div>{data.user && <div><b>{ownPlace>=0 ? '#'+(ownPlace+1) : '—'}</b><span>твоё место в топ-100</span></div>}</div></header>
+      <aside className="community-ranking-spotlight"><span className="eyebrow">В ФОКУСЕ / {labels[metric]}</span>{leaders[0]?<><Avatar name={leaders[0].username} src={leaders[0].avatar} size={80} frame="gold"/><h2>{leaders[0].username}</h2><strong>{value(leaders[0])}</strong><p>Первое место по выбранному показателю. При равных значениях порядок определяется ID участника.</p><button type="button" className="outline-btn" onClick={()=>go('/user/'+leaders[0].id)}>Заглянуть в профиль <ArrowUpRight size={16}/></button></>:<><h2>Первая история впереди.</h2><p>В рейтинге пока нет участников.</p></>}</aside>
       </div>
+      <div className="community-rankings-workspace">
       <div className="leader-controls">
         <div className="leader-filters" role="group" aria-label="Показатель рейтинга">
           {(Object.keys(labels) as LeaderboardMetric[]).map(k => (
@@ -2529,7 +2533,7 @@ function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
             <div key={p.id} className={`podium-person podium-${place === 1 ? 1 : place === 2 ? 0 : 2}`}>
               <span className="podium-crown">{place === 1 ? <Crown size={22} fill="currentColor" /> : <Trophy size={18} />}</span>
               <Avatar name={p.username} src={p.avatar} size={place === 1 ? 76 : 62} frame={place === 1 ? 'gold' : 'none'} />
-              <b>{p.username}</b><small>{titleFor({ xp: p.xp } as User, p.watches)}</small>
+              <button type="button" className="community-podium-name" onClick={()=>go('/user/'+p.id)}>{p.username}</button><small>{titleFor({ xp: p.xp } as User, p.watches)}</small>
               <strong>{value(p)}</strong>
               <span className="podium-place">#{place}</span>
             </div>
@@ -2542,13 +2546,14 @@ function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
           <div className={`rank-row ${p.id === data.user?.id ? 'is-me' : ''}`} key={p.id}>
             <span className="rank-position">{String(i + 1).padStart(2, '0')}</span>
             <Avatar name={p.username} src={p.avatar} size={40} />
-            <span className="rank-person"><b>{p.username} {p.id === data.user?.id && <small>ТЫ</small>}</b><small>{p.role === 'admin' ? 'Администратор' : p.role === 'vip' ? 'VIP зритель' : titleFor({ xp: p.xp } as User, p.watches)}</small></span>
+            <span className="rank-person"><b><button type="button" className="community-rank-name" onClick={()=>go('/user/'+p.id)}>{p.username}</button> {p.id === data.user?.id && <small>ТЫ</small>}</b><small>{p.role === 'admin' ? 'Администратор' : p.role === 'vip' ? 'VIP зритель' : titleFor({ xp: p.xp } as User, p.watches)}</small></span>
             <strong>{value(p)}</strong>
           </div>
         ))}
         {leaders.length === 0 && <div className="empty-state"><Trophy size={32} /><h3>Рейтинг пока пуст</h3><p>Участники появятся здесь после регистрации.</p></div>}
       </div>
-    </>
+      </div>
+    </section>
   );
 }
 
@@ -2660,66 +2665,8 @@ function Achievements({ data, auth, go }: { data: Data; auth: () => void; go: (s
 }
 
 function Friends({ data, action, auth, go, openChat }: { data: Data; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; auth: () => void; go: (s: string) => void; openChat: (id: number) => void; }) {
-  const [query, setQuery] = useState('');
   if (!data.user) return <Gate title="Кино лучше вместе" description="Находи единомышленников, делись фильмами и собирай своё сообщество." auth={auth} />;
-  const pending = data.friends.filter(f => f.toId === data.user?.id && f.status === 'pending');
-  const peers = data.people.filter(p => p.id !== data.user?.id && p.username.toLowerCase().includes(query.toLowerCase()));
-
-  return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow">ОДНО КИНО · ТЫСЯЧИ ИСТОРИЙ</span><h1>Твои <em>люди.</em></h1><p>Делиться впечатлениями лучше с теми, кто поймёт.</p></div>
-        <div className="heading-count"><Users size={18} />{data.friends.filter(f => f.status === 'accepted').length} друзей</div>
-      </div>
-
-      {pending.length > 0 && (
-        <section className="friend-section">
-          <SectionTitle kicker="ЖДУТ ТВОЕГО ОТВЕТА" title="Заявки в друзья" />
-          <div className="people-grid">
-            {pending.map(f => {
-              const p = data.people.find(p => p.id === f.fromId);
-              return p && (
-                <div className="person-card" key={f.id}>
-                  <Avatar name={p.username} src={p.avatar} size={48} />
-                  <div><b>{p.username}</b><small>Хочет дружить с тобой</small></div>
-                  <button className="primary-btn small" onClick={() => action({ action: 'friendAccept', id: f.id }, 'Теперь вы друзья!')}><Check size={16} /> Принять</button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <section className="friend-section">
-        <SectionTitle kicker="НАЙДИ СВОЮ КОМПАНИЮ" title="Кинолюбители" />
-        <div className="catalog-search compact"><Search size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Найти пользователя по имени..." /></div>
-        <div className="people-grid">
-          {peers.map(p => {
-            const relation = data.friends.find(f => (f.fromId === p.id || f.toId === p.id));
-            return (
-              <div className="person-card" key={p.id}>
-                <Avatar name={p.username} src={p.avatar} size={48} />
-                <div><b>{p.username}</b><small>{p.role === 'admin' ? 'Администратор' : p.role === 'vip' ? 'VIP участник' : `Уровень ${Math.floor((p.xp || 0) / 500) + 1}`}</small></div>
-                {relation ? (
-                  <div className="friend-actions">
-                    {relation.status === 'accepted' && (
-                      <>
-                        <button className="outline-btn small" onClick={() => go('/user/' + p.id)}><Eye size={14} /> Профиль</button>
-                        <button className="outline-btn small" onClick={() => openChat(p.id)}><MessageCircle size={14} /> Чат</button>
-                      </>
-                    )}
-                    {relation.status === 'pending' && <span className="friend-state">⏳ Заявка</span>}
-                  </div>
-                ) : (
-                  <button className="outline-btn small" onClick={() => action({ action: 'friend', userId: p.id }, 'Заявка отправлена')}><UserPlus size={16} /> Добавить</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-    </>
-  );
+  return <CommunityDirectory key={data.user.id} viewerId={data.user.id} people={data.people} relations={data.friends} go={go} action={action} openChat={openChat} avatar={person=><Avatar name={person.username} src={person.avatar} size={56}/>} />;
 }
 
 const gameModes = [
@@ -3521,11 +3468,14 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
   const level = s.level;
 
   const commonFilms = profile.commonFilms ?? 0;
+  const commonFilmForm = new Intl.PluralRules('ru').select(commonFilms);
 
   return (
-    <section className="public-profile" aria-label="Профиль участника">
+    <section className="public-profile community-cinema community-public-profile" aria-label="Профиль участника">
+      <CommunityNavigation active="profile" go={go}/>
       <button className="back-link" onClick={() => go('/friends')}>← Назад к друзьям</button>
 
+      <div className="community-profile-stage">
       <div className={`profile-cover header-style- effect-${p.profileEffect || 'none'} ${p.headerImage && p.headerStyle === 5 ? 'custom-header' : ''}`} style={p.headerImage && p.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${p.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={p.headerStyle || 1} data-frame={p.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
@@ -3559,6 +3509,24 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
         </div>
       </div>
 
+      <aside className="community-profile-connection">
+          {data.user && !profile.isSelf && (
+            <div className="profile-tile common-films-tile">
+              <span className="eyebrow">МЕЖДУ ВАМИ</span><div className="tile-heading"><span><Heart size={18} /> Кино-связь</span></div>
+              <div className="common-films-visual">
+                <Avatar name={data.user.username} src={data.user.avatar} size={50} />
+                <div className="common-heart"><Heart size={20} fill="var(--accent)" /></div>
+                <Avatar name={p.username} src={p.avatar} size={50} />
+              </div>
+              <p className="common-count">У вас <b>{commonFilms}</b> {commonFilmForm === 'one' ? 'общий фильм' : commonFilmForm === 'few' ? 'общих фильма' : 'общих фильмов'}.</p>
+              <p className="muted" style={{ fontSize: 11 }}>Индекс сходства по текущим данным: {profile.compatibility}%</p>
+              {profile.friendship.status==='accepted' && <button type="button" className="outline-btn" onClick={()=>go('/compare/'+p.id)}>Сравнить вкусы <ArrowUpRight size={16}/></button>}
+            </div>
+          )}
+      {(!data.user || profile.isSelf) && <div className="profile-tile"><span className="eyebrow">ЗРИТЕЛЬСКИЙ ПОЧЕРК</span><h2>Кино оставляет след.</h2><p>Истории, оценки и жанры — личный маршрут зрителя, а не соревнование вкусов.</p><button type="button" className="outline-btn" onClick={()=>go(profile.isSelf?'/profile':'/friends')}>{profile.isSelf?'Мой кинодневник':'Найти своих людей'} <ArrowUpRight size={16}/></button></div>}
+      </aside>
+      </div>
+      <div className="community-public-chapters"><span className="eyebrow">ЗРИТЕЛЬ КРУПНЫМ ПЛАНОМ</span><h2>Истории и привычки</h2><p>Просмотры, жанры и оценки участника — в одном кадре.</p></div>
       <React.Suspense fallback={null}><PublicCinemaPet key={p.id} userId={p.id} /></React.Suspense>
       <div className="profile-level-row">
         <div className="level-card">
@@ -3575,7 +3543,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
 
       <div className="profile-columns">
         <div className="profile-column">
-          <div className="profile-tile">
+          <div className="profile-tile community-public-statistics">
             <div className="tile-heading"><span><BarChart3 size={18} /> Развернутая статистика</span></div>
             <div className="profile-stats-grid expanded-stats">
               <div><span className="stat-icon"><Clapperboard size={18} /></span><b>{s.totalWatches}</b><small>просмотров</small></div>
@@ -3631,7 +3599,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
             </div>
           </div>
 
-          <div className="profile-tile">
+          <div className="profile-tile community-public-history">
             <div className="tile-heading"><span><Clock3 size={18} /> История просмотров</span></div>
             {profile.recentWatches.length ? (
               <div className="history-list">
@@ -3646,18 +3614,7 @@ function ViewUserProfile({ userId, data, go, action, openChat, auth }: { userId:
             ) : <div className="tile-empty">Нет просмотров.</div>}
           </div>
 
-          {data.user && commonFilms > 0 && (
-            <div className="profile-tile common-films-tile">
-              <div className="tile-heading"><span><Heart size={18} /> Кино-связь</span></div>
-              <div className="common-films-visual">
-                <Avatar name={data.user.username} src={data.user.avatar} size={50} />
-                <div className="common-heart"><Heart size={20} fill="var(--accent)" /></div>
-                <Avatar name={p.username} src={p.avatar} size={50} />
-              </div>
-              <p className="common-count">У вас <b>{commonFilms}</b> общих {commonFilms === 1 ? 'фильм' : commonFilms < 5 ? 'фильма' : 'фильмов'}.</p>
-              <p className="muted" style={{ fontSize: 11 }}>Индекс сходства по текущим данным: {profile.compatibility}%</p>
-            </div>
-          )}
+
         </div>
       </div>
     </section>
