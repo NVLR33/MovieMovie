@@ -84,6 +84,7 @@ jobs:
           run_suite test:experience:browser
           run_suite test:pages:browser
           run_suite test:personal:browser
+          run_suite test:community-cinema:browser
           run_suite test:frame:browser
           run_suite test:series:browser
           run_suite test:detail:browser
