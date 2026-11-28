@@ -13,6 +13,7 @@ import CatalogScreening from './catalog-screening';
 import { CommunityDirectory, CommunityNavigation } from './community-cinema';
 import CinemaChat, { CinemaChatDrawer } from './cinema-chat';
 import CinemaComparison from './cinema-comparison';
+import {CinemaLocalRoom,CinemaRoomLobby} from './cinema-room';
 import PersonalLibrary, { PersonalNextEvening, PersonalShelves } from './personal-cinema';
 import MovieQuickView, { useMovieQuickView } from './movie-quick-view';
 import { previewMovieId } from '@/lib/cinema-spaces';
@@ -59,7 +60,6 @@ import {
   type LeaderboardLimit,
   type LeaderboardMetric,
 } from '@/lib/leaderboard';
-import { playerEmbedUrl } from '@/lib/player-url';
 import { resolveSiteRoute } from '@/lib/site-routes';
 import { catalogTokens, filterCatalog, parseCatalogOptions, catalogGenreCounts, type CatalogOptions } from '@/lib/catalog-filter';
 import { CATALOG_MOODS, parseCatalogMood } from '@/lib/catalog-moods';
@@ -831,7 +831,7 @@ return (
               : active === 'wrapped' ? <WrappedPage data={data} go={browseGo} auth={() => setAuthOpen(true)} />
               : active === 'collab' ? <CollectionShowcase films={data.films} go={browseGo} watchedIds={watchedIds} signedIn={!!data.user} personal={<CollabLists data={data} go={browseGo} action={action} auth={() => setAuthOpen(true)} />} />
               : active === 'watchroom' ? <WatchRoomLobby data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
-              : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
+              : active === 'room' ? <WatchRoom roomId={roomId} data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'chat' ? <ChatPage initialPeer={Number(searchParams.get('with')) || null} data={data} go={go} auth={() => setAuthOpen(true)} />
               : active === 'admin' ? <React.Suspense fallback={<p role="status">Загружаем центр управления…</p>}><AdminWorkspace data={data} go={go} action={action} edit={setEditFilm} review={setReviewSuggestion} refresh={refresh} /></React.Suspense>
               : active === 'about-admin' ? <AboutAdmin data={data} go={go} />
@@ -3683,102 +3683,11 @@ function CollabLists({ data, go, action, auth }: { data: Data; go: (s: string) =
   return <CollaborativeCollections films={data.films} lists={data.lists || []} go={go} action={action} />;
 }
 
-function WatchRoom({ roomId, data, go, action, auth }: { roomId: string; data: Data; go: (s: string) => void; action: (p: Record<string, unknown>) => Promise<boolean>; auth: () => void; }) {
-  const [videoUrl, setVideoUrl] = useState('');
-  const [activeEmbed, setActiveEmbed] = useState('');
-  const [playerError, setPlayerError] = useState('');
-  const [chatLog, setChatLog] = useState<{ id: number, user: string, text: string }[]>([]);
-  const [chat, setChat] = useState('');
-  const [reactions, setReactions] = useState<{ id: number, emoji: string }[]>([]);
-  const msgRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
-
-  const film = data.films.find(f => f.id === Number(searchParams.get('movie'))) || data.films[0] || null;
-
-  useEffect(() => { if (msgRef.current) msgRef.current.scrollTop = msgRef.current.scrollHeight; }, [chatLog]);
-
-  if (!data.user) return <Gate title="Кинозал для друзей" description="Войди, чтобы смотреть кино вместе." auth={auth} />;
-
-  const sendReaction = (emoji: string) => {
-    const id = Date.now();
-    setReactions(r => [...r, { id, emoji }]);
-    setTimeout(() => setReactions(r => r.filter(x => x.id !== id)), 2500);
-  };
-
-  const sendChat = () => {
-    if (!chat.trim()) return;
-    setChatLog(l => [...l, { id: Date.now(), user: data.user?.username || 'Гость', text: chat.trim() }]);
-    setChat('');
-  };
-
-  const applyVideo = () => {
-    const embed = playerEmbedUrl(videoUrl);
-    if (!embed) { setPlayerError('Нужна HTTPS-ссылка YouTube, RuTube или VK video_ext.php. Произвольные страницы не поддерживаются.'); return; }
-    setPlayerError('');
-    setActiveEmbed(embed);
-  };
-
-  if (!film) return <div className="empty-state"><Sparkles size={40} /><h3>Подготовка зала...</h3><p>Устанавливаем связь с кинотеатром</p></div>;
-
-  return (
-    <>
-      <div className="page-heading" style={{ marginBottom: 10 }}>
-        <div><span className="eyebrow"><Tv2 size={14} /> КИНОЗАЛ · КОД: {roomId}</span><h1 style={{ fontSize: 24, margin: '5px 0 0' }}>{film.title}</h1></div>
-        <button className="outline-btn small" onClick={() => go('/watchroom')}>← Выйти из зала</button>
-      </div>
-
-      <p className="collectible-note" role="note">Локальный предпросмотр: видео, сообщения и реакции видны только в этой вкладке. Общая комната и синхронизация между зрителями пока не реализованы. Для переписки используй раздел «Чат».</p>
-      <div className="room-layout">
-        <div className="room-player">
-          <div className="room-video-area">
-            {!activeEmbed ? (
-              <div className="room-setup-prompt">
-                <MonitorPlay size={48} />
-                <h3>Вставьте ссылку на плеер</h3>
-                <p>Поддерживаются HTTPS-ссылки YouTube, VK video_ext.php и RuTube.</p>
-                <div className="room-url-input">
-                  <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
-                  <button className="primary-btn" onClick={applyVideo}>Запустить <Play size={14} /></button>
-                </div>
-                {playerError && <p role="alert">{playerError}</p>}
-                <span className="room-disclaimer">Плеер запускается локально; синхронизации с другими вкладками нет.</span>
-              </div>
-            ) : (
-              <iframe
-                src={activeEmbed}
-                title="Локальный предпросмотр плеера"
-                sandbox="allow-scripts allow-same-origin allow-presentation"
-                referrerPolicy="strict-origin-when-cross-origin"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="room-iframe"
-              />
-            )}
-            <div className="reaction-track">{reactions.map(r => <span key={r.id} className="flying-reaction">{r.emoji}</span>)}</div>
-          </div>
-        </div>
-
-        <div className="room-chat">
-          <div className="room-reactions">
-            <button onClick={() => sendReaction('🍿')}>🍿</button>
-            <button onClick={() => sendReaction('😱')}>😱</button>
-            <button onClick={() => sendReaction('😭')}>😭</button>
-            <button onClick={() => sendReaction('🤯')}>🤯</button>
-            <button onClick={() => sendReaction('😍')}>😍</button>
-          </div>
-          <div className="room-messages" ref={msgRef}>
-            <div className="chat-empty-thread" style={{ marginBottom: 20 }}><Sparkles size={20} /><p>Локальная сессия {roomId}.<br />Сообщения здесь не отправляются другим зрителям.</p></div>
-            {chatLog.map(m => <div key={m.id} className="room-chat-msg"><b>{m.user}:</b> <span>{m.text}</span></div>)}
-          </div>
-          <div className="chat-input-row" style={{ padding: '10px' }}>
-            <input value={chat} onChange={e => setChat(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendChat(); }} placeholder="Чат комнаты..." />
-            <button className="chat-send-btn" onClick={sendChat}><Send size={16} /></button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+function WatchRoom({ roomId, data, go, auth }: { roomId: string; data: Data; go: (s: string) => void; auth: () => void; }) {
+  const params=useSearchParams();
+  const movieId=Number(params.get('movie'))||null;
+  if (!data.user) return <Gate title="Локальный кинозал" description="Войди, чтобы подготовить плеер. Синхронный просмотр пока недоступен." auth={auth} />;
+  return <CinemaLocalRoom key={`${data.user.id}:${roomId}:${movieId}`} roomId={roomId} movieId={movieId} films={data.films} viewer={data.user} go={go}/>;
 }
 
 function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
@@ -3902,99 +3811,8 @@ function AboutAdmin({ data, go }: { data: Data; go: (s: string) => void; }) {
 }
 
 function WatchRoomLobby({ data, go, action, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>) => Promise<boolean>; auth: () => void; }) {
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<FilmType | null>(null);
-  const [roomLink, setRoomLink] = useState('');
-  const [joinCode, setJoinCode] = useState('');
-
-  if (!data.user) return <Gate title="Кинозал для друзей" description="Войди, чтобы создать комнату и смотреть кино вместе с друзьями онлайн." auth={auth} />;
-
-  const filtered = data.films.filter(f => !search || f.title.toLowerCase().includes(search.toLowerCase())).slice(0, 12);
-
-  return (
-    <>
-      <div className="page-heading">
-        <div><span className="eyebrow"><Tv2 size={14} /> СОВМЕСТНЫЙ ПРОСМОТР</span><h1>Виртуальный <em>кинозал.</em></h1><p>Выбери фильм, создай комнату и поделись ссылкой с другом — смотрите синхронно.</p></div>
-      </div>
-
-      <div className="watchroom-layout">
-        <div className="watchroom-create-card">
-          <div className="wrc-header"><span className="wrc-icon"><Sparkles size={22} /></span><div><h3>Создать новую комнату</h3><p>Сгенерируй ссылку и отправь другу</p></div></div>
-
-          <div className="wrc-film-picker">
-            <span className="eyebrow">ВЫБЕРИ ФИЛЬМ ДЛЯ ПРОСМОТРА</span>
-            <div className="catalog-search compact" style={{ marginTop: 12 }}><Search size={16} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск фильма..." /></div>
-            <div className="wrc-film-grid">
-              {filtered.map(f => (
-                <button key={f.id} className={`wrc-film-item ${selected?.id === f.id ? 'selected' : ''}`} onClick={() => setSelected(f)}>
-                  <PosterThumb film={f} movieId={f.id} src={f.poster} alt="" />
-                  <span>{f.title}</span>
-                  {selected?.id === f.id && <Check size={14} />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {selected && (
-            <div className="wrc-selected">
-              <PosterThumb film={selected} movieId={selected.id} src={selected.poster} alt="" />
-              <div><b>{selected.title}</b><small>{selected.year} · {selected.category} · {selected.duration} мин</small></div>
-            </div>
-          )}
-
-          <button
-            className="primary-btn wrc-start"
-            onClick={() => {
-              if (!selected) return;
-              const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-              const url = window.location.origin + '/room/' + code + '?movie=' + selected.id;
-              setRoomLink(url);
-              void copyText(url);
-              go(`/room/${code}?movie=${selected.id}`);
-            }}
-            disabled={!selected}
-          >
-            <Tv2 size={18} />{selected ? `Открыть зал «${selected.title.slice(0, 20)}...»` : 'Сначала выбери фильм'}
-          </button>
-
-          {roomLink && <div className="wrc-link-box"><Link2 size={15} /><span>{roomLink}</span><button onClick={() => copyText(roomLink)}><Copy size={14} /></button></div>}
-          <p className="wrc-hint">Локальный предпросмотр не синхронизирует видео и сообщения. Ссылка сохраняет выбранный фильм.</p>
-        </div>
-
-        <div className="watchroom-join-card">
-          <div className="wrc-header"><span className="wrc-icon join-icon"><UsersRound size={22} /></span><div><h3>Войти в комнату</h3><p>Введи код комнаты от друга</p></div></div>
-          <div className="wrc-join-form">
-            <label>Код комнаты<input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))} placeholder="XXXXXX" maxLength={6} /></label>
-            <button className="primary-btn" disabled={joinCode.length < 4} onClick={() => go('/room/' + joinCode + '?movie=1')}><ArrowRight size={17} /> Войти в зал</button>
-          </div>
-
-          <div className="wrc-how">
-            <span className="eyebrow">КАК ЭТО РАБОТАЕТ</span>
-            <div className="wrc-steps">
-              <div><span>1</span><p>Один создаёт комнату и выбирает фильм</p></div>
-              <div><span>2</span><p>Копирует ссылку и отправляет другу</p></div>
-              <div><span>3</span><p>Плеер работает локально; общий таймер пока недоступен</p></div>
-              <div><span>4</span><p>Для общей переписки используйте раздел «Чат»</p></div>
-            </div>
-          </div>
-
-          <div className="wrc-friends">
-            <span className="eyebrow">ПРИГЛАСИ ДРУГА</span>
-            {data.friends.filter(f => f.status === 'accepted').slice(0, 4).map(f => {
-              const peer = data.people.find(p => p.id === (f.fromId === data.user?.id ? f.toId : f.fromId));
-              return peer && (
-                <button key={f.id} className="wrc-friend-btn" onClick={() => action({ action: 'share', movieId: selected?.id || 1, userId: peer.id })}>
-                  <div style={{ flex: 'none', display: 'flex' }}><Avatar name={peer.username} src={peer.avatar} size={36} /></div>
-                  <span>{peer.username}</span>
-                  <Send size={14} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </>
-  );
+  if (!data.user) return <Gate title="Локальный кинозал" description="Войди, чтобы выбрать фильм и подготовить плеер. Общая комната и синхронизация пока не реализованы." auth={auth} />;
+  return <CinemaRoomLobby key={data.user.id} films={data.films} viewer={data.user} people={data.people} relations={data.friends} go={go} action={action} avatar={person=><Avatar name={person.username} src={person.avatar} size={36}/>} />;
 }
 
 function ChallengesPage({ data, go, action, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; auth: () => void; }) {
