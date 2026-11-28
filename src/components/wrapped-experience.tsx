@@ -1,6 +1,11 @@
-
-'use client';
-import MaterialCover from './material-cover';
+"use client";
+import MaterialCover from "./material-cover";
+import {
+  CINEMA_YEAR_CHAPTERS,
+  cinemaYearStep,
+  cinemaYears,
+} from "@/lib/cinema-year";
+import { trapDialogFocus } from "@/lib/dialog-focus";
 
 import {
   useCallback,
@@ -9,7 +14,7 @@ import {
   useState,
   type CSSProperties,
   type TouchEvent,
-} from 'react';
+} from "react";
 
 import {
   ArrowLeft,
@@ -28,7 +33,7 @@ import {
   Star,
   Trophy,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 
 /* ============================================
    TYPES
@@ -86,35 +91,38 @@ export type WrappedData = {
 type Props = {
   onClose: () => void;
   onShare?: (data: WrappedData, slide: number) => void;
+  initialYear?: number;
+  initialSlide?: number;
+  onYearChange?: (year: number) => void;
 };
 
 const TOTAL_SLIDES = 9;
 
 const MONTH_NAMES = [
-  'Янв',
-  'Фев',
-  'Мар',
-  'Апр',
-  'Май',
-  'Июн',
-  'Июл',
-  'Авг',
-  'Сен',
-  'Окт',
-  'Ноя',
-  'Дек',
+  "Янв",
+  "Фев",
+  "Мар",
+  "Апр",
+  "Май",
+  "Июн",
+  "Июл",
+  "Авг",
+  "Сен",
+  "Окт",
+  "Ноя",
+  "Дек",
 ];
 
-const nf = new Intl.NumberFormat('ru-RU');
+const nf = new Intl.NumberFormat("ru-RU");
 
 /* ============================================
    HELPERS
 ============================================ */
 
 function getMovieTitle(count: number) {
-  if (count === 1) return 'просмотр';
+  if (count === 1) return "просмотр";
   if (count % 10 === 1 && count % 100 !== 11) {
-    return 'просмотр';
+    return "просмотр";
   }
 
   if (
@@ -122,15 +130,15 @@ function getMovieTitle(count: number) {
     count % 10 <= 4 &&
     (count % 100 < 12 || count % 100 > 14)
   ) {
-    return 'просмотра';
+    return "просмотра";
   }
 
-  return 'просмотров';
+  return "просмотров";
 }
 
 function getHoursTitle(count: number) {
   if (count % 10 === 1 && count % 100 !== 11) {
-    return 'час';
+    return "час";
   }
 
   if (
@@ -138,120 +146,111 @@ function getHoursTitle(count: number) {
     count % 10 <= 4 &&
     (count % 100 < 12 || count % 100 > 14)
   ) {
-    return 'часа';
+    return "часа";
   }
 
-  return 'часов';
+  return "часов";
 }
 
 function getPersonality(data: WrappedData) {
-  const genre = data.topGenres[0]?.name.toLowerCase() || '';
+  const genre = data.topGenres[0]?.name.toLowerCase() || "";
 
   if (data.watches >= 300) {
     return {
-      title: 'Легенда кинозала',
-      description:
-        'Кажется, у тебя есть абонемент в параллельные вселенные.',
+      title: "Легенда кинозала",
+      description: "Кажется, у тебя есть абонемент в параллельные вселенные.",
     };
   }
 
-  if (genre.includes('ужас') || genre.includes('хоррор')) {
+  if (genre.includes("ужас") || genre.includes("хоррор")) {
     return {
-      title: 'Укротитель кошмаров',
-      description:
-        'Пока другие закрывают глаза, ты смотришь внимательнее.',
+      title: "Укротитель кошмаров",
+      description: "Пока другие закрывают глаза, ты смотришь внимательнее.",
     };
   }
 
-  if (genre.includes('триллер') || genre.includes('детектив')) {
+  if (genre.includes("триллер") || genre.includes("детектив")) {
     return {
-      title: 'Охотник за сюжетами',
-      description:
-        'Ты подозреваешь каждого персонажа. И обычно не зря.',
+      title: "Охотник за сюжетами",
+      description: "Ты подозреваешь каждого персонажа. И обычно не зря.",
     };
   }
 
-  if (genre.includes('фантаст') || genre.includes('фэнтези')) {
+  if (genre.includes("фантаст") || genre.includes("фэнтези")) {
     return {
-      title: 'Путешественник по мирам',
-      description:
-        'Одной реальности тебе явно недостаточно.',
+      title: "Путешественник по мирам",
+      description: "Одной реальности тебе явно недостаточно.",
     };
   }
 
-  if (genre.includes('комед')) {
+  if (genre.includes("комед")) {
     return {
-      title: 'Главный по хорошему настроению',
-      description:
-        'Смех — тоже отличный повод включить кино.',
+      title: "Главный по хорошему настроению",
+      description: "Смех — тоже отличный повод включить кино.",
     };
   }
 
-  if (genre.includes('романт') || genre.includes('мелодрам')) {
+  if (genre.includes("романт") || genre.includes("мелодрам")) {
     return {
-      title: 'Романтик большого экрана',
-      description:
-        'Веришь в любовь. Особенно под хороший саундтрек.',
+      title: "Романтик большого экрана",
+      description: "Веришь в любовь. Особенно под хороший саундтрек.",
     };
   }
 
-  if (genre.includes('драм')) {
+  if (genre.includes("драм")) {
     return {
-      title: 'Коллекционер эмоций',
-      description:
-        'Тебе нужны истории, которые остаются с тобой.',
+      title: "Коллекционер эмоций",
+      description: "Тебе нужны истории, которые остаются с тобой.",
     };
   }
 
   if (data.watches < 10) {
     return {
-      title: 'Начинающий киноман',
-      description:
-        'Каждая большая киноистория начинается с первого просмотра.',
+      title: "Начинающий киноман",
+      description: "Каждая большая киноистория начинается с первого просмотра.",
     };
   }
 
   return {
-    title: 'Главный герой киногода',
-    description:
-      'У тебя собственный вкус. И собственная история.',
+    title: "Главный герой киногода",
+    description: "У тебя собственный вкус. И собственная история.",
   };
 }
 
 function getWatchJoke(count: number) {
   if (count >= 200) {
-    return 'Кнопка «Просмотрено» просит отпуск.';
+    return "Кнопка «Просмотрено» просит отпуск.";
   }
 
   if (count >= 100) {
-    return '«Ещё один фильм» — твоя любимая фраза.';
+    return "«Ещё один фильм» — твоя любимая фраза.";
   }
 
   if (count >= 30) {
-    return 'Планы на вечер? Кажется, мы знаем ответ.';
+    return "Планы на вечер? Кажется, мы знаем ответ.";
   }
 
   if (count >= 10) {
-    return 'Хорошее начало большой киноистории.';
+    return "Хорошее начало большой киноистории.";
   }
 
-  return 'Главное не количество, а впечатления.';
+  return "Главное не количество, а впечатления.";
 }
 
 function getTimeJoke(hours: number) {
   if (hours >= 300) {
-    return 'За это время можно было освоить новый навык. Но кино тоже искусство.';
+    return "За это время можно было освоить новый навык. Но кино тоже искусство.";
   }
 
   if (hours >= 100) {
-    return 'Попкорн за это время точно успел закончиться.';
+    return "Попкорн за это время точно успел закончиться.";
   }
 
   if (hours >= 20) {
-    return 'Неплохое путешествие, не выходя из дома.';
+    return "Неплохое путешествие, не выходя из дома.";
   }
 
-  return 'Даже короткая история может запомниться надолго.';
+  return "Даже короткая история может запомниться надолго.";
 }
 
 /* ============================================
@@ -260,7 +259,7 @@ function getTimeJoke(hours: number) {
 
 function Poster({
   movie,
-  className = '',
+  className = "",
   style,
 }: {
   movie?: WrappedMovie | null;
@@ -271,9 +270,15 @@ function Poster({
     <div
       className={`ww-poster ${className}`}
       style={style}
-      title={movie?.title || 'moviemovie'}
+      title={movie?.title || "moviemovie"}
     >
-      <MaterialCover film={movie || {}} style={{width: '100%'}} alt={movie?.title || ''} badges={false} preview={false} />
+      <MaterialCover
+        film={movie || {}}
+        style={{ width: "100%" }}
+        alt={movie?.title || ""}
+        badges={false}
+        preview={false}
+      />
     </div>
   );
 }
@@ -285,74 +290,73 @@ function Poster({
 export default function WrappedExperience({
   onClose,
   onShare,
+  initialYear,
+  initialSlide = 0,
+  onYearChange,
 }: Props) {
   const [data, setData] = useState<WrappedData | null>(null);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(cinemaYearStep(initialSlide));
+  const [revision, setRevision] = useState(0);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const [year, setYear] = useState(
-    new Date().getUTCFullYear()
-  );
+  const [year, setYear] = useState(initialYear ?? new Date().getUTCFullYear());
 
   const [availableYears] = useState(() => {
     const current = new Date().getUTCFullYear();
-    return Array.from({ length: Math.max(0, current - 2019) }, (_, i) => current - i);
+    return cinemaYears(current);
   });
 
-  const touchStart = useRef<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const changeYear = (value: number) => {
+    setYear(value);
+    onYearChange?.(value);
+  };
 
   /* ============================================
      DATA LOADING
   ============================================ */
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function loadWrapped() {
       setLoading(true);
-      setError('');
+      setError("");
 
       try {
-        const response = await fetch(
-          `/api/wrapped?year=${year}`,
-          {
-            credentials: 'same-origin',
-            cache: 'no-store',
-          }
-        );
+        const response = await fetch(`/api/wrapped?year=${year}`, {
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           if (response.status === 401) {
-            throw new Error(
-              'Войди в аккаунт, чтобы увидеть свой киногод.'
-            );
+            throw new Error("Войди в аккаунт, чтобы увидеть свой киногод.");
           }
 
-          throw new Error(
-            'Не удалось загрузить итоги. Попробуй ещё раз.'
-          );
+          throw new Error("Не удалось загрузить итоги. Попробуй ещё раз.");
         }
 
         const result: WrappedData = await response.json();
 
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setData(result);
-          setStep(0);
+          setStep(cinemaYearStep(initialSlide));
         }
       } catch (err) {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setError(
-            err instanceof Error
-              ? err.message
-              : 'Произошла ошибка загрузки.'
+            err instanceof Error ? err.message : "Произошла ошибка загрузки.",
           );
           setData(null);
         }
       } finally {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
@@ -361,9 +365,9 @@ export default function WrappedExperience({
     loadWrapped();
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [year]);
+  }, [year, revision, initialSlide]);
 
   /* ============================================
      YEARS
@@ -374,9 +378,7 @@ export default function WrappedExperience({
   ============================================ */
 
   const next = useCallback(() => {
-    setStep((current) =>
-      Math.min(current + 1, TOTAL_SLIDES - 1)
-    );
+    setStep((current) => Math.min(current + 1, TOTAL_SLIDES - 1));
   }, []);
 
   const previous = useCallback(() => {
@@ -385,50 +387,70 @@ export default function WrappedExperience({
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-
-      if (event.key === 'ArrowRight') {
+      if (
+        event.defaultPrevented ||
+        document.querySelector(".wshare-backdrop[open]")
+      )
+        return;
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest('select,input,textarea,[contenteditable="true"]')
+      )
+        return;
+      if (event.key === "ArrowRight") {
         next();
       }
 
-      if (event.key === 'ArrowLeft') {
+      if (event.key === "ArrowLeft") {
         previous();
       }
     }
 
-    window.addEventListener('keydown', handleKey);
+    window.addEventListener("keydown", handleKey);
 
     return () => {
-      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener("keydown", handleKey);
     };
   }, [next, previous, onClose]);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = 'hidden';
-
+    const dialog = dialogRef.current;
+    const trigger =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    dialog?.showModal();
     return () => {
-      document.body.style.overflow = previousOverflow;
+      dialog?.close();
+      if (trigger?.isConnected) trigger.focus();
     };
   }, []);
 
-  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
-    touchStart.current = event.touches[0]?.clientX ?? null;
+  function handleTouchStart(event: TouchEvent<HTMLDialogElement>) {
+    touchStart.current = null;
+    if (
+      event.target instanceof Element &&
+      event.target.closest("button,select,input,a")
+    )
+      return;
+    const touch = event.touches[0];
+    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
   }
 
-  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+  function handleTouchEnd(event: TouchEvent<HTMLDialogElement>) {
     if (touchStart.current === null) return;
 
     const end = event.changedTouches[0]?.clientX;
 
     if (end === undefined) return;
 
-    const difference = touchStart.current - end;
+    const difference = touchStart.current.x - end;
+    const vertical = Math.abs(
+      (event.changedTouches[0]?.clientY ?? touchStart.current.y) -
+        touchStart.current.y,
+    );
 
-    if (Math.abs(difference) > 55) {
+    if (Math.abs(difference) > 55 && Math.abs(difference) > vertical) {
       if (difference > 0) {
         next();
       } else {
@@ -445,14 +467,19 @@ export default function WrappedExperience({
 
   if (loading) {
     return (
-      <div className="ww-root">
+      <dialog
+        ref={dialogRef}
+        className="ww-root ww-cinema-story"
+        aria-label="Мой киногод"
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        onKeyDown={trapDialogFocus}
+      >
         <WrappedStyles />
 
-        <button
-          className="ww-close"
-          onClick={onClose}
-          aria-label="Закрыть"
-        >
+        <button className="ww-close" onClick={onClose} aria-label="Закрыть">
           <X size={21} />
         </button>
 
@@ -461,15 +488,24 @@ export default function WrappedExperience({
 
           <h2>Монтируем твой киногод...</h2>
 
-          <p>Собираем лучшие моменты.</p>
+          <p role="status">Собираем лучшие моменты.</p>
         </div>
-      </div>
+      </dialog>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="ww-root">
+      <dialog
+        ref={dialogRef}
+        className="ww-root ww-cinema-story"
+        aria-label="Мой киногод"
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        onKeyDown={trapDialogFocus}
+      >
         <WrappedStyles />
 
         <div className="ww-center">
@@ -477,13 +513,19 @@ export default function WrappedExperience({
 
           <h2>Что-то пошло не по сценарию</h2>
 
-          <p>{error || 'Не удалось загрузить статистику.'}</p>
+          <p role="alert">{error || "Не удалось загрузить статистику."}</p>
 
-          <button className="ww-button" onClick={onClose}>
-            Вернуться
+          <button
+            className="ww-button"
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            Повторить загрузку
+          </button>
+          <button className="ww-button ww-button-ghost" onClick={onClose}>
+            Вернуться к обзору
           </button>
         </div>
-      </div>
+      </dialog>
     );
   }
 
@@ -493,14 +535,19 @@ export default function WrappedExperience({
 
   if (!data.hasData) {
     return (
-      <div className="ww-root">
+      <dialog
+        ref={dialogRef}
+        className="ww-root ww-cinema-story"
+        aria-label="Мой киногод"
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        onKeyDown={trapDialogFocus}
+      >
         <WrappedStyles />
 
-        <button
-          className="ww-close"
-          onClick={onClose}
-          aria-label="Закрыть"
-        >
+        <button className="ww-close" onClick={onClose} aria-label="Закрыть">
           <X size={21} />
         </button>
 
@@ -514,15 +561,14 @@ export default function WrappedExperience({
           <h1>Пока без титров.</h1>
 
           <p>
-            В {year} году ещё нет отмеченных просмотров.
-            Добавь просмотренные фильмы, и здесь появится
-            твоя история.
+            В {year} году ещё нет отмеченных просмотров. Добавь просмотренные
+            фильмы, и здесь появится твоя история.
           </p>
 
           <div className="ww-year-row">
             <select
               value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
+              onChange={(e) => changeYear(Number(e.target.value))}
               aria-label="Выбрать год"
             >
               {availableYears.map((y) => (
@@ -533,12 +579,12 @@ export default function WrappedExperience({
             </select>
 
             <button className="ww-button" onClick={onClose}>
-              К фильмам
+              К обзору
               <ArrowRight size={18} />
             </button>
           </div>
         </div>
-      </div>
+      </dialog>
     );
   }
 
@@ -551,7 +597,6 @@ export default function WrappedExperience({
   const topGenres = data.topGenres.slice(0, 5);
 
   const slides = [
-
     /* ============================================
        01 — INTRO
     ============================================ */
@@ -583,8 +628,7 @@ export default function WrappedExperience({
 
         <p>
           Главный герой — ты.
-          <br />
-          И сейчас будут титры.
+          <br />И сейчас будут титры.
         </p>
 
         <button className="ww-button ww-button-light" onClick={next}>
@@ -607,25 +651,18 @@ export default function WrappedExperience({
       </div>
 
       <div className="ww-main-content">
-        <div className="ww-kicker">
-          В этом году ты посвятил кино
-        </div>
+        <div className="ww-kicker">В этом году ты посвятил кино</div>
 
-        <div className="ww-big-number">
-          {nf.format(data.hours)}
-        </div>
+        <div className="ww-big-number">{nf.format(data.hours)}</div>
 
         <h2>{getHoursTitle(data.hours)}</h2>
 
         <div className="ww-accent-line" />
 
-        <p className="ww-description">
-          {getTimeJoke(data.hours)}
-        </p>
+        <p className="ww-description">{getTimeJoke(data.hours)}</p>
 
         <div className="ww-detail-chip">
-          ≈ {data.days.toLocaleString('ru-RU')} суток
-          экранных историй
+          ≈ {data.days.toLocaleString("ru-RU")} суток экранных историй
         </div>
       </div>
 
@@ -644,19 +681,13 @@ export default function WrappedExperience({
       </div>
 
       <div className="ww-main-content">
-        <div className="ww-kicker">
-          За {data.year} год ты отметил
-        </div>
+        <div className="ww-kicker">За {data.year} год ты отметил</div>
 
-        <div className="ww-big-number">
-          {nf.format(data.watches)}
-        </div>
+        <div className="ww-big-number">{nf.format(data.watches)}</div>
 
         <h2>{getMovieTitle(data.watches)}</h2>
 
-        <p className="ww-description">
-          {getWatchJoke(data.watches)}
-        </p>
+        <p className="ww-description">{getWatchJoke(data.watches)}</p>
 
         <div className="ww-stat-cards">
           <div className="ww-stat-card">
@@ -686,16 +717,14 @@ export default function WrappedExperience({
       </div>
 
       <div className="ww-genres-content">
-        <div className="ww-kicker">
-          Кажется, у твоего вкуса есть характер
-        </div>
+        <div className="ww-kicker">Кажется, у твоего вкуса есть характер</div>
 
-        <h2>{topGenre?.name || 'Кино'}</h2>
+        <h2>{topGenre?.name || "Кино"}</h2>
 
         <p className="ww-description">
           {topGenre
             ? `${topGenre.count} просмотров с этим жанром. Совпадение? Не думаем.`
-            : 'Хорошее кино не обязано помещаться в один жанр.'}
+            : "Хорошее кино не обязано помещаться в один жанр."}
         </p>
 
         <div className="ww-genre-list">
@@ -703,7 +732,7 @@ export default function WrappedExperience({
             <div className="ww-genre-item" key={genre.name}>
               <div className="ww-genre-info">
                 <span>
-                  {String(index + 1).padStart(2, '0')}
+                  {String(index + 1).padStart(2, "0")}
                   <b>{genre.name}</b>
                 </span>
 
@@ -714,8 +743,7 @@ export default function WrappedExperience({
                 <div
                   style={{
                     width: `${
-                      (genre.count / Math.max(topGenre?.count || 1, 1)) *
-                      100
+                      (genre.count / Math.max(topGenre?.count || 1, 1)) * 100
                     }%`,
                   }}
                 />
@@ -739,29 +767,27 @@ export default function WrappedExperience({
       </div>
 
       <div className="ww-main-content">
-        <div className="ww-kicker">
-          Средняя оценка просмотренного
-        </div>
+        <div className="ww-kicker">Средняя оценка просмотренного</div>
 
         <div className="ww-rating-number">
           {data.averageRating !== null
-            ? data.averageRating.toLocaleString('ru-RU', {
+            ? data.averageRating.toLocaleString("ru-RU", {
                 maximumFractionDigits: 1,
               })
-            : '—'}
+            : "—"}
           <span>/10</span>
         </div>
 
         <h2>
           {data.ratingsCount > 0
-            ? 'Кинокритики напряглись.'
-            : 'Жюри пока молчит.'}
+            ? "Кинокритики напряглись."
+            : "Жюри пока молчит."}
         </h2>
 
         <p className="ww-description">
           {data.ratingsCount > 0
             ? `Оценены ${nf.format(data.ratingsCount)} материалов из просмотренных в ${data.year} году.`
-            : 'Похоже, ты предпочитаешь наслаждаться кино без оценок.'}
+            : "Похоже, ты предпочитаешь наслаждаться кино без оценок."}
         </p>
 
         <div className="ww-rating-stars">
@@ -772,8 +798,8 @@ export default function WrappedExperience({
               fill={
                 data.averageRating !== null &&
                 index < Math.round(data.averageRating / 2)
-                  ? 'currentColor'
-                  : 'none'
+                  ? "currentColor"
+                  : "none"
               }
             />
           ))}
@@ -795,7 +821,7 @@ export default function WrappedExperience({
           style={{
             backgroundImage: `url("${data.bestMovie.poster.replace(
               /"/g,
-              '%22'
+              "%22",
             )}")`,
           }}
         />
@@ -812,14 +838,9 @@ export default function WrappedExperience({
         </div>
 
         <div className="ww-best-info">
-          <div className="ww-kicker">
-            И твой личный «Оскар» получает...
-          </div>
+          <div className="ww-kicker">И твой личный «Оскар» получает...</div>
 
-          <h2>
-            {data.bestMovie?.title ||
-              'Интрига сохраняется'}
-          </h2>
+          <h2>{data.bestMovie?.title || "Интрига сохраняется"}</h2>
 
           {data.bestMovie ? (
             <div className="ww-best-rating">
@@ -827,16 +848,13 @@ export default function WrappedExperience({
               {data.bestMovie.rating}/10
             </div>
           ) : (
-            <p>
-              Поставь оценки просмотренным фильмам,
-              чтобы выбрать фаворита.
-            </p>
+            <p>Поставь оценки просмотренным фильмам, чтобы выбрать фаворита.</p>
           )}
 
           <p className="ww-description">
             {data.bestMovie
-              ? 'Один из твоих самых высоко оценённых фильмов этого киногода.'
-              : 'Главная роль пока свободна.'}
+              ? "Один из твоих самых высоко оценённых фильмов этого киногода."
+              : "Главная роль пока свободна."}
           </p>
         </div>
       </div>
@@ -855,18 +873,14 @@ export default function WrappedExperience({
       </div>
 
       <div className="ww-months-content">
-        <div className="ww-kicker">
-          Больше всего отметок просмотра
-        </div>
+        <div className="ww-kicker">Больше всего отметок просмотра</div>
 
-        <h2>
-          {data.bestMonth?.name || 'Весь год'}
-        </h2>
+        <h2>{data.bestMonth?.name || "Весь год"}</h2>
 
         <p className="ww-description">
           {data.bestMonth
             ? `${data.bestMonth.count} отметок просмотра. Кнопка «Просмотрено» поработала на славу.`
-            : 'Каждый месяц может стать началом новой истории.'}
+            : "Каждый месяц может стать началом новой истории."}
         </p>
 
         <div className="ww-chart">
@@ -875,40 +889,33 @@ export default function WrappedExperience({
 
             return (
               <div className="ww-chart-column" key={month}>
-                <span className="ww-chart-value">
-                  {value || ''}
-                </span>
+                <span className="ww-chart-value">{value || ""}</span>
 
                 <div className="ww-chart-track">
                   <div
                     className={
                       value === maxMonth && value > 0
-                        ? 'ww-chart-bar active'
-                        : 'ww-chart-bar'
+                        ? "ww-chart-bar active"
+                        : "ww-chart-bar"
                     }
                     style={{
                       height:
                         value > 0
-                          ? `${Math.max(
-                              (value / maxMonth) * 100,
-                              7
-                            )}%`
-                          : '3px',
+                          ? `${Math.max((value / maxMonth) * 100, 7)}%`
+                          : "3px",
                     }}
                   />
                 </div>
 
-                <span className="ww-chart-label">
-                  {month}
-                </span>
+                <span className="ww-chart-label">{month}</span>
               </div>
             );
           })}
         </div>
 
         <div className="ww-note">
-          График основан на датах отметок «Просмотрено».
-          Они могут отличаться от реальных дат просмотра.
+          График основан на датах отметок «Просмотрено». Они могут отличаться от
+          реальных дат просмотра.
         </div>
       </div>
 
@@ -930,9 +937,7 @@ export default function WrappedExperience({
           <Trophy size={54} />
         </div>
 
-        <div className="ww-kicker">
-          Побочные задания? Выполнены.
-        </div>
+        <div className="ww-kicker">Побочные задания? Выполнены.</div>
 
         <div className="ww-big-number">
           {nf.format(data.challengesCompleted)}
@@ -941,14 +946,13 @@ export default function WrappedExperience({
         <h2>челленджей пройдено</h2>
 
         <div className="ww-xp-badge">
-          <Sparkles size={22} />
-          +{nf.format(data.challengeXP)} XP
+          <Sparkles size={22} />+{nf.format(data.challengeXP)} XP
         </div>
 
         <p className="ww-description">
           {data.challengesCompleted > 0
-            ? 'Награды получены. Репутация киномана растёт.'
-            : 'Пока без выполненных челленджей. Но впереди ещё много заданий.'}
+            ? "Награды получены. Репутация киномана растёт."
+            : "Пока без выполненных челленджей. Но впереди ещё много заданий."}
         </p>
       </div>
 
@@ -985,13 +989,9 @@ export default function WrappedExperience({
             <span>WRAPPED / {data.year}</span>
           </div>
 
-          <div className="ww-final-user">
-            @{data.username}
-          </div>
+          <div className="ww-final-user">@{data.username}</div>
 
-          <div className="ww-final-personality">
-            {personality.title}
-          </div>
+          <div className="ww-final-personality">{personality.title}</div>
 
           <p>{personality.description}</p>
 
@@ -1009,10 +1009,10 @@ export default function WrappedExperience({
             <div>
               <strong>
                 {data.averageRating !== null
-                  ? data.averageRating.toLocaleString('ru-RU', {
+                  ? data.averageRating.toLocaleString("ru-RU", {
                       maximumFractionDigits: 1,
                     })
-                  : '—'}
+                  : "—"}
               </strong>
               <span>средняя оценка</span>
             </div>
@@ -1020,15 +1020,12 @@ export default function WrappedExperience({
 
           <div className="ww-final-genre">
             <Sparkles size={16} />
-            ТВОЙ ЖАНР: {topGenre?.name || 'Кино'}
+            ТВОЙ ЖАНР: {topGenre?.name || "Кино"}
           </div>
 
           <div className="ww-final-posters">
             {data.posters.slice(0, 5).map((movie, index) => (
-              <Poster
-                key={`${movie.id}-${index}`}
-                movie={movie}
-              />
+              <Poster key={`${movie.id}-${index}`} movie={movie} />
             ))}
           </div>
         </div>
@@ -1052,10 +1049,7 @@ export default function WrappedExperience({
             Ещё раз
           </button>
 
-          <button
-            className="ww-button ww-button-ghost"
-            onClick={onClose}
-          >
+          <button className="ww-button ww-button-ghost" onClick={onClose}>
             Завершить
             <Check size={18} />
           </button>
@@ -1071,10 +1065,19 @@ export default function WrappedExperience({
   ============================================ */
 
   return (
-    <div
-      className="ww-root"
+    <dialog
+      ref={dialogRef}
+      className="ww-root ww-cinema-story"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onKeyDown={trapDialogFocus}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => {
+        touchStart.current = null;
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={`moviemovie Wrapped ${data.year}`}
@@ -1090,14 +1093,14 @@ export default function WrappedExperience({
               key={index}
               className={
                 index === step
-                  ? 'ww-progress-item active'
+                  ? "ww-progress-item active"
                   : index < step
-                    ? 'ww-progress-item completed'
-                    : 'ww-progress-item'
+                    ? "ww-progress-item completed"
+                    : "ww-progress-item"
               }
               onClick={() => setStep(index)}
-              aria-label={`Перейти к экрану ${index + 1}`}
-              aria-current={index === step ? 'step' : undefined}
+              aria-label={`Глава ${index + 1}: ${CINEMA_YEAR_CHAPTERS[index].title}`}
+              aria-current={index === step ? "step" : undefined}
             >
               <span />
             </button>
@@ -1106,15 +1109,26 @@ export default function WrappedExperience({
 
         <div className="ww-top-actions">
           <span className="ww-brand">
-            moviemovie
+            moviemovie <small>/ КИНОГОД</small>
           </span>
+          <span className="ww-chapter-title" aria-live="polite">
+            {CINEMA_YEAR_CHAPTERS[step].title}
+          </span>
+          {onShare && (
+            <button
+              className="ww-share-shortcut"
+              onClick={() => onShare(data, step)}
+              aria-label="Создать карточку этой главы"
+            >
+              <Share2 size={18} />
+              <span>Карточка</span>
+            </button>
+          )}
 
           <select
             className="ww-year-select"
             value={year}
-            onChange={(event) =>
-              setYear(Number(event.target.value))
-            }
+            onChange={(event) => changeYear(Number(event.target.value))}
             aria-label="Выбрать год"
           >
             {availableYears.map((y) => (
@@ -1134,6 +1148,18 @@ export default function WrappedExperience({
         </div>
       </div>
 
+      <nav className="ww-chapter-rail" aria-label="Главы киногода">
+        {CINEMA_YEAR_CHAPTERS.map((chapter, index) => (
+          <button
+            key={chapter.icon}
+            aria-current={step === index ? "step" : undefined}
+            onClick={() => setStep(index)}
+          >
+            <small>{String(index + 1).padStart(2, "0")}</small>
+            <span>{chapter.title}</span>
+          </button>
+        ))}
+      </nav>
       {/* Slides */}
 
       <div className="ww-stage">
@@ -1154,9 +1180,9 @@ export default function WrappedExperience({
         </button>
 
         <span>
-          {String(step + 1).padStart(2, '0')}
+          {String(step + 1).padStart(2, "0")}
           <span className="ww-nav-divider">/</span>
-          {String(TOTAL_SLIDES).padStart(2, '0')}
+          {String(TOTAL_SLIDES).padStart(2, "0")}
         </span>
 
         <button
@@ -1189,7 +1215,7 @@ export default function WrappedExperience({
           <ArrowRight size={24} />
         </button>
       )}
-    </div>
+    </dialog>
   );
 }
 
