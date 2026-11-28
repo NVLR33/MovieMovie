@@ -31,6 +31,7 @@ import '../components/cinema-experience.css';
 import '../components/cinema-pages.css';
 import '../components/personal-cinema.css';
 import '../components/community-cinema.css';
+import '../components/cinema-conversations.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

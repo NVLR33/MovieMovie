@@ -26,7 +26,7 @@ export function CommunityNavigation({
   active,
   go,
 }: {
-  active: 'people' | 'leaders' | 'profile';
+  active: 'people' | 'leaders' | 'profile' | 'chat';
   go: (href: string) => void;
 }) {
   return (
@@ -48,7 +48,7 @@ export function CommunityNavigation({
           href: '/chat',
           label: 'Переписка',
           icon: MessageCircle,
-          active: false,
+          active: active === 'chat',
         },
       ].map((item) => (
         <Link
