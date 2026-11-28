@@ -92,6 +92,8 @@ try {
   fs.mkdirSync('/tmp/mm-profile-responsive-screenshots', { recursive: true });
   const open = async (path) => {
     await page.goto(base + path);
+    // Wait for session/relationship hydration before testing manual profile retry.
+    await page.locator('.app-shell[data-hud-busy="false"]').waitFor();
   };
   await open('/challenges');
   await page.locator('.challenge-month-tab').last().waitFor();

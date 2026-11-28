@@ -33,6 +33,7 @@ import '../components/personal-cinema.css';
 import '../components/community-cinema.css';
 import '../components/cinema-conversations.css';
 import '../components/cinema-together.css';
+import '../components/cinema-play.css';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

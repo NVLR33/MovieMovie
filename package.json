@@ -56,7 +56,8 @@
     "test:personal:browser": "node tests/integration/browser-personal-cinema.mjs",
     "test:community-cinema:browser": "node tests/integration/browser-community-cinema.mjs",
     "test:conversations:browser": "node tests/integration/browser-cinema-conversations.mjs",
-    "test:together:browser": "node tests/integration/browser-cinema-together.mjs"
+    "test:together:browser": "node tests/integration/browser-cinema-together.mjs",
+    "test:play:browser": "node tests/integration/browser-cinema-play.mjs"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "5.3.0",

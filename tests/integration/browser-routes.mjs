@@ -12,7 +12,8 @@ const base=process.env.AUDIT_BASE_URL||'http://127.0.0.1:3000';
 assert(['localhost','127.0.0.1'].includes(new URL(base).hostname));
 assert(process.env.AUDIT_DATABASE_URL&&new URL(process.env.AUDIT_DATABASE_URL).searchParams.get('host')==='/tmp/mm-audit-pg');
 const db=new Client({connectionString:process.env.AUDIT_DATABASE_URL});await db.connect();
-assert.equal((await db.query("SELECT value FROM mm_audit_fixture WHERE key='isolated'")).rows[0]?.value,'yes');await db.end();
+assert.equal((await db.query("SELECT value FROM mm_audit_fixture WHERE key='isolated'")).rows[0]?.value,'yes');
+const gameFixtureIds=[];
 const browser=await pw.launch({executablePath:await chromium.executablePath(),args:chromium.args.filter(arg=>arg!=='--single-process'),headless:true});
 try{
  const context=await browser.newContext({viewport:{width:1280,height:1000},reducedMotion:'reduce'});
@@ -55,7 +56,9 @@ try{
  await open('/leaderboard');for(const button of await page.locator('.leader-filters:not(.leader-limit-filters) button').all()){await button.click();assert.equal(await button.getAttribute('aria-pressed'),'true')}for(const limit of [1,3,5,10,25,50,100]){await page.getByRole('button',{name:`Топ-${limit}`,exact:true}).click();assert.equal(await page.locator('.leaderboard-rank-list .rank-row').count(),Math.min(limit,snapshot.leaderboard.length))}
  await open('/world');await page.getByLabel('Выбранная страна',{exact:true}).selectOption('RU');assert.equal(await page.locator('.world-film').count(),1);await page.getByRole('button',{name:'Мои открытия',exact:true}).click();assert.equal(await page.locator('.world-film').count(),1);await page.getByRole('button',{name:'Карта каталога',exact:true}).click();await page.getByLabel('Выбранная страна',{exact:true}).selectOption('');await page.getByLabel('Ещё не смотрел',{exact:true}).check();assert.equal(await page.locator('.world-film').count(),snapshot.films.length-1);
  await open('/movie/1');await page.getByRole('button',{name:/(?:Открыть|Написать) комментарий|Открыть комментарии/}).click();await page.getByRole('dialog').waitFor();await page.keyboard.press('Escape');assert.equal(await page.locator('dialog').count(),0);
+ // Only this final game needs four distinct source titles; keep earlier catalog/map fixtures unchanged.
+ for(let i=0;i<2;i++)gameFixtureIds.push((await db.query("insert into mg_movies(title,description,category,genre,year,duration,poster)values($1,$2,'Фильм','Драма',2005,100,'/brand/moviemovie-logo.png')returning id",['Route practice '+i+' '+Date.now(),'A unique route story '+i])).rows[0].id);
  await open('/games');const modes=page.locator('.game-card');assert.equal(await modes.count(),16);await modes.first().click();for(let round=0;round<5;round++){await page.locator('.game-options button').first().click();await page.getByRole('button',{name:round===4?'Результат':'Следующий вопрос',exact:false}).click()}await page.locator('.game-result').waitFor();
  assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);
  console.log(`Passed real-browser navigation across ${pages.length} pages; all catalog control types/sorts/moods, deep links, top metrics/categories, six leaderboard metrics/seven limits, map filters, review drawer and a five-round game; no runtime/hydration errors or local HTTP 5xx.`);
-}finally{await browser.close()}
+}finally{await browser.close();if(gameFixtureIds.length)await db.query('delete from mg_movies where id=any($1::int[])',[gameFixtureIds]);await db.end()}

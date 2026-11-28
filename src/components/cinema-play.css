@@ -1,0 +1,858 @@
+/* Games, trophy cabinet and monthly calendar. Feature-scoped, shared theme tokens. */
+.cinema-games,
+.cinema-achievements,
+.cinema-challenges {
+  min-width: 0;
+  container-type: inline-size;
+}
+.cinema-play-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.cinema-play-nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 30px;
+  padding: 10px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  min-height: 44px;
+}
+.cinema-play-nav a:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+.cinema-play-nav a[aria-current] {
+  background: var(--accent-glow);
+  color: var(--accent2);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.practice-lobby-stage,
+.achievement-stage,
+.challenge-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: 28px;
+  margin-bottom: 40px;
+}
+.practice-lobby-stage > header,
+.achievement-stage > header,
+.challenge-stage > header {
+  padding: 30px 12px 24px 0;
+  min-width: 0;
+  align-self: center;
+}
+:is(.practice-lobby-stage, .achievement-stage, .challenge-stage) h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(25px, 3.5vw, 49px);
+  line-height: 1.32;
+  letter-spacing: -0.06em;
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+:is(.practice-lobby-stage, .achievement-stage, .challenge-stage) h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+:is(.practice-lobby-stage, .achievement-stage, .challenge-stage) > header > p {
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--muted);
+  max-width: 53ch;
+}
+.practice-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  margin-top: 30px;
+}
+.practice-numbers > div {
+  display: grid;
+  gap: 5px;
+}
+.practice-numbers b {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.practice-numbers span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.practice-warmup,
+.achievement-focus,
+.challenge-focus {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+  padding: 26px;
+  border: 1px solid var(--border-hi);
+  border-radius: 26px;
+  background:
+    radial-gradient(
+      ellipse at top right,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
+}
+.practice-feature-icon,
+.achievement-focus-icon {
+  font-size: 42px;
+  line-height: 1.2;
+  margin: 8px 0;
+}
+:is(.practice-warmup, .achievement-focus, .challenge-focus) h2 {
+  font-size: clamp(23px, 2.5vw, 32px);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+:is(.practice-warmup, .achievement-focus, .challenge-focus) p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+:is(.practice-warmup, .achievement-focus, .challenge-focus) button {
+  margin-top: auto;
+  min-height: 44px;
+  text-align: left;
+}
+.practice-warmup small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+:is(.achievement-focus, .challenge-focus) > strong {
+  font-size: 27px;
+  font-weight: 500;
+}
+.achievement-focus > strong small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.practice-library > header,
+.challenge-month-content > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+.practice-library > header h2,
+.challenge-month-content > header h2 {
+  font-size: clamp(23px, 2.8vw, 33px);
+  line-height: 1.3;
+  margin-top: 8px;
+}
+.practice-library > header > span,
+.challenge-month-content > header > span {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.practice-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.practice-tools > div,
+.challenge-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.practice-tools > div button,
+.challenge-scope button {
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface);
+}
+.practice-tools button[aria-pressed="true"],
+.challenge-scope button[aria-pressed="true"] {
+  color: var(--accent2);
+  background: var(--accent-glow);
+  border-color: var(--accent);
+}
+.practice-tools > label,
+.achievement-tools > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface);
+  border-radius: 12px;
+  color: var(--muted);
+  min-width: 0;
+}
+.practice-tools input,
+.achievement-tools input {
+  background: none;
+  border: 0;
+  min-width: 0;
+  width: 100%;
+  font-size: 12px;
+  min-height: 24px;
+}
+.practice-tools label:focus-within,
+.achievement-tools label:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.cinema-games .games-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.cinema-games .game-card {
+  min-width: 0;
+  min-height: 238px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  transform: none;
+  box-shadow: none;
+  transition:
+    border-color 0.18s,
+    background 0.18s;
+  overflow-wrap: anywhere;
+}
+.cinema-games .game-card:hover {
+  border-color: var(--accent);
+  background: var(--surface2);
+  transform: none;
+  box-shadow: none;
+}
+.game-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.game-card-top small {
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cinema-games .game-emoji {
+  font-size: 28px;
+  margin: 0;
+  line-height: 1.2;
+}
+.cinema-games .game-card h3 {
+  font-size: 17px;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+.cinema-games .game-card p {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.game-launch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--accent2);
+  font-size: 11px;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.practice-note {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+  margin-top: 20px;
+  max-width: 95ch;
+}
+.cinema-practice-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(640px, calc(100vw - 28px));
+  max-width: none;
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  border: 1px solid var(--border-hi);
+  background: var(--bg);
+  color: var(--text);
+  padding: 32px;
+  border-radius: 24px;
+  box-shadow: 0 30px 100px var(--shadow);
+}
+.cinema-practice-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px);
+}
+.cinema-practice-dialog > .eyebrow {
+  display: block;
+  padding-right: 34px;
+  line-height: 1.7;
+}
+.cinema-practice-dialog h2 {
+  font-size: clamp(20px, 3vw, 26px);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.cinema-practice-dialog .game-options {
+  grid-template-columns: 1fr;
+  gap: 9px;
+}
+.cinema-practice-dialog .game-options button {
+  min-height: 50px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.cinema-practice-dialog .game-options button > span {
+  flex: none;
+}
+.cinema-practice-dialog .game-options button:disabled {
+  opacity: 1;
+}
+.cinema-practice-dialog .game-options .correct {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 13%, var(--bg));
+  color: var(--text);
+}
+.cinema-practice-dialog .game-options .incorrect {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 13%, var(--bg));
+  color: var(--text);
+}
+.cinema-practice-dialog .game-poster {
+  width: 120px;
+  height: 170px;
+  object-fit: cover;
+  margin: 0 auto 20px;
+}
+.cinema-practice-dialog .game-next {
+  gap: 16px;
+  align-items: center;
+}
+.cinema-practice-dialog .game-next > span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.cinema-practice-dialog .game-next button {
+  min-height: 44px;
+  flex: none;
+}
+.cinema-practice-dialog .game-result {
+  padding: 24px 0 0;
+}
+.cinema-practice-dialog .game-result > button {
+  margin: 12px auto 0;
+  min-height: 44px;
+  display: flex;
+  justify-content: center;
+}
+.cinema-practice-dialog .game-result p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin-top: 12px;
+}
+.achievement-library {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.achievement-tools {
+  display: grid;
+  gap: 16px;
+  position: sticky;
+  top: 160px;
+  min-width: 0;
+  padding: 20px 18px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.achievement-tools h2 {
+  font-size: 22px;
+  line-height: 1.3;
+}
+.achievement-tools > label {
+  padding: 8px 10px;
+  flex-wrap: wrap;
+}
+.achievement-tools > label:first-of-type {
+  flex-wrap: nowrap;
+}
+.achievement-tools > label > span {
+  font-size: 10px;
+  flex-basis: 100%;
+}
+.achievement-tools select {
+  width: 100%;
+  min-width: 0;
+  background: var(--bg);
+  border: 0;
+  font-size: 12px;
+  min-height: 32px;
+}
+.achievement-categories {
+  display: grid;
+  gap: 4px;
+}
+.achievement-categories button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 12px;
+  border-radius: 10px;
+  color: var(--muted);
+}
+.achievement-categories button small {
+  font-variant-numeric: tabular-nums;
+}
+.achievement-categories button[aria-pressed="true"] {
+  background: var(--accent-glow);
+  color: var(--accent2);
+}
+.achievement-tools > .outline-btn {
+  font-size: 11px;
+  min-height: 44px;
+}
+.achievement-tools > .practice-note {
+  margin: 0;
+  font-size: 10px;
+}
+.achievement-results {
+  min-width: 0;
+}
+.cinema-achievements .rarity-guide {
+  margin-top: 0;
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 16px;
+  gap: 10px;
+}
+.cinema-achievements .collectible-note {
+  font-size: 11px;
+  line-height: 1.8;
+}
+.cinema-achievements .achievement-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.cinema-achievements .achievement-card {
+  padding: 20px;
+  border-radius: 20px;
+  cursor: default;
+  transform: none;
+  background: var(--surface);
+  min-width: 0;
+}
+.cinema-achievements .achievement-card:hover {
+  transform: none;
+}
+.cinema-achievements .achievement-card h3 {
+  font-size: 19px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.cinema-achievements .achievement-card > p {
+  min-height: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.achievement-detail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 0;
+  font-size: 11px;
+  color: var(--accent2);
+}
+.cinema-achievements .achievement-progress > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.cinema-achievements .ach-tiers-detail {
+  min-width: 0;
+}
+.cinema-achievements .ach-tier-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+}
+.cinema-achievements .ach-tier-row > span {
+  flex-basis: 70px;
+}
+.cinema-achievements .achievement-reveal {
+  min-height: 44px;
+}
+.cinema-challenges .challenge-overview {
+  margin-bottom: 18px;
+  gap: 10px;
+}
+.cinema-challenges .challenge-overview-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 16px;
+}
+.challenge-calendar {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 28px;
+  align-items: start;
+}
+.challenge-month-index {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px 12px;
+  background: var(--surface);
+}
+.challenge-month-index > .eyebrow,
+.challenge-month-index > h2 {
+  margin: 0 8px;
+}
+.challenge-month-index h2 {
+  font-size: 21px;
+  line-height: 1.3;
+  padding: 10px 0 18px;
+}
+.cinema-challenges .challenge-month-tabs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+}
+.cinema-challenges .challenge-month-tab {
+  padding: 9px 10px;
+  min-height: 44px;
+  min-width: 0;
+  border-color: transparent;
+  background: none;
+  border-radius: 11px;
+  gap: 8px;
+  font-size: 12px;
+  white-space: normal;
+  justify-content: start;
+  flex-wrap: wrap;
+}
+.cinema-challenges .challenge-month-tab.active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+.cinema-challenges .challenge-month-tab .month-num {
+  color: var(--muted);
+  flex: none;
+}
+.cinema-challenges .month-now {
+  margin-left: auto;
+  font-size: 8px;
+  letter-spacing: 0;
+}
+.challenge-month-content {
+  min-width: 0;
+}
+.challenge-scope {
+  margin-bottom: 20px;
+}
+.cinema-challenges .challenge-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.cinema-challenges .challenge-card {
+  border-radius: 20px;
+  background: var(--surface);
+  padding: 22px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transform: none;
+}
+.cinema-challenges .challenge-card h3 {
+  font-size: 22px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.cinema-challenges .challenge-card p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.cinema-challenges .challenge-card .challenge-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cinema-challenges .challenge-card .challenge-footer button {
+  min-height: 44px;
+}
+:is(
+    .cinema-games,
+    .cinema-achievements,
+    .cinema-challenges,
+    .cinema-practice-dialog
+  )
+  :is(button, a, select):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+@container (max-width:1050px) {
+  .cinema-games .games-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .achievement-library,
+  .challenge-calendar {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 18px;
+  }
+  .cinema-achievements .achievement-grid,
+  .cinema-challenges .challenge-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@container (max-width:780px) {
+  .practice-lobby-stage,
+  .achievement-stage,
+  .challenge-stage {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 30px;
+  }
+  .practice-lobby-stage > header,
+  .achievement-stage > header,
+  .challenge-stage > header {
+    padding: 8px 0;
+  }
+  .practice-warmup,
+  .achievement-focus,
+  .challenge-focus {
+    padding: 22px;
+  }
+  .practice-feature-icon,
+  .achievement-focus-icon {
+    font-size: 32px;
+    margin: 0;
+  }
+  .cinema-games .games-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cinema-games .game-card {
+    min-height: 210px;
+    padding: 17px;
+  }
+  .achievement-library,
+  .challenge-calendar {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .achievement-tools {
+    position: static;
+    gap: 12px;
+  }
+  .achievement-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .achievement-categories button {
+    border: 1px solid var(--border);
+    gap: 12px;
+  }
+  .cinema-achievements .achievement-grid,
+  .cinema-challenges .challenge-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cinema-challenges .challenge-month-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cinema-challenges .challenge-month-tab {
+    font-size: 11px;
+    padding: 9px 8px;
+    gap: 5px;
+  }
+  .cinema-challenges .month-now {
+    flex-basis: 100%;
+    width: max-content;
+    max-width: max-content;
+    margin-left: 0;
+  }
+  .practice-tools > label {
+    flex: 1;
+    min-width: 180px;
+  }
+}
+@container (max-width:510px) {
+  .cinema-play-nav {
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+  .cinema-play-nav a {
+    font-size: 11px;
+    padding: 8px 10px;
+    gap: 5px;
+  }
+  .cinema-play-nav a svg {
+    width: 14px;
+  }
+  .practice-numbers {
+    gap: 22px;
+  }
+  .practice-numbers b {
+    font-size: 24px;
+  }
+  .practice-numbers span {
+    font-size: 10px;
+  }
+  .practice-library > header {
+    align-items: start;
+    gap: 10px;
+  }
+  .practice-library > header h2 {
+    font-size: 23px;
+  }
+  .practice-library > header .eyebrow {
+    font-size: 8px;
+  }
+  .practice-tools > div {
+    gap: 5px;
+  }
+  .practice-tools > div button,
+  .challenge-scope button {
+    padding: 9px 11px;
+    font-size: 11px;
+  }
+  .cinema-games .game-card {
+    padding: 14px;
+    min-height: 228px;
+    gap: 16px;
+    border-radius: 16px;
+  }
+  .cinema-games .game-card h3 {
+    font-size: 15px;
+  }
+  .cinema-games .game-card p {
+    font-size: 11px;
+  }
+  .game-card-top small {
+    font-size: 8px;
+  }
+  .cinema-games .game-emoji {
+    font-size: 25px;
+  }
+  .cinema-games .games-grid {
+    gap: 8px;
+  }
+  .cinema-achievements .achievement-grid,
+  .cinema-challenges .challenge-grid {
+    grid-template-columns: 1fr;
+  }
+  .cinema-challenges .challenge-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cinema-challenges .challenge-overview-card {
+    padding: 12px;
+    gap: 8px;
+  }
+  .cinema-challenges .challenge-overview-card b {
+    font-size: 17px;
+  }
+  .cinema-challenges .challenge-overview-card small {
+    font-size: 9px;
+  }
+  .cinema-challenges .challenge-ov-icon {
+    font-size: 21px;
+  }
+  .challenge-month-index {
+    padding: 16px 8px;
+  }
+  .cinema-challenges .challenge-month-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .cinema-practice-dialog {
+    padding: 24px 18px;
+    max-height: calc(100dvh - 20px);
+  }
+  .cinema-practice-dialog .game-next {
+    display: grid;
+  }
+  .cinema-practice-dialog .game-next button {
+    width: 100%;
+    margin: 0;
+  }
+  .cinema-practice-dialog .game-options button {
+    font-size: 12px;
+    padding: 12px;
+    gap: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cinema-games .game-card,
+  .cinema-practice-dialog {
+    transition: none;
+    animation: none;
+  }
+}
+.practice-error {
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  background: var(--accent-glow);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.cinema-challenges .challenge-status-row {
+  margin-top: auto;
+  padding-top: 18px;
+  flex-wrap: wrap;
+}
+.cinema-challenges .challenge-catalog-link {
+  min-height: 44px;
+}
+
+/* Spotlight/error jumps must not land underneath the persistent shell header. */
+.cinema-achievements .achievement-card,
+.practice-error,
+#achievement-cabinet,
+#challenge-calendar,
+.practice-library {
+  scroll-margin-top: 180px;
+}
