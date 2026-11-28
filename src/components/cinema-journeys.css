@@ -1,0 +1,946 @@
+/* Discovery destinations: existing geographic and provider data, an editorial map and program. */
+.world-cinema,
+.showtimes-page {
+  container-type: inline-size;
+  min-width: 0;
+  max-width: none;
+  margin-inline: 0;
+}
+.journey-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px;
+  margin-bottom: 24px;
+}
+.journey-navigation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.journey-navigation a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 28px;
+  color: var(--muted);
+}
+.journey-navigation a[aria-current] {
+  background: var(--accent-glow);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent2);
+}
+.journey-navigation a:hover {
+  color: var(--text);
+  border-color: var(--border-hi);
+}
+.atlas-editorial {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: 36px;
+  align-items: center;
+  margin: 0 0 34px;
+}
+.atlas-editorial > header {
+  min-width: 0;
+  padding: 12px 0;
+}
+.atlas-editorial h1,
+.screenings-stage h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(27px, 3.5vw, 48px);
+  line-height: 1.28;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+  margin: 18px 0;
+}
+.atlas-editorial h1 em,
+.screenings-stage h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+.atlas-editorial > header > p,
+.screenings-stage .showtimes-heading > p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.9;
+  max-width: 61ch;
+  display: block;
+}
+.atlas-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 18px;
+  color: var(--accent2);
+  font-size: 12px;
+}
+.world-cinema .world-stat-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  padding: 8px 24px;
+  background:
+    radial-gradient(ellipse at top right, var(--accent-glow), transparent 75%),
+    var(--surface);
+}
+.world-cinema .world-stat-row > div {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+  padding: 18px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.world-cinema .world-stat-row > div + div {
+  border-top: 1px solid var(--border);
+}
+.world-cinema .world-stat-row b {
+  font-size: 32px;
+  font-weight: 500;
+  flex-basis: 62px;
+  flex-shrink: 0;
+  color: var(--text);
+  line-height: 1.2;
+}
+.world-cinema .world-stat-row span {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.atlas-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(260px, 1fr);
+  gap: 18px;
+  align-items: start;
+  scroll-margin-top: 170px;
+}
+.atlas-map-column {
+  min-width: 0;
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.world-cinema .world-toolbar {
+  padding: 16px 18px;
+  margin: 0;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.world-cinema .world-mode {
+  padding: 3px;
+  border-radius: 22px;
+  background: var(--bg);
+  border-color: var(--border);
+}
+.world-cinema .world-mode button {
+  min-height: 44px;
+  padding: 9px 13px;
+  border-radius: 20px;
+  font-size: 11px;
+}
+.world-cinema .world-toolbar > select {
+  font-size: 11px;
+  min-height: 44px;
+  background: var(--bg);
+  max-width: 100%;
+  flex: 1;
+  min-width: 120px;
+}
+.world-cinema .world-unseen {
+  font-size: 11px;
+  min-height: 32px;
+}
+.world-cinema .world-unseen input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+}
+.world-cinema .world-map-panel {
+  padding: 20px;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(
+      ellipse at center,
+      color-mix(in srgb, var(--accent) 7%, transparent),
+      transparent 80%
+    ),
+    var(--bg);
+  box-shadow: none;
+}
+.world-cinema .world-map-info {
+  color: var(--text);
+  font-size: 12px;
+  gap: 8px;
+}
+.world-cinema .world-map-info svg {
+  color: var(--accent);
+  flex: none;
+}
+.world-cinema .world-map-info span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.world-cinema .world-map-svg {
+  margin: 24px 0;
+  aspect-ratio: 1.85;
+  overflow: visible;
+}
+.world-cinema .world-country {
+  stroke: var(--bg);
+  stroke-width: 0.7;
+}
+.world-cinema .world-country[data-country]:hover,
+.world-cinema .world-country.is-selected,
+.world-cinema .world-country:focus-visible {
+  stroke: var(--text);
+  stroke-width: 2;
+  filter: none;
+}
+.world-cinema .world-map-bottom {
+  gap: 20px;
+}
+.world-cinema .world-legend {
+  color: var(--muted);
+  font-size: 10px;
+  gap: 12px;
+}
+.world-cinema .world-map-buttons {
+  gap: 8px;
+}
+.world-cinema .world-map-buttons .outline-btn {
+  color: var(--text);
+  border-color: var(--border-hi);
+  min-height: 44px;
+  font-size: 10px;
+  background: var(--surface);
+}
+.atlas-route-panel {
+  min-width: 0;
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface);
+}
+.atlas-route-panel > h2 {
+  font-size: 27px;
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.atlas-route-summary {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.world-cinema .world-country-picker {
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin: 20px 0 10px;
+}
+.world-cinema .world-country-picker label {
+  font-size: 11px;
+}
+.world-cinema .world-country-picker :is(input, select) {
+  width: 100%;
+  background: var(--bg);
+  font-size: 12px;
+  min-height: 44px;
+  border-radius: 11px;
+  padding: 12px;
+}
+.atlas-search-count {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.atlas-destinations {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.atlas-destinations h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.atlas-destinations p {
+  font-size: 10px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 8px 0 12px;
+}
+.atlas-destinations button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+  font-size: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.atlas-destinations button span {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.atlas-destinations button b {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.atlas-destinations button svg {
+  color: var(--accent);
+}
+.atlas-destinations button[aria-pressed="true"] {
+  color: var(--accent2);
+}
+.atlas-to-results {
+  margin-top: 22px;
+  min-height: 44px;
+  font-size: 12px;
+}
+.atlas-reading {
+  margin-top: 20px;
+  border-bottom: 1px solid var(--border);
+  padding: 0 0 16px;
+  color: var(--muted);
+}
+.atlas-reading summary {
+  font-size: 12px;
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+  width: fit-content;
+  color: var(--text);
+}
+.atlas-reading .world-map-note {
+  max-width: 110ch;
+  margin: 8px 0 0;
+}
+.world-cinema .world-unmapped {
+  min-height: 44px;
+  padding: 10px 0;
+  line-height: 1.8;
+}
+.world-cinema .world-unmapped[aria-pressed="true"] {
+  color: var(--text);
+}
+.world-cinema .world-results {
+  margin-top: 32px;
+  scroll-margin-top: 170px;
+}
+.world-cinema .world-results-heading {
+  margin-bottom: 22px;
+  gap: 16px;
+  align-items: end;
+}
+.world-cinema .world-results-heading h2 {
+  font-size: clamp(23px, 2.7vw, 33px);
+  line-height: 1.3;
+}
+.world-cinema .world-results-heading select {
+  background: var(--surface);
+  font-size: 11px;
+  max-width: 100%;
+  min-height: 44px;
+}
+.world-cinema .world-film-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+}
+.world-cinema .world-film {
+  background: none;
+  border-color: transparent;
+  border-radius: 16px;
+  overflow: visible;
+}
+.world-cinema .world-film h3,
+.world-cinema .world-film p,
+.world-cinema .world-film > small {
+  margin-left: 0;
+  margin-right: 0;
+}
+.world-cinema .world-film h3 {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.world-cinema .world-film p {
+  font-size: 10px;
+}
+.world-cinema .world-film > small {
+  font-size: 10px;
+  line-height: 1.7;
+}
+.world-cinema .world-attribution {
+  padding-top: 20px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  max-width: 110ch;
+  font-size: 10px;
+  line-height: 1.9;
+}
+:root[data-theme="light"] .world-cinema {
+  --map-0: #dde2d9;
+  --map-1: #6f8db0;
+  --map-2: #39877c;
+  --map-3: #8d6db8;
+  --map-4: #a97926;
+}
+.screenings-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+  gap: 36px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.showtimes-page .showtimes-heading {
+  display: block;
+  margin: 0;
+  padding: 12px 0;
+  min-width: 0;
+}
+.screenings-city-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.screenings-city-line svg {
+  color: var(--accent);
+  flex: none;
+}
+.screenings-city-line b {
+  font-size: 14px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.screenings-city-line > span {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+.screenings-location {
+  min-width: 0;
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at top right, var(--accent-glow), transparent 75%),
+    var(--surface);
+  padding: 26px;
+  display: grid;
+  gap: 18px;
+}
+.screenings-location > svg {
+  color: var(--accent);
+  margin: 4px 0;
+}
+.screenings-location > h2 {
+  font-size: 26px;
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.showtimes-page .showtimes-city-panel {
+  margin: 0;
+  padding: 16px;
+  border-color: var(--border-hi);
+  background: var(--bg);
+  border-radius: 13px;
+}
+.showtimes-page .showtimes-city-panel summary {
+  min-height: 44px;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.showtimes-page .showtimes-city-panel summary > span {
+  font-size: 10px;
+}
+.screenings-location-note,
+.screenings-control-note {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.screenings-location > .outline-btn {
+  width: fit-content;
+  min-height: 44px;
+  font-size: 12px;
+}
+.showtimes-page .showtimes-source-note {
+  padding: 16px 20px;
+  margin: 0 0 28px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  line-height: 1.9;
+  max-width: 110ch;
+}
+.screenings-workspace {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+  scroll-margin-top: 170px;
+}
+.screenings-controls {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 22px 18px;
+  background: var(--surface);
+  position: sticky;
+  top: 160px;
+  min-width: 0;
+}
+.screenings-controls > h2 {
+  font-size: 24px;
+  line-height: 1.35;
+  margin: 12px 0 0;
+}
+.showtimes-page .showtimes-filters {
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin: 24px 0;
+}
+.showtimes-page .showtimes-filters :is(select, input) {
+  font-size: 12px;
+  background: var(--bg);
+  min-height: 46px;
+}
+.screenings-program {
+  min-width: 0;
+}
+.screenings-program-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.screenings-program-heading h2 {
+  font-size: clamp(23px, 2.7vw, 33px);
+  line-height: 1.3;
+  margin-top: 8px;
+}
+.screenings-program-heading > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.showtimes-page .showtimes-result-meta {
+  margin: 0 0 20px;
+  gap: 10px;
+  align-items: start;
+}
+.showtimes-page .showtime-movie {
+  border-radius: 22px;
+  transform: none;
+}
+.showtimes-page .showtime-movie > header {
+  padding: 22px 24px;
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--accent) 5%, transparent),
+    transparent 90%
+  );
+  align-items: start;
+}
+.showtimes-page .showtime-movie > header > span {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 12px;
+}
+.showtimes-page .showtime-movie h2 {
+  font-size: clamp(20px, 2.1vw, 27px);
+  line-height: 1.3;
+  margin-top: 8px;
+}
+.showtimes-page .showtime-venue {
+  padding: 20px 24px;
+  grid-template-columns: minmax(120px, 0.75fr) minmax(0, 1.5fr);
+  gap: 20px;
+}
+.showtimes-page .showtime-venue h3 {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.showtimes-page .showtime-venue p {
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.showtimes-page .showtime-slots {
+  gap: 8px;
+}
+.showtimes-page .showtime-slots a {
+  min-height: 74px;
+  min-width: 90px;
+  max-width: 100%;
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 12px;
+  flex: 0 1 auto;
+}
+.showtimes-page .showtime-slots a b {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.showtimes-page .showtime-slots small {
+  font-size: 10px;
+}
+.showtimes-page .showtime-slots a:hover {
+  border-color: var(--accent);
+  transform: none;
+}
+.showtimes-page .showtimes-external {
+  margin-top: 28px;
+  border-radius: 22px;
+  background: var(--surface);
+  padding: 24px;
+  gap: 24px;
+}
+.showtimes-page .showtimes-external h3 {
+  font-size: 20px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.showtimes-page .showtimes-external p {
+  font-size: 11px;
+  line-height: 1.9;
+  max-width: 70ch;
+}
+.showtimes-page .showtimes-external a {
+  min-height: 44px;
+  font-size: 12px;
+}
+.showtimes-page :is(.showtimes-empty, .showtimes-loading) {
+  border-radius: 22px;
+  line-height: 1.8;
+  padding: 28px;
+}
+.showtimes-page .showtimes-empty h2 {
+  line-height: 1.4;
+}
+.showtimes-page .showtimes-empty p {
+  font-size: 12px;
+  max-width: 75ch;
+}
+.showtimes-page .screenings-location .city-input-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.showtimes-page .screenings-location .city-input-row input {
+  flex: 1 1 150px;
+  min-width: 0;
+  width: 100%;
+  font-size: 16px;
+}
+.showtimes-page .screenings-location .city-input-row button {
+  min-height: 44px;
+  font-size: 12px;
+}
+.showtimes-page .screenings-location .city-buttons {
+  flex-wrap: wrap;
+}
+.showtimes-page .screenings-location .city-buttons button {
+  min-height: 44px;
+  font-size: 11px;
+}
+:is(.world-cinema, .showtimes-page)
+  :is(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+@container (max-width:1100px) {
+  .atlas-workspace {
+    grid-template-columns: minmax(0, 1.9fr) minmax(250px, 1fr);
+  }
+  .atlas-editorial,
+  .screenings-stage {
+    gap: 24px;
+  }
+  .world-cinema .world-film-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .screenings-workspace {
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 18px;
+  }
+  .showtimes-page .showtime-venue {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+@container (max-width:820px) {
+  .atlas-editorial,
+  .screenings-stage {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .world-cinema .world-stat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 18px;
+  }
+  .world-cinema .world-stat-row > div {
+    display: grid;
+    gap: 8px;
+    padding: 0 12px;
+    align-content: start;
+  }
+  .world-cinema .world-stat-row > div + div {
+    border-top: 0;
+    border-left: 1px solid var(--border);
+  }
+  .world-cinema .world-stat-row b {
+    font-size: 27px;
+    flex-basis: auto;
+  }
+  .world-cinema .world-stat-row span {
+    font-size: 10px;
+  }
+  .atlas-workspace {
+    grid-template-columns: 1fr;
+  }
+  .atlas-route-panel {
+    padding: 22px;
+  }
+  .world-cinema .world-country-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .atlas-destinations {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 20px;
+  }
+  .atlas-destinations > h3,
+  .atlas-destinations > p {
+    grid-column: 1/-1;
+  }
+  .screenings-location {
+    gap: 14px;
+    padding: 22px;
+  }
+  .screenings-location > svg {
+    width: 30px;
+    height: 30px;
+  }
+  .screenings-location h2 {
+    font-size: 24px;
+  }
+  .screenings-workspace {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .screenings-controls {
+    position: static;
+    padding: 22px;
+  }
+  .showtimes-page .showtimes-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 18px 0;
+  }
+  .showtimes-page .showtimes-search {
+    grid-column: 1/-1;
+  }
+}
+@container (max-width:520px) {
+  .journey-navigation {
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+  .journey-navigation a {
+    font-size: 10px;
+    gap: 6px;
+    padding: 8px 9px;
+  }
+  .journey-navigation a svg {
+    width: 14px;
+  }
+  .journey-navigation > div {
+    gap: 3px;
+  }
+  .atlas-editorial h1,
+  .screenings-stage h1 {
+    font-size: 27px;
+    margin: 14px 0;
+  }
+  .atlas-editorial > header > p,
+  .screenings-stage .showtimes-heading > p {
+    font-size: 12px;
+    line-height: 1.85;
+  }
+  .atlas-editorial {
+    margin-bottom: 22px;
+  }
+  .world-cinema .world-stat-row {
+    padding: 16px 8px;
+    gap: 0;
+  }
+  .world-cinema .world-stat-row > div {
+    padding: 0 10px;
+  }
+  .world-cinema .world-stat-row b {
+    font-size: 24px;
+  }
+  .world-cinema .world-stat-row span {
+    font-size: 9px;
+  }
+  .world-cinema .world-toolbar {
+    padding: 14px;
+    gap: 10px;
+  }
+  .world-cinema .world-mode {
+    width: 100%;
+  }
+  .world-cinema .world-mode button {
+    flex: 1;
+    padding: 9px 8px;
+    font-size: 10px;
+  }
+  .world-cinema .world-toolbar > select {
+    flex-basis: 100%;
+  }
+  .world-cinema .world-map-panel {
+    padding: 16px 12px;
+  }
+  .world-cinema .world-map-svg {
+    margin: 20px 0;
+    aspect-ratio: 1.55;
+  }
+  .world-cinema .world-map-info {
+    font-size: 11px;
+  }
+  .world-cinema .world-map-info span {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+  .world-cinema .world-legend {
+    gap: 10px;
+    font-size: 9px;
+  }
+  .world-cinema .world-map-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .world-cinema .world-map-buttons button {
+    padding: 10px;
+    font-size: 10px;
+    justify-content: center;
+  }
+  .atlas-route-panel {
+    padding: 20px;
+  }
+  .atlas-route-panel > h2 {
+    font-size: 25px;
+  }
+  .world-cinema .world-country-picker {
+    grid-template-columns: 1fr;
+  }
+  .atlas-destinations {
+    gap: 0 14px;
+  }
+  .atlas-destinations button {
+    font-size: 11px;
+    gap: 7px;
+  }
+  .world-cinema .world-film-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 12px;
+  }
+  .world-cinema .world-film h3 {
+    font-size: 13px;
+  }
+  .world-cinema .world-results-heading h2 {
+    font-size: 24px;
+  }
+  .world-cinema .world-results-heading select {
+    width: 100%;
+  }
+  .screenings-stage {
+    gap: 20px;
+  }
+  .screenings-location {
+    padding: 20px;
+  }
+  .screenings-location .showtimes-city-panel {
+    padding: 12px;
+  }
+  .screenings-controls {
+    padding: 20px;
+  }
+  .screenings-controls > h2 {
+    font-size: 22px;
+  }
+  .showtimes-page .showtimes-filters {
+    grid-template-columns: 1fr;
+  }
+  .screenings-city-line {
+    gap: 8px;
+  }
+  .screenings-city-line > span {
+    flex-basis: 100%;
+    border: 0;
+    padding: 0;
+  }
+  .showtimes-page .showtime-movie > header {
+    padding: 18px 16px;
+    gap: 12px;
+  }
+  .showtimes-page .showtime-movie h2 {
+    font-size: 21px;
+  }
+  .showtimes-page .showtime-venue {
+    padding: 18px 16px;
+  }
+  .showtimes-page .showtime-slots a {
+    min-width: 82px;
+    flex: 1 1 82px;
+    max-width: calc(50% - 4px);
+  }
+  .showtimes-page .showtimes-external {
+    padding: 20px;
+    display: grid;
+  }
+  .showtimes-page .showtimes-external a {
+    width: fit-content;
+  }
+  .showtimes-page :is(.showtimes-empty, .showtimes-loading) {
+    padding: 22px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-cinema .world-country,
+  .world-cinema .world-film,
+  .showtimes-page .showtime-slots a {
+    transition: none;
+    animation: none;
+  }
+}
