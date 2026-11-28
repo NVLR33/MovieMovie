@@ -124,6 +124,8 @@ export default function MovieQuickView({
       element.close();
       document.body.style.overflow = overflow;
       if (previous?.isConnected) previous.focus({ preventScroll: true });
+      else
+        document.getElementById("main-content")?.focus({ preventScroll: true });
     };
   }, []);
   const mutate = async (kind: "bookmark" | "favorite") => {

@@ -10,6 +10,7 @@ import { SiteFooter } from './shell-navigation';
 import CinemaNavigation from './cinema-navigation';
 import CinemaHomeStage from './cinema-home-stage';
 import CatalogScreening from './catalog-screening';
+import PersonalLibrary, { PersonalNextEvening, PersonalShelves } from './personal-cinema';
 import MovieQuickView, { useMovieQuickView } from './movie-quick-view';
 import { previewMovieId } from '@/lib/cinema-spaces';
 import { DetailDescription, DetailTags, detailTitleStyle } from './material-detail-parts';
@@ -817,9 +818,9 @@ return (
               : active === 'world' ? <React.Suspense fallback={<p role="status">Загружаем карту мира…</p>}><WorldCinema key={`${searchParams.get('mode')}:${searchParams.get('country')}:${data.user?.id || 'guest'}`} initialMode={searchParams.get('mode') || ''} initialCountry={searchParams.get('country') || ''} films={data.films} watchedIds={watchedIds} signedIn={!!data.user} go={browseGo} auth={() => setAuthOpen(true)} en={en} /></React.Suspense>
               : active === 'top' ? <TopMaterials films={data.films} go={browseGo} en={en} watchedIds={watchedIds} signedIn={!!data.user} />
               : active === 'movie' ? ( <MovieDetail film={data.films.find(f => f.id === filmId)} data={data} go={go} action={action} requireAuth={requireAuth} share={setShareFilm} onSocialShare={openMovieShare} edit={setEditFilm} onSeriesUpdated={refresh} />)
-              : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={browseGo} action={action} notify={notify} auth={() => setAuthOpen(true)} />
-              : active === 'watchlist' ? <Watchlist data={data} go={browseGo} auth={() => setAuthOpen(true)} />
-              : active === 'favorites' ? <FavoritesPage data={data} go={browseGo} auth={() => setAuthOpen(true)} />
+              : active === 'profile' ? <Profile key={data.user?.id || 'guest'} data={data} go={browseGo} action={action} notify={notify} auth={() => setAuthOpen(true)} en={en} />
+              : active === 'watchlist' ? <Watchlist data={data} go={browseGo} auth={() => setAuthOpen(true)} en={en} />
+              : active === 'favorites' ? <FavoritesPage data={data} go={browseGo} auth={() => setAuthOpen(true)} en={en} />
               : active === 'leaderboard' ? <Leaderboard data={data} go={go} />
               : active === 'achievements' ? <Achievements data={data} auth={() => setAuthOpen(true)} go={go} />
               : active === 'challenges' ? <ChallengesPage data={data} go={go} action={action} auth={() => setAuthOpen(true)} />
@@ -2227,7 +2228,7 @@ function CommentRow({
   );
 }
 
-function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; notify: (s: string) => void; auth: () => void; }) {
+function Profile({ data, go, action, notify, auth, en = false }: { data: Data; go: (s: string) => void; action: (p: Record<string, unknown>, s?: string) => Promise<boolean>; notify: (s: string) => void; auth: () => void; en?: boolean; }) {
   const u = data.user;
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(u?.bio || '');
@@ -2350,8 +2351,11 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
     )
   };
 
+  const savedFilms = data.films.filter(film=>data.bookmarks.some(bookmark=>bookmark.movieId===film.id));
   return (
-    <>
+    <div className="personal-profile">
+      <PersonalShelves active="profile" savedCount={savedFilms.length} favoriteCount={data.films.filter(film=>data.favoriteIds.includes(film.id)).length} go={go} en={en}/>
+      <div className="personal-profile-stage">
       <div className={`profile-cover hud-profile-cover header-style- effect-${u.profileEffect || 'none'} ${u.headerImage && u.headerStyle === 5 ? 'custom-header' : ''}`} style={u.headerImage && u.headerStyle === 5 ? { backgroundImage: `linear-gradient(120deg,rgba(10,12,18,.55),rgba(10,12,18,.2)),url(${u.headerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} data-style={u.headerStyle || 1} data-frame={u.headerFrame || 'none'}>
         <div className="cover-noise" />
         <div className="cover-effect-layer" />
@@ -2367,10 +2371,10 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
             <p>{u.bio}</p>
           </div>
           <div className="cover-side">
-            <div className="avatar-edit" onClick={() => upload.current?.click()}>
+            <button type="button" className="avatar-edit" aria-label={en ? 'Upload avatar' : 'Загрузить аватар'} onClick={() => upload.current?.click()}>
               <Avatar name={u.username} src={u.avatar} size={100} frame={u.avatarFrame} />
               <span><Upload size={15} /></span>
-            </div>
+            </button>
             <input ref={upload} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => handleUpload(e.target.files?.[0])} />
             <div className="cover-actions-bar">
               <button className="cover-edit" onClick={() => go("/wrapped")}><Sparkles size={16} /> Итоги года</button>
@@ -2380,6 +2384,8 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         </div>
       </div>
 
+      <PersonalNextEvening films={savedFilms} go={go} en={en} compact/>
+      </div>
       <div className="passport-level-banner"><ProfileLevel xp={u.xp} title={progressionTitle(new Set(watched.map(watch => watch.movieId)).size)} /></div>
 
       <nav className="profile-section-tabs" aria-label="Разделы профиля">{[
@@ -2389,9 +2395,10 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
       {profileSection === 'card' && <CinemaCardStudio user={u} films={data.films} watches={data.watches} progress={data.achievementProgress} ownership={data.achievementStats} hiddenAchievements={data.hiddenAchievements} go={go} />}
       {profileSection === 'titles' && <UserTitleStudio collection={data.titles} username={u.username} action={action} />}
       {profileSection === 'diary' && <>
-      <CinemaPassport films={data.films} watches={data.watches} go={go} onTitles={() => setProfileSection('titles')} />
+      <nav className="personal-diary-chapters" aria-label={en ? 'In your diary' : 'В кинодневнике'}><a href="#personal-atlas"><span>01</span>{en ? 'Your cinema map' : 'Твой киномир'}</a><a href="#personal-activity"><span>02</span>{en ? 'Your journey' : 'Твой путь'}</a><a href="#personal-journal"><span>03</span>{en ? 'Diary entries' : 'Записи дневника'}</a></nav>
+      <div id="personal-atlas" tabIndex={-1}><CinemaPassport films={data.films} watches={data.watches} go={go} onTitles={() => setProfileSection('titles')} /></div>
 
-      <ProfileHud showLevel={false} xp={u.xp} title={progressionTitle(new Set(watched.map(watch => watch.movieId)).size)} watches={new Set(watched.map(watch => watch.movieId)).size} minutes={minutes} achieved={achieved} days={new Set(data.watches.map(w => new Date(w.watchedAt).toISOString().slice(0, 10))).size} progress={data.achievementProgress} go={go} />
+      <div id="personal-activity" tabIndex={-1}><ProfileHud showLevel={false} xp={u.xp} title={progressionTitle(new Set(watched.map(watch => watch.movieId)).size)} watches={new Set(watched.map(watch => watch.movieId)).size} minutes={minutes} achieved={achieved} days={new Set(data.watches.map(w => new Date(w.watchedAt).toISOString().slice(0, 10))).size} progress={data.achievementProgress} go={go} /></div>
 
       {editing && (
         <div className="customize-panel">
@@ -2450,7 +2457,7 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         </div>
       )}
 
-      <div className="profile-section-heading">
+      <div className="profile-section-heading" id="personal-journal" tabIndex={-1}>
         <div><span className="eyebrow">ЗАПИСИ И ДОСТИЖЕНИЯ</span><h2>Мой кинодневник</h2></div>
         {editing && <span className="drag-hint"><GripVertical size={16} /> Перетащи, чтобы изменить порядок</span>}
       </div>
@@ -2463,116 +2470,28 @@ function Profile({ data, go, action, notify, auth }: { data: Data; go: (s: strin
         ))}
       </div>
       </>}
-    </>
+    </div>
   );
 }
 
-// --- Favorites Page ❤️ ---
-function FavoritesPage({
-  data,
-  go,
-  auth,
-}: {
-  data: Data;
-  go: (s: string) => void;
-  auth: () => void;
-}) {
-  if (!data.user) {
-    return (
-      <Gate
-        title="Твои любимые истории"
-        description="Войди в аккаунт, чтобы сохранять любимые фильмы, сериалы и аниме."
-        auth={auth}
-      />
-    );
-  }
-
-  const favoriteIds = new Set(data.favoriteIds || []);
-
-  const favoriteFilms = data.films.filter(f =>
-    favoriteIds.has(f.id)
-  );
-
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">
-            ТВОЯ ЛИЧНАЯ КОЛЛЕКЦИЯ
-          </span>
-
-          <h1>
-            Моё <em>любимое.</em>
-          </h1>
-
-          <p>
-            Истории, которые заняли особое место в твоём сердце.
-          </p>
-        </div>
-
-        <div className="heading-count">
-          <Heart size={19} fill="currentColor" />
-          {favoriteFilms.length} любимых
-        </div>
-      </div>
-
-      {favoriteFilms.length > 0 ? (
-        <FilmGrid films={favoriteFilms} go={go} />
-      ) : (
-        <div className="empty-state">
-          <Heart size={40} />
-
-          <h3>Здесь пока нет любимых историй</h3>
-
-          <p>
-            Нажми на сердечко на любом материале,
-            чтобы добавить его сюда.
-          </p>
-
-          <button
-            className="primary-btn"
-            onClick={() => go('/catalog')}
-          >
-            Найти любимое
-            <ArrowRight size={17} />
-          </button>
-        </div>
-      )}
-    </>
-  );
+// Both shelves use existing collection state and the shared quick-view/card actions.
+function FavoritesPage({ data, go, auth, en = false }: { data: Data; go: (s: string) => void; auth: () => void; en?: boolean }) {
+  if (!data.user) return <Gate title="Твои любимые истории" description="Войди в аккаунт, чтобы сохранять любимые фильмы, сериалы и аниме." auth={auth} />;
+  return <PersonalCollection data={data} go={go} kind="favorites" en={en} />;
 }
-
-
-function Watchlist({ data, go, auth }: { data: Data; go: (s: string) => void; auth: () => void; }) {
+function Watchlist({ data, go, auth, en = false }: { data: Data; go: (s: string) => void; auth: () => void; en?: boolean }) {
   if (!data.user) return <Gate title="Буду смотреть" description="Войди, чтобы сохранять материалы, которые хочешь посмотреть позже." auth={auth} />;
-  const saved = data.films.filter(f => data.bookmarks.some(b => b.movieId === f.id));
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">ЗАПЛАНИРОВАНО К ПРОСМОТРУ</span>
-          <h1>Буду <em>смотреть.</em></h1>
-          <p>Истории, которые ты добавил в желаемое и хочешь посмотреть позже.</p>
-        </div>
-        
-        <div className="heading-count">
-          <Bookmark size={18} />
-          {saved.length} в желаемом
-        </div>
-      </div>
-      {saved.length ? <FilmGrid films={saved} go={go} /> : (
-        <div className="empty-state">
-          <Bookmark size={38} />
-          <h3>Здесь пока пусто</h3>
-          <p>Найди что-нибудь интересное и добавь в желаемое.</p>
-          <button className="primary-btn" onClick={() => go('/catalog')}>
-            Исследовать каталог <ArrowRight size={17} />
-          </button>
-        </div>
-      )}
-    </>
-  );
+  return <PersonalCollection data={data} go={go} kind="saved" en={en} />;
 }
+function PersonalCollection({data,go,kind,en}:{data:Data;go:(s:string)=>void;kind:'saved'|'favorites';en:boolean}) {
+  const savedIds = new Set(data.bookmarks.map(item=>item.movieId));
+  const favoriteIds = new Set(data.favoriteIds);
+  const watched = new Set(data.watches.map(item=>item.movieId));
+  const ratings = new Map(data.ratings.map(item=>[item.movieId,item.value]));
+  const films = data.films.filter(film=>(kind==='saved'?savedIds:favoriteIds).has(film.id));
+  return <PersonalLibrary kind={kind} films={films} watched={watched} ratings={ratings} savedCount={data.films.filter(film=>savedIds.has(film.id)).length} favoriteCount={data.films.filter(film=>favoriteIds.has(film.id)).length} go={go} en={en} renderGrid={items=><FilmGrid films={items} go={go} watchedIds={watched} />} />;
+}
+
 
 function Leaderboard({ data, go }: { data: Data; go: (s: string) => void; }) {
   const [metric, setMetric] = useState<LeaderboardMetric>('minutes');

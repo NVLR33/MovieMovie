@@ -1,0 +1,843 @@
+/* Personal cinema: owned collections and an identity-led diary.
+   No reordering, new rewards, playback tracking or permanent navigation sidebar. */
+.personal-profile,
+.personal-library {
+  min-width: 0;
+}
+.personal-collection-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.personal-collection-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.personal-collection-nav a[aria-current] {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.personal-collection-nav a small {
+  min-width: 20px;
+  padding-left: 9px;
+  border-left: 1px solid currentColor;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.personal-profile-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.cinema-experience .personal-profile .profile-cover {
+  min-height: 340px;
+  height: auto;
+  margin: 0;
+  padding: 56px 28px 28px;
+  border-radius: 26px;
+  display: flex;
+  align-items: flex-end;
+}
+.cinema-experience
+  .personal-profile
+  .profile-cover[data-style]
+  .profile-cover-content {
+  position: relative;
+  inset: auto;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 22px;
+}
+.personal-profile .profile-cover .cover-main {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+.personal-profile .profile-cover .profile-name {
+  font-size: clamp(28px, 3.1vw, 46px);
+  line-height: 1.1;
+  max-width: 100%;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.personal-profile .profile-cover .cover-main > p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.personal-profile .profile-cover .cover-side {
+  flex: 0 1 180px;
+  min-width: 0;
+  max-width: 180px;
+  gap: 20px;
+}
+.personal-profile .profile-cover .cover-actions-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  gap: 6px;
+}
+.personal-profile .profile-cover .cover-edit {
+  position: static;
+  margin: 0;
+  min-height: 38px;
+  padding: 9px 12px;
+  font-size: 10px;
+  white-space: normal;
+  justify-content: center;
+}
+.personal-profile .profile-cover .cover-side .avatar-edit {
+  flex: none;
+  align-self: flex-end;
+  border-radius: 50%;
+}
+.personal-profile .profile-cover .cover-side .avatar {
+  width: 80px !important;
+  height: 80px !important;
+}
+.personal-profile .profile-cover[data-style="2"] .profile-cover-content {
+  flex-direction: row-reverse;
+}
+.personal-profile .profile-cover[data-style="4"] .profile-cover-content {
+  align-items: center;
+}
+.personal-profile .profile-cover .cover-label {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  max-width: calc(100% - 56px);
+  overflow-wrap: anywhere;
+}
+.personal-profile .passport-level-banner {
+  margin: 20px 0 24px;
+}
+.personal-profile .profile-section-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-hi);
+  padding-bottom: 18px;
+  margin: 0;
+}
+.personal-profile .profile-section-tabs button {
+  border-radius: 12px;
+  min-height: 44px;
+}
+.personal-diary-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: 0 4px;
+  margin-bottom: 28px;
+}
+.personal-diary-chapters a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.personal-diary-chapters a span {
+  color: var(--accent);
+  font-size: 9px;
+}
+:is(#personal-atlas, #personal-activity, #personal-journal) {
+  scroll-margin-top: 180px;
+}
+.personal-profile .cinema-passport {
+  margin-top: 0;
+}
+.personal-profile .passport-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: 20px;
+}
+.personal-profile .passport-widget {
+  border-radius: 22px;
+}
+.personal-profile .passport-section-heading h2 {
+  font-size: clamp(25px, 2.8vw, 38px);
+}
+.personal-profile .passport-section-heading p {
+  font-size: 12px;
+}
+.personal-profile .hud-command {
+  margin: 28px 0;
+}
+.personal-profile .hud-metric {
+  border-radius: 18px;
+}
+.personal-profile .profile-section-heading h2 {
+  font-size: clamp(26px, 2.8vw, 38px);
+  letter-spacing: -0.04em;
+}
+.personal-profile .profile-tiles.hud-bento {
+  gap: 20px;
+}
+.personal-profile .hud-bento > [data-hud-tile="stats"] {
+  grid-column: span 7;
+}
+.personal-profile .hud-bento > [data-hud-tile="genres"] {
+  grid-column: span 5;
+}
+.personal-profile .hud-bento > [data-hud-tile="history"] {
+  grid-column: 1/-1;
+}
+.personal-profile .hud-bento > [data-hud-tile="achievements"] {
+  grid-column: span 7;
+}
+.personal-profile .hud-bento > [data-hud-tile="friends"] {
+  grid-column: span 5;
+}
+.personal-profile .profile-tile {
+  border-radius: 22px;
+  padding: 24px;
+}
+.personal-profile .orbit-profile-tile {
+  padding: 24px;
+}
+.personal-profile .orbit-profile-tile .memory-orbit {
+  margin: 0;
+}
+
+.personal-library-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr);
+  gap: 32px;
+  align-items: stretch;
+  margin-bottom: 40px;
+}
+.personal-library-intro {
+  padding: 16px 0;
+  min-width: 0;
+}
+.personal-library-intro h1 {
+  font-size: clamp(38px, 4.8vw, 72px);
+  font-weight: 550;
+  letter-spacing: -0.055em;
+  line-height: 1.02;
+  margin: 20px 0;
+}
+.personal-library-intro h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+.personal-library-favorites .personal-library-intro h1 em {
+  color: #f08db7;
+}
+:root[data-theme="light"]
+  .personal-library-favorites
+  .personal-library-intro
+  h1
+  em {
+  color: #a42e62;
+}
+.personal-library-intro > p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  max-width: 46ch;
+}
+.personal-library-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+}
+.personal-library-numbers > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-left: 1px solid var(--border-hi);
+  padding-left: 16px;
+  min-width: 0;
+}
+.personal-library-numbers > div:first-child {
+  border: 0;
+  padding-left: 0;
+}
+.personal-library-numbers strong {
+  font-weight: 500;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.personal-library-numbers svg {
+  color: var(--accent);
+}
+.personal-library-numbers span {
+  flex: 1 0 100%;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.personal-evening {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 26px;
+  border: 1px solid var(--border-hi);
+  border-radius: 26px;
+  background:
+    radial-gradient(ellipse at top right, var(--accent-glow), transparent 80%),
+    var(--surface);
+}
+.personal-evening > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.personal-evening > header .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  letter-spacing: 1.3px;
+}
+.personal-evening-position {
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.personal-evening-story {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+  flex: 1;
+}
+.personal-evening-cover {
+  width: 110px;
+}
+.personal-evening-meta {
+  color: var(--muted);
+  font-size: 10px;
+}
+.personal-evening-story h2 {
+  font-size: clamp(21px, 2.3vw, 32px);
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.personal-evening-story p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 14px;
+}
+.personal-evening a {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 650;
+}
+.personal-evening > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+}
+.personal-evening > footer button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-hi);
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--surface2);
+}
+.personal-evening > footer button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.personal-evening-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1;
+  padding: 10px 0;
+  min-height: 200px;
+}
+.personal-evening-empty > svg {
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+.personal-evening-empty h2 {
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  font-size: 28px;
+  line-height: 1.15;
+  margin-bottom: 14px;
+}
+.personal-evening-empty p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 14px;
+  max-width: 38ch;
+}
+.personal-evening.is-compact {
+  padding: 24px;
+}
+.personal-evening.is-compact .personal-evening-story {
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 16px;
+}
+.personal-evening.is-compact .personal-evening-cover {
+  width: 76px;
+}
+.personal-evening.is-compact .personal-evening-story h2 {
+  font-size: 21px;
+}
+.personal-evening.is-compact .personal-evening-story p {
+  display: none;
+}
+.personal-evening.is-compact > header {
+  margin-bottom: 20px;
+}
+.personal-evening.is-compact > footer {
+  margin-top: 20px;
+}
+.personal-library-desk {
+  border-top: 1px solid var(--border-hi);
+  padding-top: 26px;
+}
+.personal-library-desk-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.personal-library-desk-heading h2 {
+  font-size: clamp(24px, 2.7vw, 36px);
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  margin-top: 10px;
+}
+.personal-library-desk-heading .material-view-control {
+  margin: 0;
+}
+.personal-library-query {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 12px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: 14px;
+  color: var(--muted);
+}
+.personal-library-query input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  outline-offset: 4px;
+}
+.personal-library-query button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+}
+.personal-library-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.personal-library-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.personal-library-controls label > span {
+  color: var(--muted);
+  font-size: 10px;
+  padding-left: 2px;
+}
+.personal-library-controls select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.personal-library-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0 22px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.personal-library-results strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin: 0 4px;
+}
+.personal-library-results button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--accent);
+  min-height: 36px;
+}
+.personal-library-desk .empty-state {
+  padding: 40px 22px;
+  border: 1px dashed var(--border-hi);
+  border-radius: 20px;
+}
+@media (max-width: 1180px) {
+  .personal-profile-stage {
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+    gap: 18px;
+  }
+  .cinema-experience .personal-profile .profile-cover {
+    padding: 56px 22px 24px;
+  }
+  .cinema-experience
+    .personal-profile
+    .profile-cover[data-style]
+    .profile-cover-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+  .personal-profile .profile-cover .cover-main {
+    width: 100%;
+  }
+  .personal-profile .profile-cover .cover-side {
+    flex: none;
+    width: 100%;
+    max-width: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .personal-profile .profile-cover .cover-side .avatar-edit {
+    align-self: center;
+  }
+  .personal-profile .profile-cover .cover-side .avatar {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .personal-profile .profile-cover .cover-actions-bar {
+    max-width: 180px;
+  }
+  .personal-profile .passport-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .personal-profile .passport-world {
+    grid-column: 1/-1;
+  }
+  .personal-profile .passport-streak {
+    grid-column: auto;
+  }
+  .personal-profile .hud-bento > [data-hud-tile="stats"],
+  .personal-profile .hud-bento > [data-hud-tile="genres"] {
+    grid-column: span 6;
+  }
+  .personal-library-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+  }
+  .personal-evening {
+    padding: 22px;
+  }
+  .personal-evening-story {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .personal-evening-cover {
+    width: 84px;
+  }
+  .personal-evening-story h2 {
+    font-size: 23px;
+  }
+  .personal-library-numbers {
+    gap: 10px;
+  }
+  .personal-library-numbers > div {
+    padding-left: 10px;
+  }
+}
+@media (max-width: 800px) {
+  .personal-profile-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cinema-experience .personal-profile .profile-cover {
+    min-height: 300px;
+  }
+  .personal-evening.is-compact .personal-evening-story p {
+    display: -webkit-box;
+  }
+  .personal-profile .hud-bento > [data-hud-tile] {
+    grid-column: 1/-1;
+  }
+  .personal-profile .hud-bento .profile-badges {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .personal-library-stage {
+    grid-template-columns: minmax(0, 1fr);
+    margin-bottom: 28px;
+  }
+  .personal-library-intro {
+    padding: 0;
+  }
+  .personal-library-intro h1 {
+    font-size: 56px;
+  }
+  .personal-library-intro h1 br {
+    display: none;
+  }
+  .personal-library-intro h1 em::before {
+    content: " ";
+  }
+  .personal-library-intro > p {
+    max-width: 60ch;
+  }
+  .personal-library-numbers {
+    margin-top: 22px;
+  }
+  .personal-library-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .personal-evening-story {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+  .personal-evening-cover {
+    width: 100px;
+  }
+}
+@media (max-width: 600px) {
+  .personal-collection-nav {
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  .personal-collection-nav a {
+    flex: 1 1 auto;
+    justify-content: center;
+    font-size: 10px;
+    gap: 6px;
+    padding: 9px 10px;
+    min-height: 44px;
+  }
+  .personal-collection-nav a small {
+    font-size: 9px;
+    padding-left: 6px;
+    min-width: auto;
+  }
+  .personal-collection-nav a svg {
+    width: 14px;
+  }
+  .cinema-experience .personal-profile .profile-cover {
+    min-height: 300px;
+    padding: 54px 20px 22px;
+    border-radius: 20px;
+  }
+  .personal-profile .profile-cover .profile-name {
+    font-size: 32px;
+  }
+  .personal-profile .profile-cover .cover-main > p {
+    font-size: 11px;
+  }
+  .personal-profile .profile-cover .cover-label {
+    left: 20px;
+    max-width: calc(100% - 40px);
+  }
+  .personal-profile .profile-cover .cover-side .avatar {
+    width: 58px !important;
+    height: 58px !important;
+  }
+  .personal-profile .profile-cover .cover-actions-bar {
+    max-width: 174px;
+  }
+  .personal-profile .profile-cover .cover-edit {
+    font-size: 10px;
+    min-height: 40px;
+  }
+  .personal-profile .profile-section-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .personal-profile .profile-section-tabs button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px;
+    font-size: 10px;
+  }
+  .personal-profile .profile-section-tabs button svg {
+    flex-shrink: 0;
+    width: 15px;
+  }
+  .personal-diary-chapters {
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .personal-diary-chapters a {
+    font-size: 9px;
+    gap: 6px;
+  }
+  .personal-profile .passport-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .personal-profile .passport-grid > .passport-widget {
+    grid-column: 1/-1;
+  }
+  .personal-profile .hud-bento .profile-badges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .personal-profile .profile-tile,
+  .personal-profile .orbit-profile-tile {
+    padding: 18px;
+  }
+  .personal-profile .passport-edition {
+    display: none;
+  }
+  .personal-evening,
+  .personal-evening.is-compact {
+    padding: 18px;
+    border-radius: 20px;
+  }
+  .personal-evening > header {
+    margin-bottom: 20px;
+  }
+  .personal-evening > header .eyebrow {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .personal-evening-story {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .personal-evening-cover {
+    width: 76px;
+  }
+  .personal-evening-story h2 {
+    font-size: 21px;
+  }
+  .personal-evening-story p {
+    font-size: 10px;
+  }
+  .personal-evening > footer {
+    margin-top: 18px;
+    padding-top: 14px;
+    font-size: 9px;
+  }
+  .personal-evening > footer button {
+    width: 40px;
+    height: 40px;
+  }
+  .personal-library-intro h1 {
+    font-size: 46px;
+  }
+  .personal-library-intro .eyebrow {
+    font-size: 8px;
+  }
+  .personal-library-intro > p {
+    font-size: 12px;
+  }
+  .personal-library-numbers strong {
+    font-size: 28px;
+  }
+  .personal-library-numbers span {
+    font-size: 9px;
+  }
+  .personal-library-desk-heading h2 {
+    font-size: 27px;
+  }
+  .personal-library-desk-heading .eyebrow {
+    font-size: 8px;
+  }
+  .personal-library-query {
+    gap: 8px;
+    padding: 12px;
+  }
+  .personal-library-query input {
+    font-size: 12px;
+  }
+  .personal-library-controls {
+    gap: 12px 8px;
+  }
+  .personal-library-controls select {
+    font-size: 10px;
+    padding: 10px 8px;
+  }
+}
+@media (forced-colors: active) {
+  .personal-evening,
+  .personal-collection-nav a,
+  .personal-library-query,
+  .personal-library-controls select {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+  .personal-collection-nav a[aria-current] {
+    background: Highlight;
+    color: HighlightText;
+  }
+  .personal-library-intro h1 em {
+    color: CanvasText;
+  }
+  .personal-evening a {
+    color: LinkText;
+  }
+}
