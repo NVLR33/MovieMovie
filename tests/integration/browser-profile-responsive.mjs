@@ -47,6 +47,7 @@ try {
     localStorage.setItem('mg_season_mode', 'off'),
   );
   const stamp = Date.now();
+  const peerName = 'ИмяБезПробелов' + String(stamp).slice(-10);
   async function signup(ctx, name) {
     const response = await ctx.request.post(base + '/api/auth', {
       data: {
@@ -65,7 +66,7 @@ try {
     peer = await signup(peerContext, 'Friend');
   await db.query(
     'update mg_users set username=$1,bio=$2,xp=6715,header_style=1 where id=$3',
-    ['ИмяБезПробелов12345678901', 'ДлиннаяБиография'.repeat(6), peer],
+    [peerName, 'ДлиннаяБиография'.repeat(6), peer],
   );
   for (let n = 0; n < 9; n++) {
     const id = (
@@ -188,7 +189,7 @@ try {
     await page
       .locator('.content')
       .evaluate((el) => getComputedStyle(el).maxWidth),
-    '1480px',
+    '1720px',
   );
   for (const style of [2, 3, 4, 5]) {
     await db.query('update mg_users set header_style=$1 where id=$2', [
@@ -285,7 +286,7 @@ try {
   await open('/friends');
   const friendCard = page
     .locator('.person-card')
-    .filter({ hasText: 'ИмяБезПробелов12345678901' });
+    .filter({ hasText: peerName });
   await friendCard
     .getByRole('button', { name: 'Профиль', exact: true })
     .waitFor();
