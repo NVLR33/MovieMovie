@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Check,
@@ -12,9 +12,11 @@ import {
   Square,
   RectangleVertical,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 
-import type { WrappedData } from './wrapped-experience';
+import { cinemaYearCard } from "@/lib/cinema-year";
+import { trapDialogFocus } from "@/lib/dialog-focus";
+import type { WrappedData } from "./wrapped-experience";
 
 /* ============================================
    TYPES
@@ -26,33 +28,28 @@ type Props = {
   initialSlide?: number;
 };
 
-type Format = 'story' | 'post' | 'square';
+type Format = "story" | "post" | "square";
 
-type CardType =
-  | 'summary'
-  | 'time'
-  | 'genre'
-  | 'movie'
-  | 'achievements';
+type CardType = "summary" | "time" | "genre" | "movie" | "achievements";
 
 const FORMATS: Record<
   Format,
   { label: string; width: number; height: number }
 > = {
-  story: { label: 'История', width: 1080, height: 1920 },
-  post: { label: 'Публикация', width: 1080, height: 1350 },
-  square: { label: 'Квадрат', width: 1080, height: 1080 },
+  story: { label: "История", width: 1080, height: 1920 },
+  post: { label: "Публикация", width: 1080, height: 1350 },
+  square: { label: "Квадрат", width: 1080, height: 1080 },
 };
 
 const CARDS: { id: CardType; title: string; emoji: string }[] = [
-  { id: 'summary', title: 'Мой киногод', emoji: '🎬' },
-  { id: 'time', title: 'Время в кино', emoji: '⏱️' },
-  { id: 'genre', title: 'Мой жанр', emoji: '🎭' },
-  { id: 'movie', title: 'Фильм года', emoji: '⭐' },
-  { id: 'achievements', title: 'Достижения', emoji: '🏆' },
+  { id: "summary", title: "Мой киногод", emoji: "🎬" },
+  { id: "time", title: "Время в кино", emoji: "⏱️" },
+  { id: "genre", title: "Мой жанр", emoji: "🎭" },
+  { id: "movie", title: "Фильм года", emoji: "⭐" },
+  { id: "achievements", title: "Достижения", emoji: "🏆" },
 ];
 
-const nf = new Intl.NumberFormat('ru-RU');
+const nf = new Intl.NumberFormat("ru-RU");
 
 /* ============================================
    CANVAS HELPERS
@@ -65,7 +62,7 @@ function roundedRect(
   width: number,
   height: number,
   radius: number,
-  fill: string
+  fill: string,
 ) {
   ctx.fillStyle = fill;
   ctx.beginPath();
@@ -81,11 +78,11 @@ function text(
   size: number,
   color: string,
   weight = 800,
-  align: CanvasTextAlign = 'left'
+  align: CanvasTextAlign = "left",
 ) {
   ctx.fillStyle = color;
   ctx.textAlign = align;
-  ctx.textBaseline = 'alphabetic';
+  ctx.textBaseline = "alphabetic";
   ctx.font = `${weight} ${size}px "Unbounded", "Rubik", Arial, sans-serif`;
   ctx.fillText(value, x, y);
 }
@@ -97,11 +94,11 @@ function wrapText(
   y: number,
   maxWidth: number,
   lineHeight: number,
-  maxLines = 4
+  maxLines = 4,
 ) {
   const words = value.split(/\s+/);
   const lines: string[] = [];
-  let line = '';
+  let line = "";
 
   for (const word of words) {
     const test = line ? `${line} ${word}` : word;
@@ -126,7 +123,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
     if (!src) return resolve(null);
 
     const image = new window.Image();
-    image.crossOrigin = 'anonymous';
+    image.crossOrigin = "anonymous";
 
     const timeout = window.setTimeout(() => resolve(null), 5000);
 
@@ -150,23 +147,17 @@ function drawCover(
   x: number,
   y: number,
   width: number,
-  height: number
+  height: number,
 ) {
   const ratio = Math.max(
     width / image.naturalWidth,
-    height / image.naturalHeight
+    height / image.naturalHeight,
   );
 
   const w = image.naturalWidth * ratio;
   const h = image.naturalHeight * ratio;
 
-  ctx.drawImage(
-    image,
-    x + (width - w) / 2,
-    y + (height - h) / 2,
-    w,
-    h
-  );
+  ctx.drawImage(image, x + (width - w) / 2, y + (height - h) / 2, w, h);
 }
 
 function drawPoster(
@@ -175,7 +166,7 @@ function drawPoster(
   x: number,
   y: number,
   width: number,
-  height: number
+  height: number,
 ) {
   ctx.save();
 
@@ -187,21 +178,21 @@ function drawPoster(
     drawCover(ctx, image, x, y, width, height);
   } else {
     const gradient = ctx.createLinearGradient(x, y, x + width, y + height);
-    gradient.addColorStop(0, '#474757');
-    gradient.addColorStop(1, '#22222e');
+    gradient.addColorStop(0, "#474757");
+    gradient.addColorStop(1, "#22222e");
 
     ctx.fillStyle = gradient;
     ctx.fillRect(x, y, width, height);
 
     text(
       ctx,
-      'MOVIE',
+      "MOVIE",
       x + width / 2,
       y + height / 2,
       24,
-      '#a8a8ba',
+      "#a8a8ba",
       900,
-      'center'
+      "center",
     );
   }
 
@@ -215,52 +206,52 @@ function drawPoster(
 async function generateWrappedImage(
   data: WrappedData,
   format: Format,
-  card: CardType
+  card: CardType,
 ): Promise<Blob> {
   const { width: W, height: H } = FORMATS[format];
 
   await document.fonts.ready;
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
 
   if (!ctx) {
-    throw new Error('Canvas недоступен в этом браузере.');
+    throw new Error("Canvas недоступен в этом браузере.");
   }
 
-  const compact = format === 'square';
-  const story = format === 'story';
+  const compact = format === "square";
+  const story = format === "story";
 
   const M = 85;
-  const white = '#f8f8f4';
-  const muted = '#a5a5b4';
-  const lime = '#d8ff63';
+  const white = "#f8f8f4";
+  const muted = "#a5a5b4";
+  const lime = "#d8ff63";
 
   /* Background */
 
   const backgrounds: Record<CardType, string> = {
-    summary: '#17171e',
-    time: '#111317',
-    genre: '#d8ff63',
-    movie: '#17171f',
-    achievements: '#224de2',
+    summary: "#17171e",
+    time: "#111317",
+    genre: "#d8ff63",
+    movie: "#17171f",
+    achievements: "#224de2",
   };
 
   ctx.fillStyle = backgrounds[card];
   ctx.fillRect(0, 0, W, H);
 
-  const darkText = card === 'genre';
-  const mainColor = darkText ? '#191b16' : white;
-  const secondaryColor = darkText ? '#444b32' : muted;
+  const darkText = card === "genre";
+  const mainColor = darkText ? "#191b16" : white;
+  const secondaryColor = darkText ? "#444b32" : muted;
 
   /* Decorative circle */
 
   ctx.save();
   ctx.globalAlpha = 0.07;
-  ctx.fillStyle = darkText ? '#000' : '#fff';
+  ctx.fillStyle = darkText ? "#000" : "#fff";
   ctx.beginPath();
   ctx.arc(W + 150, H * 0.35, 500, 0, Math.PI * 2);
   ctx.fill();
@@ -268,146 +259,65 @@ async function generateWrappedImage(
 
   /* Header */
 
-  text(
-    ctx,
-    'moviemovie',
-    M,
-    135,
-    43,
-    darkText ? '#191b16' : lime,
-    900
-  );
+  text(ctx, "moviemovie", M, 135, 43, darkText ? "#191b16" : lime, 900);
 
-  text(
-    ctx,
-    `WRAPPED ${data.year}`,
-    W - M,
-    135,
-    27,
-    mainColor,
-    800,
-    'right'
-  );
+  text(ctx, `WRAPPED ${data.year}`, W - M, 135, 27, mainColor, 800, "right");
 
-  ctx.fillStyle = darkText ? 'rgba(0,0,0,.18)' : 'rgba(255,255,255,.16)';
+  ctx.fillStyle = darkText ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.16)";
   ctx.fillRect(M, 168, W - M * 2, 2);
 
   /* Content area */
 
   const top = story ? 350 : compact ? 265 : 295;
 
-  if (card === 'summary') {
-    text(ctx, 'ЭТО БЫЛО', M, top, 74, white);
-    text(ctx, 'КИНО.', M, top + 107, 125, lime);
+  if (card === "summary") {
+    text(ctx, "ЭТО БЫЛО", M, top, 74, white);
+    text(ctx, "КИНО.", M, top + 107, 125, lime);
 
-    text(
-      ctx,
-      `@${data.username}`,
-      M,
-      top + 185,
-      33,
-      muted
-    );
+    text(ctx, `@${data.username}`, M, top + 185, 33, muted);
 
     const statsY = story ? top + 350 : top + 280;
 
     const statWidth = (W - M * 2 - 28) / 2;
 
-    roundedRect(
-      ctx,
-      M,
-      statsY,
-      statWidth,
-      180,
-      24,
-      '#292b37'
-    );
+    roundedRect(ctx, M, statsY, statWidth, 180, 24, "#292b37");
 
-    roundedRect(
-      ctx,
-      M + statWidth + 28,
-      statsY,
-      statWidth,
-      180,
-      24,
-      '#292b37'
-    );
+    roundedRect(ctx, M + statWidth + 28, statsY, statWidth, 180, 24, "#292b37");
 
-    text(
-      ctx,
-      nf.format(data.watches),
-      M + 30,
-      statsY + 92,
-      67,
-      white
-    );
+    text(ctx, nf.format(data.watches), M + 30, statsY + 92, 67, white);
 
-    text(
-      ctx,
-      'ПРОСМОТРОВ',
-      M + 30,
-      statsY + 137,
-      20,
-      muted
-    );
+    text(ctx, "ПРОСМОТРОВ", M + 30, statsY + 137, 20, muted);
 
-    text(
-      ctx,
-      nf.format(data.hours),
-      M + statWidth + 58,
-      statsY + 92,
-      67,
-      lime
-    );
+    text(ctx, nf.format(data.hours), M + statWidth + 58, statsY + 92, 67, lime);
 
-    text(
-      ctx,
-      'ЧАСОВ КИНО',
-      M + statWidth + 58,
-      statsY + 137,
-      20,
-      muted
-    );
+    text(ctx, "ЧАСОВ КИНО", M + statWidth + 58, statsY + 137, 20, muted);
 
     const genreY = statsY + 270;
 
-    text(
-      ctx,
-      'МОЙ ГЛАВНЫЙ ЖАНР',
-      M,
-      genreY,
-      22,
-      muted
-    );
+    text(ctx, "МОЙ ГЛАВНЫЙ ЖАНР", M, genreY, 22, muted);
 
     ctx.font = '900 58px "Unbounded", Arial, sans-serif';
     ctx.fillStyle = lime;
 
     wrapText(
       ctx,
-      data.topGenres[0]?.name || 'Кино',
+      data.topGenres[0]?.name || "Кино",
       M,
       genreY + 75,
       W - M * 2,
       65,
-      2
+      2,
     );
 
     /* Poster strip */
 
-    const posterY = story
-      ? H - 570
-      : compact
-        ? H - 295
-        : H - 380;
+    const posterY = story ? H - 570 : compact ? H - 295 : H - 380;
 
     const posterWidth = (W - M * 2 - 40) / 5;
     const posterHeight = compact ? 190 : 275;
 
     const images = await Promise.all(
-      data.posters.slice(0, 5).map((movie) =>
-        loadImage(movie.poster || '')
-      )
+      data.posters.slice(0, 5).map((movie) => loadImage(movie.poster || "")),
     );
 
     for (let i = 0; i < 5; i++) {
@@ -417,13 +327,13 @@ async function generateWrappedImage(
         M + i * (posterWidth + 10),
         posterY,
         posterWidth,
-        posterHeight
+        posterHeight,
       );
     }
   }
 
-  if (card === 'time') {
-    text(ctx, 'ТВОЁ ВРЕМЯ', M, top, 49, white);
+  if (card === "time") {
+    text(ctx, "ТВОЁ ВРЕМЯ", M, top, 49, white);
 
     text(
       ctx,
@@ -431,29 +341,22 @@ async function generateWrappedImage(
       M,
       top + (story ? 300 : 240),
       data.hours >= 1000 ? 180 : 220,
-      lime
+      lime,
     );
 
-    text(
-      ctx,
-      'ЧАСОВ КИНО',
-      M,
-      top + (story ? 390 : 325),
-      58,
-      white
-    );
+    text(ctx, "ЧАСОВ КИНО", M, top + (story ? 390 : 325), 58, white);
 
     ctx.font = '500 34px "Rubik", Arial, sans-serif';
     ctx.fillStyle = muted;
 
     wrapText(
       ctx,
-      'За это время можно было освоить новый навык. Но ты освоил кинематограф.',
+      "За это время можно было освоить новый навык. Но ты освоил кинематограф.",
       M,
       top + (story ? 505 : 440),
       W - M * 2,
       51,
-      4
+      4,
     );
 
     roundedRect(
@@ -463,52 +366,30 @@ async function generateWrappedImage(
       W - M * 2,
       170,
       26,
-      '#252832'
+      "#252832",
     );
 
     text(
       ctx,
-      `≈ ${data.days.toLocaleString('ru-RU')} суток`,
+      `≈ ${data.days.toLocaleString("ru-RU")} суток`,
       M + 35,
       (story ? H - 600 : H - 360) + 102,
       55,
-      lime
+      lime,
     );
   }
 
-  if (card === 'genre') {
-    text(
-      ctx,
-      'МОЯ ЖАНРОВАЯ',
-      M,
-      top,
-      43,
-      mainColor
-    );
+  if (card === "genre") {
+    text(ctx, "МОЯ ЖАНРОВАЯ", M, top, 43, mainColor);
 
-    text(
-      ctx,
-      'ДУША.',
-      M,
-      top + 75,
-      75,
-      mainColor
-    );
+    text(ctx, "ДУША.", M, top + 75, 75, mainColor);
 
-    const genreName = data.topGenres[0]?.name || 'Кино';
+    const genreName = data.topGenres[0]?.name || "Кино";
 
     ctx.fillStyle = mainColor;
     ctx.font = '900 90px "Unbounded", Arial, sans-serif';
 
-    wrapText(
-      ctx,
-      genreName,
-      M,
-      top + 220,
-      W - M * 2,
-      100,
-      2
-    );
+    wrapText(ctx, genreName, M, top + 220, W - M * 2, 100, 2);
 
     const genres = data.topGenres.slice(0, 5);
     const max = Math.max(genres[0]?.count || 1, 1);
@@ -519,35 +400,11 @@ async function generateWrappedImage(
     genres.forEach((genre, index) => {
       const y = listY + index * gap;
 
-      text(
-        ctx,
-        `${index + 1}. ${genre.name}`,
-        M,
-        y,
-        29,
-        mainColor
-      );
+      text(ctx, `${index + 1}. ${genre.name}`, M, y, 29, mainColor);
 
-      text(
-        ctx,
-        String(genre.count),
-        W - M,
-        y,
-        29,
-        mainColor,
-        800,
-        'right'
-      );
+      text(ctx, String(genre.count), W - M, y, 29, mainColor, 800, "right");
 
-      roundedRect(
-        ctx,
-        M,
-        y + 20,
-        W - M * 2,
-        18,
-        9,
-        'rgba(0,0,0,.13)'
-      );
+      roundedRect(ctx, M, y + 20, W - M * 2, 18, 9, "rgba(0,0,0,.13)");
 
       roundedRect(
         ctx,
@@ -556,20 +413,13 @@ async function generateWrappedImage(
         (W - M * 2) * (genre.count / max),
         18,
         9,
-        '#20241b'
+        "#20241b",
       );
     });
   }
 
-  if (card === 'movie') {
-    text(
-      ctx,
-      'МОЙ ФИЛЬМ ГОДА',
-      M,
-      top,
-      47,
-      white
-    );
+  if (card === "movie") {
+    text(ctx, "МОЙ ФИЛЬМ ГОДА", M, top, 47, white);
 
     const movie = data.bestMovie;
 
@@ -579,16 +429,9 @@ async function generateWrappedImage(
     const posterX = (W - posterWidth) / 2;
     const posterY = story ? 440 : compact ? 330 : 370;
 
-    const image = await loadImage(movie?.poster || '');
+    const image = await loadImage(movie?.poster || "");
 
-    drawPoster(
-      ctx,
-      image,
-      posterX,
-      posterY,
-      posterWidth,
-      posterHeight
-    );
+    drawPoster(ctx, image, posterX, posterY, posterWidth, posterHeight);
 
     const titleY = posterY + posterHeight + 85;
 
@@ -597,35 +440,21 @@ async function generateWrappedImage(
 
     wrapText(
       ctx,
-      movie?.title || 'Интрига сохраняется',
+      movie?.title || "Интрига сохраняется",
       M,
       titleY,
       W - M * 2,
       65,
-      3
+      3,
     );
 
     if (movie) {
-      text(
-        ctx,
-        `★ ${movie.rating}/10`,
-        M,
-        titleY + 150,
-        56,
-        lime
-      );
+      text(ctx, `★ ${movie.rating}/10`, M, titleY + 150, 56, lime);
     }
   }
 
-  if (card === 'achievements') {
-    text(
-      ctx,
-      'ПОБОЧНЫЕ КВЕСТЫ',
-      M,
-      top,
-      42,
-      white
-    );
+  if (card === "achievements") {
+    text(ctx, "ПОБОЧНЫЕ КВЕСТЫ", M, top, 42, white);
 
     text(
       ctx,
@@ -633,26 +462,12 @@ async function generateWrappedImage(
       M,
       top + (story ? 335 : 265),
       220,
-      white
+      white,
     );
 
-    text(
-      ctx,
-      'ЧЕЛЛЕНДЖЕЙ',
-      M,
-      top + (story ? 430 : 355),
-      54,
-      white
-    );
+    text(ctx, "ЧЕЛЛЕНДЖЕЙ", M, top + (story ? 430 : 355), 54, white);
 
-    text(
-      ctx,
-      'ПРОЙДЕНО',
-      M,
-      top + (story ? 510 : 425),
-      54,
-      white
-    );
+    text(ctx, "ПРОЙДЕНО", M, top + (story ? 510 : 425), 54, white);
 
     roundedRect(
       ctx,
@@ -661,7 +476,7 @@ async function generateWrappedImage(
       W - M * 2,
       200,
       27,
-      lime
+      lime,
     );
 
     text(
@@ -670,9 +485,9 @@ async function generateWrappedImage(
       W / 2,
       (story ? 1150 : compact ? 690 : 850) + 126,
       73,
-      '#17191d',
+      "#17191d",
       900,
-      'center'
+      "center",
     );
   }
 
@@ -680,40 +495,19 @@ async function generateWrappedImage(
 
   const footerY = H - (story ? 210 : 90);
 
-  ctx.fillStyle = darkText
-    ? 'rgba(0,0,0,.22)'
-    : 'rgba(255,255,255,.2)';
+  ctx.fillStyle = darkText ? "rgba(0,0,0,.22)" : "rgba(255,255,255,.2)";
 
   ctx.fillRect(M, footerY - 35, W - M * 2, 2);
 
-  text(
-    ctx,
-    'ТВОЙ ГОД. ТВОЁ КИНО.',
-    M,
-    footerY + 17,
-    21,
-    secondaryColor
-  );
+  text(ctx, "ТВОЙ ГОД. ТВОЁ КИНО.", M, footerY + 17, 21, secondaryColor);
 
-  text(
-    ctx,
-    'moviemovie',
-    W - M,
-    footerY + 17,
-    22,
-    mainColor,
-    900,
-    'right'
-  );
+  text(ctx, "moviemovie", W - M, footerY + 17, 22, mainColor, 900, "right");
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error('Не удалось создать PNG.'));
-      },
-      'image/png'
-    );
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Не удалось создать PNG."));
+    }, "image/png");
   });
 }
 
@@ -726,25 +520,41 @@ export default function WrappedShare({
   onClose,
   initialSlide = 8,
 }: Props) {
-  const [format, setFormat] = useState<Format>('post');
-  const [card, setCard] = useState<CardType>('summary');
+  const [format, setFormat] = useState<Format>("post");
+  const [card, setCard] = useState<CardType>(() =>
+    cinemaYearCard(initialSlide),
+  );
 
-  const [preview, setPreview] = useState('');
+  const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
+  const [revision, setRevision] = useState(0);
 
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current,
+      trigger =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    dialog?.showModal();
+    return () => {
+      dialog?.close();
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, []);
 
   /* Preview generation */
 
   useEffect(() => {
     let cancelled = false;
-    let objectUrl = '';
+    let objectUrl = "";
 
     async function generate() {
       setBusy(true);
-      setMessage('');
-      setPreview('');
+      setMessage("");
+      setPreview("");
       setImageBlob(null);
 
       try {
@@ -758,7 +568,7 @@ export default function WrappedShare({
         setImageBlob(blob);
       } catch {
         if (!cancelled) {
-          setMessage('Не удалось создать изображение.');
+          setMessage("Не удалось создать изображение.");
         }
       } finally {
         if (!cancelled) {
@@ -776,7 +586,7 @@ export default function WrappedShare({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [data, format, card]);
+  }, [data, format, card, revision]);
 
   /* Download */
 
@@ -785,7 +595,7 @@ export default function WrappedShare({
 
     const url = URL.createObjectURL(imageBlob);
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `moviemovie-wrapped-${data.year}-${card}-${format}.png`;
 
@@ -795,7 +605,7 @@ export default function WrappedShare({
 
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-    setMessage('PNG готов! Изображение сохранено.');
+    setMessage("PNG готов! Изображение сохранено.");
   }, [imageBlob, data.year, card, format]);
 
   /* Native share */
@@ -803,11 +613,9 @@ export default function WrappedShare({
   async function nativeShare() {
     if (!imageBlob) return;
 
-    const file = new File(
-      [imageBlob],
-      `moviemovie-wrapped-${data.year}.png`,
-      { type: 'image/png' }
-    );
+    const file = new File([imageBlob], `moviemovie-wrapped-${data.year}.png`, {
+      type: "image/png",
+    });
 
     try {
       if (
@@ -818,29 +626,35 @@ export default function WrappedShare({
         await navigator.share({
           files: [file],
           title: `Мой moviemovie Wrapped ${data.year}`,
-          text: 'Это был мой киногод! 🎬',
+          text: "Это был мой киногод! 🎬",
         });
 
         return;
       }
 
       setMessage(
-        'Браузер не поддерживает отправку PNG. Скачай изображение и опубликуй его вручную.'
+        "Браузер не поддерживает отправку PNG. Скачай изображение и опубликуй его вручную.",
       );
     } catch (error) {
-      if (
-        error instanceof DOMException &&
-        error.name === 'AbortError'
-      ) {
+      if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
 
-      setMessage('Не удалось открыть меню публикации.');
+      setMessage("Не удалось открыть меню публикации.");
     }
   }
 
   return (
-    <div className="wshare-backdrop" role="dialog" aria-modal="true">
+    <dialog
+      ref={dialogRef}
+      className="wshare-backdrop cinema-year-share"
+      aria-label="Карточка киногода"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onKeyDown={trapDialogFocus}
+    >
       <style>{`
         .wshare-backdrop {
           position: fixed;
@@ -1100,8 +914,11 @@ export default function WrappedShare({
       <div className="wshare-modal">
         <div className="wshare-header">
           <div>
-            <h2>✨ Wrapped Share Studio</h2>
-            <p>Твой киногод заслуживает красивой публикации.</p>
+            <span className="eyebrow">ПОСЛЕДНИЙ КАДР · {data.year}</span>
+            <h2>Твой киногод. Твоя обложка.</h2>
+            <p>
+              Выбери содержание и формат. Публикация — только по твоему желанию.
+            </p>
           </div>
 
           <button
@@ -1126,15 +943,19 @@ export default function WrappedShare({
               <div className="wshare-loading">
                 <ImageIcon size={34} />
                 Предпросмотр недоступен
+                <button
+                  className="wshare-secondary"
+                  onClick={() => setRevision((value) => value + 1)}
+                >
+                  Повторить создание
+                </button>
               </div>
             )}
           </div>
 
           <div className="wshare-controls">
             <div>
-              <div className="wshare-label">
-                01 / Выбери карточку
-              </div>
+              <div className="wshare-label">01 / Выбери карточку</div>
 
               <div className="wshare-options">
                 {CARDS.map((item) => (
@@ -1142,9 +963,10 @@ export default function WrappedShare({
                     key={item.id}
                     className={
                       card === item.id
-                        ? 'wshare-option active'
-                        : 'wshare-option'
+                        ? "wshare-option active"
+                        : "wshare-option"
                     }
+                    aria-pressed={card === item.id}
                     onClick={() => setCard(item.id)}
                   >
                     <span>{item.emoji}</span>
@@ -1155,18 +977,17 @@ export default function WrappedShare({
             </div>
 
             <div>
-              <div className="wshare-label">
-                02 / Формат изображения
-              </div>
+              <div className="wshare-label">02 / Формат изображения</div>
 
               <div className="wshare-options">
                 <button
                   className={
-                    format === 'story'
-                      ? 'wshare-option active'
-                      : 'wshare-option'
+                    format === "story"
+                      ? "wshare-option active"
+                      : "wshare-option"
                   }
-                  onClick={() => setFormat('story')}
+                  aria-pressed={format === "story"}
+                  onClick={() => setFormat("story")}
                 >
                   <Smartphone size={17} />
                   История
@@ -1174,11 +995,10 @@ export default function WrappedShare({
 
                 <button
                   className={
-                    format === 'post'
-                      ? 'wshare-option active'
-                      : 'wshare-option'
+                    format === "post" ? "wshare-option active" : "wshare-option"
                   }
-                  onClick={() => setFormat('post')}
+                  aria-pressed={format === "post"}
+                  onClick={() => setFormat("post")}
                 >
                   <RectangleVertical size={17} />
                   Пост
@@ -1186,11 +1006,12 @@ export default function WrappedShare({
 
                 <button
                   className={
-                    format === 'square'
-                      ? 'wshare-option active'
-                      : 'wshare-option'
+                    format === "square"
+                      ? "wshare-option active"
+                      : "wshare-option"
                   }
-                  onClick={() => setFormat('square')}
+                  aria-pressed={format === "square"}
+                  onClick={() => setFormat("square")}
                 >
                   <Square size={17} />
                   Квадрат
@@ -1198,15 +1019,12 @@ export default function WrappedShare({
               </div>
 
               <div className="wshare-format-info">
-                {FORMATS[format].width} × {FORMATS[format].height} px
-                · PNG
+                {FORMATS[format].width} × {FORMATS[format].height} px · PNG
               </div>
             </div>
 
             <div className="wshare-actions">
-              <div className="wshare-label">
-                03 / Поделись результатом
-              </div>
+              <div className="wshare-label">03 / Поделись результатом</div>
 
               <button
                 className="wshare-primary"
@@ -1227,21 +1045,20 @@ export default function WrappedShare({
               </button>
 
               {message && (
-                <div className="wshare-message">
+                <div className="wshare-message" role="status">
                   {message}
                 </div>
               )}
 
               <div className="wshare-note">
-                Изображение можно опубликовать в Telegram,
-                MAX, ВКонтакте, Instagram или Discord.
-                Доступность прямой отправки зависит от
+                Изображение можно опубликовать в Telegram, MAX, ВКонтакте,
+                Instagram или Discord. Доступность прямой отправки зависит от
                 браузера и приложения.
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
